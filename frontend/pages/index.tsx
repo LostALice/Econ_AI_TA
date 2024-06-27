@@ -12,14 +12,14 @@ export default function MainPage() {
     <DefaultLayout>
       <section className="flex flex-col items-center justify-center">
         <div className="inline-block text-center justify-center">
-          <h1 className={title()}>逢甲大學選課問答機械人</h1>
+          <h1 className={title()}>逢甲大學經濟學課程智能TA</h1>
         </div>
       </section>
       <section className="flex flex-col items-center justify-center p-4">
         <div className="inline-block text-center justify-center">
-          <h2>歡迎來到逢甲大學課程問答機械人的專屬頁面！</h2>
+          <h2>歡迎來到經濟學課程智能TA的專屬頁面！</h2>
           <h2>
-            在這裡，您可以即時獲得有關課程的所有問題的答案。不論是關於課程表、學分還是其他任何問題。
+            在這裡，無論你有關於經濟學理論、數據分析、作業輔導，還是任何其他相關問題，我都樂意提供幫助。
           </h2>
         </div>
       </section>
