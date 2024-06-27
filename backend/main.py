@@ -145,21 +145,9 @@ async def file_upload(
     docs_file: UploadFile,
     tags: list[str] = Form(),
     department: Literal[
-        "工程與科學學院",
-        "商學院",
-        "人文社會學院",
-        "資訊電機學院",
-        "建設學院",
-        "金融學院",
-        "國際科技與管理學院",
-        "建築專業學院",
-        "創能學院",
-        "通識教育中心",
-        "經營管理學院",
-        "行政單位",
-        "研究中心",
-        "其他",
-    ] = "其他",
+        "docx",
+        "pptx",
+    ] = "docx",
     collection: str = "default"
 ):
     """upload a docs file
@@ -183,18 +171,18 @@ async def file_upload(
         pformat(f"""docs_file: {filename} file_uuid: {file_uuid} tags: {file_tags}"""))
 
     # exclude non pdf files
-    if not filename.endswith(".pdf"):
+    if not filename.endswith(".docx"):
         logging.debug(pformat(f"Invalid file type: {filename}"))
         return HTTPException(status_code=200, detail="Invalid file type")
 
     # save uploaded pdf file
     pdf_contents = docs_file.file.read()
-    with open(f"./files/{file_uuid}.pdf", "wb") as f:
+    with open(f"./files/{file_uuid}.docx", "wb") as f:
         f.write(pdf_contents)
 
     # load sentences from pdf
-    splitted_content = LOADER.docs_client.pdf_splitter(
-        f"./files/{file_uuid}.pdf")
+    splitted_content = LOADER.docs_client.MS_docx_splitter(
+        f"./files/{file_uuid}.docx")
     logging.debug(pformat(splitted_content))
 
     # insert to milvus

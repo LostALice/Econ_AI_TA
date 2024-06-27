@@ -1,17 +1,15 @@
 # Code by AkinoAlice@TyrantRey
-
+from langchain_community.document_loaders import UnstructuredPowerPointLoader
 from langchain_community.document_loaders import PyPDFLoader
 
 from utils.setup import SetupMYSQL, SetupMilvus
 from utils.error import *
 
-from text2vec import SentenceModel
-from llama_cpp import Llama
+from numpy import ndarray, asarray
 from pprint import pformat
-from numpy import ndarray
 
+import requests
 import logging
-import opencc
 import os
 
 
@@ -294,11 +292,30 @@ class FileHandler(object):
         # last element is ""
         return splitted_content[:-1]
 
+    # def MS_pptx_splitter(self, document_path: str) -> list[str]:
+    #     if not document_path.endswith([".pptx"]):
+    #         raise FormatError("Supported formats: .pptx")
 
+    #     ppt = UnstructuredPowerPointLoader(document_path)
+    #     data = ppt.load()
+
+    #     for text in data:
+    #         text.page_content.replace("\n", "")
+
+    def MS_docx_splitter(self, document_path: str) -> list[str]:
+        if not document_path.endswith([".pptx"]):
+            raise FormatError("Supported formats: .pptx")
+
+        ppt = UnstructuredPowerPointLoader(document_path)
+        data = ppt.load()
+        splitted_content = "".join([text.page_content.replace("A:  ", "") for text in data]).split("  ")
+        return splitted_content
+
+# https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api
 class VectorHandler(object):
     def __init__(self) -> None:
-        self.HF_embedding_model = os.getenv("HF_EMBEDDING_MODEL")
-        self.embedding = SentenceModel(self.HF_embedding_model)
+        self.url = os.getenv("API_URL") + "/models/embeddings"
+        self.api_key = os.getenv("API_KEY")
 
     def encoder(self, text: str) -> ndarray:
         """convert text to ndarray (vector)
@@ -309,36 +326,94 @@ class VectorHandler(object):
         Returns:
             ndarray: numpy array (vector)
         """
-        return self.embedding.encode(text)
 
+        headers = {
+                    "Content-Type": "application/json",
+                    "X-API-HOST": "afs-inference",
+                    "X-API-KEY": self.api_key
+                }
 
-class RAGHandler(object):
+        data = {
+            "model": "llama3-ffm-70b-chat",
+            "inputs": [text]
+        }
+
+        response = requests.post(self.url, headers=headers, data=data)
+        response_data = response.json()
+        embeddings_vector = response_data["data"]["embedding"]
+
+        return asarray(embeddings_vector, dtype=float)
+
+# class ResponseHandler(object):
+#     def __init__(self) -> None:
+#         # only except .gguf format
+#         if not os.getenv("LLM_MODEL").endswith(".gguf"):
+#             raise FormatError
+
+#         if not os.path.exists(f"""./model/{os.getenv("LLM_MODEL")}"""):
+#             from huggingface_hub import hf_hub_download
+#             hf_hub_download(
+#                 repo_id=os.getenv("REPO_ID"),
+#                 filename=os.getenv("LLM_MODEL"),
+#                 local_dir="./model"
+#             )
+
+#         self.model = Llama(
+#             model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
+#             verbose=False,
+#             n_gpu_layers=-1,
+#             n_ctx=0,
+#         )
+
+#         self.system_prompt = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {regulations} 根據上文回答問題"
+
+#         self.converter = opencc.OpenCC("s2tw.json")
+
+#     def token_counter(self, prompt: str) -> int:
+#         return len(self.model.tokenize(prompt.encode("utf-8")))
+
+#     def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str | int]:
+#         """response from RAG
+
+#         Args:
+#             question (str): question from user
+#             regulations (list): regulations from database
+#             max_tokens (int, optional): max token allowed. Defaults to 8192.
+
+#         Returns:
+#             answer: response from RAG
+#             token_size: token size
+#         """
+#         content = self.system_prompt.format(regulations=" ".join(regulations))
+
+#         token_size = self.token_counter(content)
+
+#         message = [
+#             {
+#                 "role": "system",
+#                 "content": content,
+#             },
+#             {
+#                 "role": "user",
+#                 "content": question
+#             },
+#         ]
+
+#         output = self.model.create_chat_completion(
+#             message,
+#             stop=["<|eot_id|>", "<|end_of_text|>"],
+#             max_tokens=max_tokens,
+#             temperature=.5
+#         )["choices"][0]["message"]["content"]
+
+#         return self.converter.convert(output), token_size
+
+# https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/conversation-api
+class ResponseHandler(object):
     def __init__(self) -> None:
-        # only except .gguf format
-        if not os.getenv("LLM_MODEL").endswith(".gguf"):
-            raise FormatError
+        self.url = os.getenv("API_URL") + "/models/conversation"
 
-        if not os.path.exists(f"""./model/{os.getenv("LLM_MODEL")}"""):
-            from huggingface_hub import hf_hub_download
-            hf_hub_download(
-                repo_id=os.getenv("REPO_ID"),
-                filename=os.getenv("LLM_MODEL"),
-                local_dir="./model"
-            )
-
-        self.model = Llama(
-            model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
-            verbose=False,
-            n_gpu_layers=-1,
-            n_ctx=0,
-        )
-
-        self.system_prompt = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {regulations} 根據上文回答問題"
-
-        self.converter = opencc.OpenCC("s2tw.json")
-
-    def token_counter(self, prompt: str) -> int:
-        return len(self.model.tokenize(prompt.encode("utf-8")))
+        self.api_key = os.getenv("API_KEY")
 
     def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str | int]:
         """response from RAG
@@ -352,34 +427,42 @@ class RAGHandler(object):
             answer: response from RAG
             token_size: token size
         """
-        content = self.system_prompt.format(regulations=" ".join(regulations))
 
-        token_size = self.token_counter(content)
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-HOST": "afs-inference",
+            "X-API-KEY": self.api_key,
+        }
 
-        message = [
-            {
-                "role": "system",
-                "content": content,
+        data = {
+            "model": "llama3-ffm-70b-chat",
+            "messages": [
+                {
+                    "role": "human",
+                    "content": "你是經濟老師的得力助手，你必須用有支持的資訊來回答我的問題。你必須用中文或英文回答我取決於我問你的問題",
+                },
+                {
+                    "role": "assistant",
+                    "content": "當然，我會盡力回答你的問題，並根據你的問題選擇使用中文或英文回答。請問你有什麼問題需要解答",
+                },
+                {
+                    "role": "human",
+                    "content": "根據以下資料:" + "".join(regulations) + "回答以下問題:" + question,
+                },
+            ],
+            "parameters": {
+                "max_new_tokens": max_tokens,
+                "temperature": 0.6,
+                "top_k": 30,
+                "top_p": 1,
+                "frequence_penalty": 1,
             },
-            {
-                "role": "user",
-                "content": question
-            },
-        ]
+        }
 
-        output = self.model.create_chat_completion(
-            message,
-            stop=["<|eot_id|>", "<|end_of_text|>"],
-            max_tokens=max_tokens,
-            temperature=.5
-        )["choices"][0]["message"]["content"]
+        response = requests.post(self.url, headers=headers, data=data)
+        response_data = response.json()
 
-        return self.converter.convert(output), token_size
-
+        return response_data.get("generated_text"), response_data.get("total_time_taken")
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv("./.env")
-
-    VectorHandler().encoder("學分的抵免原則")
-    MilvusHandler().search_similarity()
+    ...

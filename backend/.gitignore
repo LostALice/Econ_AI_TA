@@ -1,0 +1,22 @@
+
+/Scripts
+/Lib
+/Include
+/share
+/Library
+.vscode/
+
+# LLM
+# ===================
+*.gguf
+
+# files
+# ===================
+pyvenv.cfg
+*.pyc
+*.pdf
+
+# testing file
+# ===================
+test.*
+*.log
