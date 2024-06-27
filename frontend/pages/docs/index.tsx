@@ -23,19 +23,8 @@ export default function DocsPage() {
   const [fileList, setFileList] = useState<IDocsFormat[]>([]);
 
   const departmentList: IDepartment[] = [
-    { departmentName: "工程與科學學院" },
-    { departmentName: "商學院" },
-    { departmentName: "人文社會學院" },
-    { departmentName: "資訊電機學院" },
-    { departmentName: "建設學院" },
-    { departmentName: "金融學院" },
-    { departmentName: "國際科技與管理學院" },
-    { departmentName: "建築專業學院" },
-    { departmentName: "創能學院" },
-    { departmentName: "通識教育中心" },
-    { departmentName: "經營管理學院" },
-    { departmentName: "行政單位" },
-    { departmentName: "研究中心" }
+    { departmentName: "pptx" },
+    { departmentName: "docx" },
   ]
 
   async function loadFileList(departmentName: React.Key) {

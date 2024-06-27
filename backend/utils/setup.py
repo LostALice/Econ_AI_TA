@@ -196,7 +196,7 @@ class SetupMilvus(object):
         schema.add_field(field_name="content", datatype=DataType.VARCHAR,
                          max_length=2048)
         schema.add_field(field_name="vector",
-                         datatype=DataType.FLOAT_VECTOR, dim=768)
+                         datatype=DataType.FLOAT_VECTOR, dim=getenv("MILVUS_VECTOR_DIM"))
 
         index_params = self.milvus_client.prepare_index_params()
 

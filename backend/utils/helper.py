@@ -199,7 +199,7 @@ class MilvusHandler(SetupMilvus):
             remove_duplicates (bool, optional): remove duplicates vector in database. Defaults to True.
 
         Returns:
-            dict: _description_
+            dict: Number of rows that were inserted and the inserted primary key list.
         """
         # fix duplicates
         if remove_duplicates:
@@ -292,19 +292,19 @@ class FileHandler(object):
         # last element is ""
         return splitted_content[:-1]
 
-    # def MS_pptx_splitter(self, document_path: str) -> list[str]:
-    #     if not document_path.endswith([".pptx"]):
-    #         raise FormatError("Supported formats: .pptx")
+    def MS_pptx_splitter(self, document_path: str) -> list[str]:
+        if not document_path.endswith((".pptx")):
+            raise FormatError("Supported formats: .pptx")
 
-    #     ppt = UnstructuredPowerPointLoader(document_path)
-    #     data = ppt.load()
-
-    #     for text in data:
-    #         text.page_content.replace("\n", "")
+        loader = UnstructuredPowerPointLoader(document_path)
+        data = loader.load()
+        splitted_content = "".join([text.page_content for text in data]).split("\n\n\n\n")
+        splitted_content = [x.replace("\n", "").replace("\t", "") for x in splitted_content]
+        return splitted_content
 
     def MS_docx_splitter(self, document_path: str) -> list[str]:
-        if not document_path.endswith([".pptx"]):
-            raise FormatError("Supported formats: .pptx")
+        if not document_path.endswith((".docx")):
+            raise FormatError("Supported formats: .docx")
 
         ppt = UnstructuredPowerPointLoader(document_path)
         data = ppt.load()
@@ -340,6 +340,7 @@ class VectorHandler(object):
 
         response = requests.post(self.url, headers=headers, data=data)
         response_data = response.json()
+        print(response_data)
         embeddings_vector = response_data["data"]["embedding"]
 
         return asarray(embeddings_vector, dtype=float)

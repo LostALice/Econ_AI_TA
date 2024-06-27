@@ -6,11 +6,11 @@ from fastapi import UploadFile, Form
 from fastapi import HTTPException
 
 from utils.helper import (
+    ResponseHandler,
     VectorHandler,
     MilvusHandler,
     MySQLHandler,
     FileHandler,
-    RAGHandler,
 )
 from utils.model import (
     QuestioningModel,
@@ -62,7 +62,7 @@ class UtilsLoader(object):
         self.mysql_client = MySQLHandler()
         self.encoder_client = VectorHandler()
         self.docs_client = FileHandler()
-        self.RAG = RAGHandler()
+        self.RAG = ResponseHandler()
 
 
 LOADER = UtilsLoader()
@@ -82,7 +82,7 @@ async def login():
     return HTTPException(status_code=200, detail="login")
 
 
-@app.get("/docs/{docs_id}/", status_code=200)
+@app.get("/documentation/{docs_id}/", status_code=200)
 async def get_docs(docs_id: str) -> FileResponse:
     """download documentation from docs_id
 
@@ -111,20 +111,8 @@ async def get_docs(docs_id: str) -> FileResponse:
 @app.get("/department/{department}/", status_code=200)
 async def get_department_docs_list(
         department: Literal[
-            "工程與科學學院",
-            "商學院",
-            "人文社會學院",
-            "資訊電機學院",
-            "建設學院",
-            "金融學院",
-            "國際科技與管理學院",
-            "建築專業學院",
-            "創能學院",
-            "通識教育中心",
-            "經營管理學院",
-            "行政單位",
-            "研究中心",
-            "其他",
+            "docx",
+            "pptx"
         ] = "其他"):
 
     docs_list = LOADER.mysql_client.select_department_docs_list(department)
@@ -165,25 +153,32 @@ async def file_upload(
         "tags": tags
     }))
     filename = str(docs_file.filename)
+    file_extension = filename.split(".")[-1]
     file_uuid = str(uuid.uuid4())
 
     logging.debug(
         pformat(f"""docs_file: {filename} file_uuid: {file_uuid} tags: {file_tags}"""))
 
-    # exclude non pdf files
-    if not filename.endswith(".docx"):
-        logging.debug(pformat(f"Invalid file type: {filename}"))
+    if file_extension != department:
+        # exclude non invalid files
+        logging.debug(pformat(f"Invalid file type: {file_extension}, prefer: {department}"))
         return HTTPException(status_code=200, detail="Invalid file type")
 
     # save uploaded pdf file
-    pdf_contents = docs_file.file.read()
-    with open(f"./files/{file_uuid}.docx", "wb") as f:
-        f.write(pdf_contents)
+    docs_contents = docs_file.file.read()
+    with open(f"./files/{file_uuid}.{file_extension}", "wb") as f:
+        f.write(docs_contents)
 
-    # load sentences from pdf
-    splitted_content = LOADER.docs_client.MS_docx_splitter(
-        f"./files/{file_uuid}.docx")
-    logging.debug(pformat(splitted_content))
+    # files identify
+    if department == "docx":
+        splitted_content = LOADER.docs_client.MS_docx_splitter(
+            f"./files/{file_uuid}.docx")
+        logging.debug(pformat(splitted_content))
+
+    if department == "pptx":
+        splitted_content = LOADER.docs_client.MS_pptx_splitter(
+            f"./files/{file_uuid}.pptx")
+        logging.debug(pformat(splitted_content))
 
     # insert to milvus
     for sentence in splitted_content:

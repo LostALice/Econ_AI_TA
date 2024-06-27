@@ -59,12 +59,15 @@ export async function fetchDocsList(
 export async function fetchDocs(
     docsID: string
 ): Promise<Blob> {
-    const resp = await fetch(siteConfig.api_url + "/docs/" + docsID + "/", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/pdf",
-        },
-    })
+    const resp = await fetch(
+        siteConfig.api_url + "/documentation/" + docsID + "/",
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/pdf",
+            },
+        }
+    )
     console.log(resp)
     const data = await resp.blob()
 
