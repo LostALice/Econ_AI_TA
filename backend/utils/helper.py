@@ -1,5 +1,5 @@
 # Code by AkinoAlice@TyrantRey
-from langchain_community.document_loaders import UnstructuredPowerPointLoader
+from langchain_community.document_loaders import UnstructuredPowerPointLoader, UnstructuredWordDocumentLoader
 from langchain_community.document_loaders import PyPDFLoader
 
 from utils.setup import SetupMYSQL, SetupMilvus
@@ -10,6 +10,7 @@ from pprint import pformat
 
 import requests
 import logging
+import json
 import os
 
 
@@ -306,9 +307,9 @@ class FileHandler(object):
         if not document_path.endswith((".docx")):
             raise FormatError("Supported formats: .docx")
 
-        ppt = UnstructuredPowerPointLoader(document_path)
-        data = ppt.load()
-        splitted_content = "".join([text.page_content.replace("A:  ", "") for text in data]).split("  ")
+        docx = UnstructuredWordDocumentLoader(document_path)
+        data = docx.load()
+        splitted_content = "".join([text.page_content.replace("A:  ", "").replace("\n", "") for text in data]).split("  ")
         return splitted_content
 
 # https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api
@@ -334,14 +335,14 @@ class VectorHandler(object):
                 }
 
         data = {
-            "model": "llama3-ffm-70b-chat",
+            "model": "ffm-embedding",
             "inputs": [text]
         }
 
-        response = requests.post(self.url, headers=headers, data=data)
+        response = requests.post(self.url, headers=headers, data=json.dumps(data))
         response_data = response.json()
         print(response_data)
-        embeddings_vector = response_data["data"]["embedding"]
+        embeddings_vector = response_data["data"][0]["embedding"]
 
         return asarray(embeddings_vector, dtype=float)
 
@@ -460,7 +461,7 @@ class ResponseHandler(object):
             },
         }
 
-        response = requests.post(self.url, headers=headers, data=data)
+        response = requests.post(self.url, headers=headers, data=json.dumps(data))
         response_data = response.json()
 
         return response_data.get("generated_text"), response_data.get("total_time_taken")
