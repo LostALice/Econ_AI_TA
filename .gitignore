@@ -5,7 +5,7 @@
 /Include
 /share
 /Library
-/.vscode
+**/.vscode
 setting.*
 
 # LLM
