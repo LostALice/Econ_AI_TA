@@ -96,7 +96,10 @@ async def login(login_form: LoginFormModel):
     _status, user_info = LOADER.mysql_client.get_user_info(username, hashed_password)
 
     if _status != 200:
-        return HTTPException(status_code=_status, detail="Failed to login")
+        return {
+            "success": False,
+            "response": _status,
+        }
 
     if _status == 200:
         login_info = {}
@@ -113,6 +116,7 @@ async def login(login_form: LoginFormModel):
     _success = LOADER.mysql_client.insert_login_token(login_info["user_id"], jwt_token)
     if _success:
         return {
+            "success": True,
             "jwt_token": jwt_token,
             "role": login_info["role_name"]
         }

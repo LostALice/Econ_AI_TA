@@ -64,12 +64,18 @@ export const LoginButton = () => {
     }).then(async (response) => {
       if (response.ok) {
         const data = await response.json();
-        setCookie("jwt", data.jwt_token);
-        setCookie("role", data.role);
-        const userRole = getCookie("role") || "未登入";
-        setRole(userRole);
-        setIsLoggedIn(true);
-        return true;
+        if (data.success) {
+          setCookie("jwt", data.jwt_token);
+          setCookie("role", data.role);
+          const userRole = getCookie("role") || "未登入";
+          setRole(userRole);
+          setIsLoggedIn(true);
+          return true;
+        }
+        else {
+          console.log("login failed");
+          return false;
+        }
       } else {
         console.log("login failed");
         return false;

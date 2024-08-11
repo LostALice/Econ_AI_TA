@@ -156,6 +156,8 @@ class MySQLHandler(SetupMYSQL):
 
         if login_info:
             return 200, login_info
+        else:
+            return 403, "Error"
 
 
     def check_user(self, username: str, roles: str = None) -> int:

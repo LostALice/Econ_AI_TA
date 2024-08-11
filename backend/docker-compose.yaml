@@ -1,40 +1,53 @@
 version: "3"
 services:
   backend:
-    image: fcu_llm:latest
+    image: llm_backend:1723358842
     container_name: backend
     environment:
+      # Global variables
+      - DEBUG=True
+
+      # CORS Setting
+      # - CORS_ALLOWED_ORIGIN="*"
+
+      # JWT Settings
+      - JWT_SECRET="secret_token"
+      - JWT_ALGORITHM="HS256"
+
+      # Admin Settings
+      - ROOT_USERNAME="admin"
+      - ROOT_PASSWORD="ADMIN-"
+
       # Mysql Setup
-      - MYSQL_HOST=140.134.197.150
+      - MYSQL_DEBUG=False
+      - MYSQL_HOST=192.168.1.105
       - MYSQL_PORT=3307
       - MYSQL_USER_NAME=root
       - MYSQL_PASSWORD=example_password
       - MYSQL_DATABASE=FCU_LLM
 
       # Milvus Setup
-      - MILVUS_HOST=140.134.197.150
+      - MILVUS_DEBUG=False
+      - MILVUS_HOST=192.168.1.105
       - MILVUS_PORT=19530
       - MILVUS_DEFAULT_COLLECTION_NAME=default
+      - MILVUS_VECTOR_DIM=4096
 
-      # LLM Setup
-      # HF: Llama3-8B-Chinese-Chat-q8-v2.gguf
-      # HF: chinese-alpaca-2-7b-gguf-q4_k.gguf
-      - REPO_ID=shenzhi-wang/Llama3-8B-Chinese-Chat-GGUF-4bit
-      - LLM_MODEL=Llama3-8B-Chinese-Chat-q4_0-v2_1.gguf
-      - HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
-    # volumes:
-    #   - /path/of/model/:/FCU_LLM/model
+      # # LLM Setup
+      # REPO_ID=shenzhi-wang/Llama3-8B-Chinese-Chat-GGUF-4bit
+      # LLM_MODEL=Llama3-8B-Chinese-Chat-q4_0-v2_1.gguf
+      # HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
+      # volumes:
+      #   - /path/of/model/:/FCU_LLM/model
+
+      # API
+      - API_URL=https://api-ams.twcc.ai/api
+      - API_KEY=4bfbaa37-0262-4f5c-878f-8e9d509bad56
+
     ports:
       - 8081:8080
     restart: unless-stopped
 
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     depends_on:
       mysql:
         condition: service_started

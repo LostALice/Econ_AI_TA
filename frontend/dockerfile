@@ -1,4 +1,4 @@
-FROM node as builder
+FROM node AS builder
 
 RUN mkdir -p /home/FCU_LLM
 
@@ -10,10 +10,4 @@ RUN npm i
 
 RUN npm run build
 
-FROM nginx
-
-RUN rm -rf /usr/share/nginx/html/*
-
-COPY --from=builder /home/FCU_LLM/.next /usr/share/nginx/html
-
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["npm", "run", "dev"]
