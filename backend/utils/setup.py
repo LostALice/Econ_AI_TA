@@ -32,6 +32,7 @@ class SetupMYSQL(object):
             if getenv("MYSQL_DEBUG") == "True":
                 logging.warning("Dropping database")
                 self.cursor.execute(f"DROP DATABASE {self.DATABASE}")
+                self.commit()
                 self.create_database()
         except connector.Error as error:
             logging.error(error)
@@ -48,50 +49,59 @@ class SetupMYSQL(object):
         self.connection.connect(database=self.DATABASE)
         self.connection.commit()
 
-        # LOGIN table
-        self.cursor.execute(
-            """
-            CREATE TABLE `FCU_LLM`.`login` (
-                `user_id` VARCHAR(45) NOT NULL,
-                `password` VARCHAR(45) NOT NULL,
-                `jwt` VARCHAR(45) NOT NULL,
-                `last_login` TIMESTAMP NOT NULL,
-                PRIMARY KEY (`user_id`)
-            );
-            """
-        )
-
-        # USER table
-        self.cursor.execute(
-            """
-            CREATE TABLE `FCU_LLM`.`user` (
-                `user_id` INT NOT NULL,
-                `username` VARCHAR(45) NOT NULL,
-                `role_id` INT NOT NULL,
-                PRIMARY KEY (`user_id`)
-            );
-            """
-        )
-
         # ROLE table
         self.cursor.execute(
             """
             CREATE TABLE `FCU_LLM`.`role` (
                 `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`role_id`)
+                PRIMARY KEY (`role_id`),
+                UNIQUE INDEX `role_id` (`role_id` ASC)
+            );
+
+            """
+        )
+        self.connection.commit()
+
+        # USER table
+        self.cursor.execute(
+            """
+            CREATE TABLE `FCU_LLM`.`user` (
+                `user_id` INT NOT NULL AUTO_INCREMENT,
+                `username` VARCHAR(45) NOT NULL,
+                `role_id` INT UNSIGNED NOT NULL,
+                PRIMARY KEY (`user_id`),
+                FOREIGN KEY (`role_id`) REFERENCES `role`(`role_id`)
             );
             """
         )
+        self.connection.commit()
+
+        # LOGIN table
+        self.cursor.execute(
+            """
+            CREATE TABLE `FCU_LLM`.`login` (
+                `user_id` INT NOT NULL,
+                `password` VARCHAR(64) NOT NULL,
+                `jwt` VARCHAR(255) NOT NULL DEFAULT "",
+                `last_login` TIMESTAMP NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (`user_id`),
+                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+            );
+            """
+        )
+        self.connection.commit()
 
         # CHAT table
         self.cursor.execute(
             """
             CREATE TABLE `FCU_LLM`.`chat` (
                 `chat_id` VARCHAR(45) NOT NULL,
-                `user_id` VARCHAR(45) NOT NULL,
+                `user_id` INT NOT NULL,
                 `chat_name` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`chat_id`)
+                PRIMARY KEY (`chat_id`),
+                UNIQUE INDEX `chat_id` (`chat_id` ASC),
+                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
             );
             """
         )
@@ -104,10 +114,11 @@ class SetupMYSQL(object):
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
-                `expired` TINYINT NOT NULL DEFAULT '0',
+                `expired` TINYINT NOT NULL DEFAULT "0",
                 `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
-                PRIMARY KEY (`file_id`, `collection`)
-            )
+                PRIMARY KEY (`file_id`, `collection`),
+                UNIQUE INDEX `file_id` (`file_id` ASC)
+            );
             """
         )
 
@@ -120,9 +131,12 @@ class SetupMYSQL(object):
                 `question` LONGTEXT NOT NULL,
                 `answer` LONGTEXT NOT NULL,
                 `token_size` INT NOT NULL DEFAULT 0,
+                `rating`TINYINT DEFAULT NULL,
                 `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `sent_by` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`chat_id`, `qa_id`)
+                PRIMARY KEY (`chat_id`, `qa_id`),
+                UNIQUE INDEX `qa_id` (`qa_id`),
+                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`)
             );
             """
         )
@@ -134,12 +148,55 @@ class SetupMYSQL(object):
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `file_id` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`qa_id`, `file_id`)
+                PRIMARY KEY (`qa_id`, `file_id`),
+                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+                FOREIGN KEY (`file_id`) REFERENCES `file`(`file_id`),
+                FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
             );
             """
         )
 
         self.connection.commit()
+
+        # Admin account
+        admin_username = getenv("ROOT_USERNAME") if getenv("ROOT_USERNAME") else "admin"
+        admin_password = getenv("ROOT_PASSWORD") if getenv("ROOT_PASSWORD") else b"ADMIN-"
+
+        import hashlib
+        hashed_admin_password = hashlib.sha3_256(admin_password.encode("utf-8")).hexdigest()
+        logging.info(f"Root username: {admin_username}")
+        logging.info(f"Root password: {hashed_admin_password}")
+
+        self.cursor.execute(
+            """
+            INSERT INTO `role` (`role_name`) VALUES ("Admin");
+            """
+        )
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 1);
+            """, (admin_username,)
+        )
+        self.cursor.execute(
+            """
+            INSERT INTO `login` (user_id, password) VALUES (1, %s);
+            """, (hashed_admin_password,)
+        )
+        self.connection.commit()
+
+        # Anonymous
+        self.cursor.execute(
+            """
+            INSERT INTO `role` (`role_name`) VALUES ("Anonymous");
+            """
+        )
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 2);
+            """, ("Anonymous",)
+        )
+        self.connection.commit()
+
         logging.debug(pformat(f"Created MYSQL database {self.DATABASE}"))
 
 
@@ -194,7 +251,7 @@ class SetupMilvus(object):
         schema.add_field(field_name="file_uuid",
                          datatype=DataType.VARCHAR, max_length=36)
         schema.add_field(field_name="content", datatype=DataType.VARCHAR,
-                         max_length=2048)
+                         max_length=4096)
         schema.add_field(field_name="vector",
                          datatype=DataType.FLOAT_VECTOR, dim=getenv("MILVUS_VECTOR_DIM"))
 

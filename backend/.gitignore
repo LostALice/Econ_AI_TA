@@ -23,4 +23,4 @@ pyvenv.cfg
 test.*
 *.log
 .docx
-*.env
+.env

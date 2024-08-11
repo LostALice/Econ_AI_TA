@@ -7,9 +7,14 @@ from utils.error import *
 
 from numpy import ndarray, asarray
 from pprint import pformat
+from utils.model import (
+    UserInfoModel
+)
 
+import numpy as np
 import requests
 import logging
+import hashlib
 import json
 import os
 
@@ -17,6 +22,159 @@ import os
 class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
         super().__init__()
+
+    def query_role(self, role_name: int) -> str | tuple[None, str]:
+        """query the role name using role id
+
+        Args:
+            role_id (int): role id
+
+        Returns:
+            str: role name
+            None: not found
+        """
+        logging.debug(
+            pformat(f"create_user {role_name}"))
+
+        self.cursor.execute("""SELECT role_id FROM `role` WHERE role_name = %s""", (role_name,))
+        self.sql_query_logger()
+        role_id = self.cursor.fetchone()
+        logging.info(pformat(role_id))
+
+        return role_id if role_id else None, "role_name not exists"
+
+
+    def create_role(self, role_name: str) -> int | tuple[None, str]:
+        """create a new role
+
+        Args:
+            role_name (str): name of the role
+
+        Returns:
+            int: the role_id
+        """
+        logging.debug(
+            pformat(f"create_role {role_name}"))
+
+        # check is role exist
+        role_id = self.query_role(role_name)
+        if role_id is None:
+            return None, "role_name not exists"
+
+        self.cursor.execute("""
+            INSERT INTO `role` (role_name)
+            VALUES (
+                %s,
+            );""", (role_name,))
+
+        self.commit()
+
+        role_id = self.query_role(role_name)
+        return role_id
+
+
+    def create_user(self, username: str, hashed_password: str, role_name: str) -> int:
+        """create a new user
+
+        Args:
+            username (str): provide a username
+            password (str): password
+            roles (str): admin | user
+
+        Returns:
+            int:
+                200: success
+                302: username exists in database
+                500: database error
+        """
+        logging.debug(
+            pformat(f"create_user {username} {hashed_password} {role_name}"))
+
+        # check if user already exists
+        self.cursor.execute("""SELECT username FROM `users` WHERE username = %s""", (username,))
+
+        self.sql_query_logger()
+        is_username_exist = self.cursor.fetchone()
+        logging.info("is_username_exist", is_username_exist)
+
+        if is_username_exist:
+            return 302
+
+        # check if role exists in database
+        self.cursor.execute("""SELECT role_id FROM `role` WHERE role_name = %s""", (role_name,))
+
+        self.sql_query_logger()
+        role_id = self.cursor.fetchone()
+        logging.info(pformat(role_id))
+
+        if is_username_exist:
+            return 302
+
+        self.cursor.execute("""
+            INSERT INTO `login` (user_id, password)
+            VALUES (
+                %s, %s,
+            );""", (username, hashed_password))
+
+        return self.commit()
+
+    def insert_login_token(self, user_id: str, jwt_token: str) -> bool:
+        # logging.debug("user: {username} trying to login")
+        self.cursor.execute("""
+            UPDATE login
+            SET jwt = %s
+            WHERE user_id = %s""", (jwt_token, user_id))
+
+        return self.commit()
+
+    def get_user_info(self, username: str, hashed_password: str) -> tuple[int, dict[UserInfoModel]]:
+        """check if the user logged
+
+        Args:
+            username (str): username
+            hashed_password (str): hashed_password
+
+        Returns:
+            int:
+                200: user inside database and password correct
+                403: password incorrect
+                500: database error
+        """
+
+        logging.debug("user: {username} trying to login")
+
+        self.cursor.execute("""
+            SELECT user.user_id, user.username, login.password, login.jwt, login.last_login, role.role_name
+            FROM user
+            JOIN login ON user.user_id = login.user_id
+            JOIN role ON user.role_id = role.role_id
+            WHERE user.username = %s AND login.password = %s""", (username, hashed_password))
+
+        login_info = self.cursor.fetchone()
+
+        logging.debug(pformat(login_info))
+
+        if login_info:
+            return 200, login_info
+
+
+    def check_user(self, username: str, roles: str = None) -> int:
+        """check username and password is inside database
+
+        Args:
+            username (str): username
+            password (str): hash of password
+            roles (str): admin | user | None roles
+
+        Returns:
+            int:
+                200: user inside database and password correct
+                401: username not found
+                403: password incorrect
+                500: database error
+        """
+
+
 
     def insert_file(self, file_uuid: str, filename: str, tags: str, collection: str = "default") -> bool:
         """insert a file record into the database
@@ -34,12 +192,33 @@ class MySQLHandler(SetupMYSQL):
             pformat(f"insert_file {file_uuid} {filename} {tags} {collection}"))
 
         self.cursor.execute("""
-            INSERT INTO file (file_id, file_name, tags, collection)
+            INSERT INTO `file` (file_id, file_name, tags, collection)
             VALUES (
                 %s, %s, %s, %s
             );""", (file_uuid, filename, tags, collection))
 
         return self.commit()
+
+    def update_rating(self, question_uuid: str, rating: bool) -> bool:
+        """rating of the answer
+
+        Args:
+            question_uuid (str): uuid of the question
+            rating (bool): True = good/ false = bad
+
+        Returns:
+            success: insert success or failure
+        """
+        logging.info(f"inserting rating {question_uuid}:{rating}")
+
+        self.cursor.execute("""
+            UPDATE table_name
+            SET rating = %s
+            WHERE qa_id = %s;""", (rating, question_uuid))
+
+        success = self.commit()
+        assert success
+        return success
 
     def insert_chatting(
         self,
@@ -65,6 +244,8 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: success or failure
         """
+        self.cursor.execute("""SELECT user_id FROM user WHERE username = %s""", (sent_by, ))
+        user_id = self.cursor.fetchone()["user_id"]
 
         logging.debug(pformat({
             "chat_id": chat_id,
@@ -74,7 +255,17 @@ class MySQLHandler(SetupMYSQL):
             "token_size": token_size,
             "sent_by": sent_by,
             "file_ids": file_ids,
+            "user_id": user_id,
         }))
+
+        self.cursor.execute("""
+            INSERT IGNORE INTO `FCU_LLM`.`chat` (chat_id, user_id, chat_name)
+            VALUES (
+                %s, %s, %s
+            );""", (chat_id, user_id, answer[:10]))
+
+        success = self.commit()
+        assert success
 
         self.cursor.execute("""
             INSERT INTO `FCU_LLM`.`qa` (chat_id, qa_id, question, answer, token_size, sent_by)
@@ -84,8 +275,6 @@ class MySQLHandler(SetupMYSQL):
         """, (chat_id, qa_id, question, answer, token_size, sent_by))
 
         success = self.commit()
-
-        # checkpoint
         assert success
 
         if not file_ids is None:
@@ -230,7 +419,7 @@ class MilvusHandler(SetupMilvus):
         self,
         question_vector: ndarray,
         collection_name: str = "default",
-        limit: int = 10
+        limit: int = 3
     ) -> list[dict[str, str, int]]:
         """search for similarity using answer from user and vector database
 
@@ -245,6 +434,7 @@ class MilvusHandler(SetupMilvus):
 
         docs_results = self.milvus_client.search(collection_name=collection_name, data=[
                                                  question_vector], limit=limit)[0]
+        logging.info(f"question_vector: {question_vector}")
         logging.info(f"docs_results: {docs_results}")
 
         regulations = []
@@ -301,6 +491,7 @@ class FileHandler(object):
         data = loader.load()
         splitted_content = "".join([text.page_content for text in data]).split("\n\n\n\n")
         splitted_content = [x.replace("\n", "").replace("\t", "") for x in splitted_content]
+        splitted_content = filter(lambda x: x != "", splitted_content)
         return splitted_content
 
     def MS_docx_splitter(self, document_path: str) -> list[str]:
@@ -310,6 +501,7 @@ class FileHandler(object):
         docx = UnstructuredWordDocumentLoader(document_path)
         data = docx.load()
         splitted_content = "".join([text.page_content.replace("A:  ", "").replace("\n", "") for text in data]).split("  ")
+        splitted_content = filter(lambda x: x != "", splitted_content)
         return splitted_content
 
 # https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api
@@ -343,72 +535,10 @@ class VectorHandler(object):
         response_data = response.json()
         print(response_data)
         embeddings_vector = response_data["data"][0]["embedding"]
+        unpadded_vector = asarray(embeddings_vector, dtype=float)
 
-        return asarray(embeddings_vector, dtype=float)
+        return np.pad(unpadded_vector, (0, 4096 - len(unpadded_vector)), mode="constant", constant_values=0)
 
-# class ResponseHandler(object):
-#     def __init__(self) -> None:
-#         # only except .gguf format
-#         if not os.getenv("LLM_MODEL").endswith(".gguf"):
-#             raise FormatError
-
-#         if not os.path.exists(f"""./model/{os.getenv("LLM_MODEL")}"""):
-#             from huggingface_hub import hf_hub_download
-#             hf_hub_download(
-#                 repo_id=os.getenv("REPO_ID"),
-#                 filename=os.getenv("LLM_MODEL"),
-#                 local_dir="./model"
-#             )
-
-#         self.model = Llama(
-#             model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
-#             verbose=False,
-#             n_gpu_layers=-1,
-#             n_ctx=0,
-#         )
-
-#         self.system_prompt = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {regulations} 根據上文回答問題"
-
-#         self.converter = opencc.OpenCC("s2tw.json")
-
-#     def token_counter(self, prompt: str) -> int:
-#         return len(self.model.tokenize(prompt.encode("utf-8")))
-
-#     def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str | int]:
-#         """response from RAG
-
-#         Args:
-#             question (str): question from user
-#             regulations (list): regulations from database
-#             max_tokens (int, optional): max token allowed. Defaults to 8192.
-
-#         Returns:
-#             answer: response from RAG
-#             token_size: token size
-#         """
-#         content = self.system_prompt.format(regulations=" ".join(regulations))
-
-#         token_size = self.token_counter(content)
-
-#         message = [
-#             {
-#                 "role": "system",
-#                 "content": content,
-#             },
-#             {
-#                 "role": "user",
-#                 "content": question
-#             },
-#         ]
-
-#         output = self.model.create_chat_completion(
-#             message,
-#             stop=["<|eot_id|>", "<|end_of_text|>"],
-#             max_tokens=max_tokens,
-#             temperature=.5
-#         )["choices"][0]["message"]["content"]
-
-#         return self.converter.convert(output), token_size
 
 # https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/conversation-api
 class ResponseHandler(object):
@@ -417,7 +547,7 @@ class ResponseHandler(object):
 
         self.api_key = os.getenv("API_KEY")
 
-    def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str | int]:
+    def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str, int]:
         """response from RAG
 
         Args:
@@ -437,10 +567,10 @@ class ResponseHandler(object):
         }
 
         data = {
-            "model": "llama3-ffm-70b-chat",
+            "model": "meta-llama31-70b-inst",
             "messages": [
                 {
-                    "role": "human",
+                    "role": "system",
                     "content": "你是經濟老師的得力助手，你必須用有支持的資訊來回答我的問題。你必須用中文或英文回答我取決於我問你的問題",
                 },
                 {
@@ -449,7 +579,7 @@ class ResponseHandler(object):
                 },
                 {
                     "role": "human",
-                    "content": "根據以下資料:" + "".join(regulations) + "回答以下問題:" + question,
+                    "content": "根據以下資料:" + "".join(regulations) + "回答以下問題:" + question + "請先用總結你的回答，之後解釋你的回答讓學生容易理解",
                 },
             ],
             "parameters": {
@@ -463,8 +593,8 @@ class ResponseHandler(object):
 
         response = requests.post(self.url, headers=headers, data=json.dumps(data))
         response_data = response.json()
-
-        return response_data.get("generated_text"), response_data.get("total_time_taken")
+        logging.debug(f"Response: {pformat(response_data)}")
+        return response_data.get("generated_text").replace("**", ""), response_data.get("prompt_tokens")
 
 if __name__ == "__main__":
     ...

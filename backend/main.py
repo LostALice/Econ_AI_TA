@@ -1,9 +1,9 @@
 # Code by AkinoAlice@TyrantRey
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Response
 from fastapi import UploadFile, Form
 from fastapi import HTTPException
+from fastapi import FastAPI
 
 from utils.helper import (
     ResponseHandler,
@@ -14,6 +14,8 @@ from utils.helper import (
 )
 from utils.model import (
     QuestioningModel,
+    LoginFormModel,
+    RatingModel,
 )
 from utils.error import *
 
@@ -22,9 +24,12 @@ from starlette.responses import FileResponse
 from typing import Literal
 from pprint import pformat
 
+import datetime
+import hashlib
 import logging
 import uuid
 import json
+import jwt
 import sys
 import os
 
@@ -41,15 +46,21 @@ logging.debug(f"""Debug {os.getenv("DEBUG")}""")
 # disable logging
 logging.getLogger("multipart").propagate = False
 
+CORS_allow_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        os.getenv("CORS_ALLOWED_ORIGIN"),
+    ]
+
+logging.info(pformat(("CORS:", CORS_allow_origins)))
+
 app = FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
     # can alter with time
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        os.getenv("CORS_ALLOWED_ORIGIN"),
-    ],
+    allow_origins=CORS_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,7 +79,7 @@ class UtilsLoader(object):
 LOADER = UtilsLoader()
 
 logging.debug("====================")
-logging.debug("| loading finished |")
+logging.debug("| Loading Finished |")
 logging.debug("====================")
 
 
@@ -78,7 +89,43 @@ async def test():
 
 
 @app.post("/login/", status_code=200)
-async def login():
+async def login(login_form: LoginFormModel):
+    username = login_form.username
+    hashed_password = login_form.hashed_password
+
+    _status, user_info = LOADER.mysql_client.get_user_info(username, hashed_password)
+
+    if _status != 200:
+        return HTTPException(status_code=_status, detail="Failed to login")
+
+    if _status == 200:
+        login_info = {}
+        login_info["expire_time"] = str(datetime.datetime.now() + datetime.timedelta(days=1))
+        login_info["role_name"] = user_info["role_name"]
+        login_info["username"] = user_info["username"]
+        login_info["user_id"] = user_info["user_id"]
+
+        logging.debug(pformat(login_info))
+
+        jwt_token = jwt.encode(login_info, os.getenv("JWT_SECRET"), algorithm=os.getenv("JWT_ALGORITHM"))
+        logging.debug(f"Generated new jwt token:{jwt_token}")
+
+    _success = LOADER.mysql_client.insert_login_token(login_info["user_id"], jwt_token)
+    if _success:
+        return {
+            "jwt_token": jwt_token,
+            "role": login_info["role_name"]
+        }
+    else:
+        return HTTPException(status_code=500, detail="unknown issue")
+
+@app.post("/sign/", status_code=200)
+async def sign_in(username: str, password: str):
+    hash_function = hashlib.sha3_256()
+    hashed_password = hash_function.update(password).hexdigest()
+
+
+    LOADER.mysql_client.create_user(username, hashed_password)
     return HTTPException(status_code=200, detail="login")
 
 
@@ -205,7 +252,32 @@ async def file_upload(
     return HTTPException(status_code=200, detail="Internal server error")
 
 
-@app.post("/chat/{chat_id}", status_code=200)
+@app.post("/rating/", status_code=200)
+async def question_rating(rating_model: RatingModel):
+    """Score of the answer
+
+    Args:
+        rating_model (RatingModel): question_uuid: string
+                                    rating: bool
+    Returns:
+        _type_: _description_
+    """
+    question_uuid = rating_model.question_uuid
+    score = rating_model.rating
+
+    logging.debug(pformat({
+        "question_uuid": question_uuid,
+        "score": score,
+    }))
+
+    success = LOADER.mysql_client.update_rating(question_uuid=question_uuid, score=score)
+
+    return {
+        "success": success
+    }
+
+
+@app.post("/chat/{chat_id}/", status_code=200)
 async def questioning(question_model: QuestioningModel):
     """Ask the question and return the answer from RAG
 
@@ -254,6 +326,7 @@ async def questioning(question_model: QuestioningModel):
 
     answer, token_size = LOADER.RAG.response(
         regulations=regulations_content, question=question)
+    answer = "".join(answer).replace("\n\n", "\n")
 
     # insert into mysql
     LOADER.mysql_client.insert_chatting(

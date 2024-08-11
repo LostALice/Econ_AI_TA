@@ -5,7 +5,7 @@
 /Include
 /share
 /Library
-.vscode/
+/.vscode
 setting.*
 
 # LLM
@@ -22,5 +22,5 @@ pyvenv.cfg
 # ===================
 test.*
 *.log
-.docx
-*.env
+*.docx
+.env

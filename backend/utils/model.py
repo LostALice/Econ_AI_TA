@@ -1,6 +1,5 @@
 # Code by AkinoAlice@TyrantRey
 
-
 from pydantic import BaseModel
 from typing import Literal
 
@@ -29,3 +28,20 @@ class Departments(BaseModel):
         "研究中心",
         "其他",
     ]
+
+class LoginFormModel(BaseModel):
+    username: str
+    hashed_password: str
+
+class UserInfoModel(BaseModel):
+    user_id: int
+    username: str
+    password: str
+    jwt: str
+    last_log: str
+    role_nam: str
+
+
+class RatingModel(BaseModel):
+    question_uuid: str
+    rating: bool

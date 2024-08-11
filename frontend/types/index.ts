@@ -25,3 +25,11 @@ type TDepartmentName =
 export interface IDepartment {
     departmentName: TDepartmentName
 }
+
+type TPermission =
+    | true
+    | false
+
+export interface ILoginPermission {
+    loggedInState: TPermission
+}
