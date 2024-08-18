@@ -119,13 +119,12 @@ class MySQLHandler(SetupMYSQL):
         return self.commit()
 
     def insert_login_token(self, user_id: str, jwt_token: str) -> bool:
-        # logging.debug("user: {username} trying to login")
         self.cursor.execute("""
             UPDATE login
             SET jwt = %s
             WHERE user_id = %s""", (jwt_token, user_id))
 
-        return self.commit()
+        return self.commit() ? True : False
 
     def get_user_info(self, username: str, hashed_password: str) -> tuple[int, dict[UserInfoModel]]:
         """check if the user logged
@@ -141,7 +140,7 @@ class MySQLHandler(SetupMYSQL):
                 500: database error
         """
 
-        logging.debug("user: {username} trying to login")
+        logging.debug(f"user: {username} trying to login")
 
         self.cursor.execute("""
             SELECT user.user_id, user.username, login.password, login.jwt, login.last_login, role.role_name

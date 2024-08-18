@@ -97,7 +97,7 @@ export const MessageBox: FC<IMessageInfo> = ({
                     <Tooltip content={<span>沒有幫助</span>}>
                       <Button
                         onClick={() => {
-                          rating_answer(questionUUID, true);
+                          rating_answer(questionUUID, false);
                         }}
                       >
                         👎
