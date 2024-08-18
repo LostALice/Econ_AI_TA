@@ -124,7 +124,7 @@ class MySQLHandler(SetupMYSQL):
             SET jwt = %s
             WHERE user_id = %s""", (jwt_token, user_id))
 
-        return self.commit() ? True : False
+        return True if self.commit() else False
 
     def get_user_info(self, username: str, hashed_password: str) -> tuple[int, dict[UserInfoModel]]:
         """check if the user logged
@@ -213,7 +213,7 @@ class MySQLHandler(SetupMYSQL):
         logging.info(f"inserting rating {question_uuid}:{rating}")
 
         self.cursor.execute("""
-            UPDATE table_name
+            UPDATE `qa`
             SET rating = %s
             WHERE qa_id = %s;""", (rating, question_uuid))
 

@@ -274,7 +274,7 @@ async def question_rating(rating_model: RatingModel):
         "score": score,
     }))
 
-    success = LOADER.mysql_client.update_rating(question_uuid=question_uuid, score=score)
+    success = LOADER.mysql_client.update_rating(question_uuid=question_uuid, rating=score)
 
     return {
         "success": success
