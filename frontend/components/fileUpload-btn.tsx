@@ -83,7 +83,7 @@ export const FileUploadButton = () => {
 
     tags.forEach((tag) => fileFormData.append("tags", tag));
 
-    fetch(siteConfig.api_url + "/upload", {
+    fetch(siteConfig.api_url + "/upload/", {
       method: "POST",
       body: fileFormData,
     }).then((response) => {
