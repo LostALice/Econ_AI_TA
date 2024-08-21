@@ -133,7 +133,7 @@ async def sign_in(username: str, password: str):
     return HTTPException(status_code=200, detail="login")
 
 
-@app.get("/documentation/{docs_id}/", status_code=200)
+@app.get("/documentation/{docs_id}", status_code=200)
 async def get_docs(docs_id: str) -> FileResponse:
     """download documentation from docs_id
 
