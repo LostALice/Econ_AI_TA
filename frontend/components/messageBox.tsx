@@ -65,7 +65,7 @@ export const MessageBox: FC<IMessageInfo> = ({
                   <Button
                     isExternal
                     href={
-                      siteConfig.api_url?.toString() + "/docs/" + file.file_uuid
+                      siteConfig.api_url?.toString() + "/documentation/" + file.file_uuid
                     }
                     key={file.file_uuid}
                     as={Link}
