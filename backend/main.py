@@ -21,7 +21,7 @@ from utils.error import *
 
 from logging.handlers import RotatingFileHandler
 from starlette.responses import FileResponse
-from typing import Literal
+from typing import Literal, Annotated
 from pprint import pformat
 
 import datetime
@@ -97,6 +97,7 @@ async def login(login_form: LoginFormModel):
 
     if _status != 200:
         return {
+            "status_code": _status,
             "success": False,
             "response": _status,
         }
@@ -116,6 +117,7 @@ async def login(login_form: LoginFormModel):
     _success = LOADER.mysql_client.insert_login_token(login_info["user_id"], jwt_token)
     if _success:
         return {
+            "status_code": 200,
             "success": True,
             "jwt_token": jwt_token,
             "role": login_info["role_name"]
@@ -145,7 +147,7 @@ async def get_docs(docs_id: str) -> FileResponse:
     """
 
     if docs_id == "":
-        return HTTPException(status_code=200, detail="Empty request")
+        return HTTPException(status_code=422, detail="Empty request")
 
     file_name = LOADER.mysql_client.query_docs_name(docs_id)["file_name"]
     file_extension = file_name.split(".")[-1]
@@ -169,6 +171,7 @@ async def get_department_docs_list(
     docs_list = LOADER.mysql_client.select_department_docs_list(department)
 
     return {
+        "status_code": 200,
         "docs_list": docs_list
     }
 
@@ -182,11 +185,8 @@ async def get_uuid():
 @app.post("/upload/", status_code=200)
 async def file_upload(
     docs_file: UploadFile,
-    tags: list[str] = Form(),
-    department: Literal[
-        "docx",
-        "pptx",
-    ] = "docx",
+    tags: Annotated[list[str], Form()],
+    department: Literal["docx", "pptx"] = "docx",
     collection: str = "default"
 ):
     """upload a docs file
@@ -213,7 +213,7 @@ async def file_upload(
     if file_extension != department:
         # exclude non invalid files
         logging.debug(pformat(f"Invalid file type: {file_extension}, prefer: {department}"))
-        return HTTPException(status_code=200, detail="Invalid file type")
+        return HTTPException(status_code=422, detail="Invalid file type")
 
     # save uploaded pdf file
     docs_contents = docs_file.file.read()
@@ -249,11 +249,11 @@ async def file_upload(
 
     if success:
         return {
-            "success": success,
+            "status_code": 200,
             "file_id": file_uuid,
         }
 
-    return HTTPException(status_code=200, detail="Internal server error")
+    return HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/rating/", status_code=200)
@@ -276,10 +276,13 @@ async def question_rating(rating_model: RatingModel):
 
     success = LOADER.mysql_client.update_rating(question_uuid=question_uuid, rating=score)
 
-    return {
-        "success": success
-    }
+    if success:
+        return {
+            "status_code": 200,
+            "success": success
+        }
 
+    return HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.post("/chat/{chat_id}/", status_code=200)
 async def questioning(question_model: QuestioningModel):
@@ -345,12 +348,13 @@ async def questioning(question_model: QuestioningModel):
 
     if answer:
         return {
+            "status_code": 200,
             "question_uuid": question_uuid,
             "answer": answer,
             "files": files
         }
 
-    return HTTPException(status_code=200, detail="Internal server error")
+    return HTTPException(status_code=500, detail="Internal server error")
 
 if __name__ == "__main__":
     # development only

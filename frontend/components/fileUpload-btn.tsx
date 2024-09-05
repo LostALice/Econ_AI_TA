@@ -6,49 +6,49 @@ import {
   ModalFooter,
   Button,
   useDisclosure,
-} from "@nextui-org/react";
-import { useEffect, useState, useContext } from "react";
+} from "@nextui-org/react"
+import { useEffect, useState, useContext } from "react"
 
-import { getCookie } from "cookies-next";
-import { siteConfig } from "@/config/site";
-import { AuthContext } from "@/contexts/AuthContext";
+import { getCookie } from "cookies-next"
+import { siteConfig } from "@/config/site"
+import { AuthContext } from "@/contexts/AuthContext"
 
 export const FileUploadButton = () => {
-  const { role, setRole } = useContext(AuthContext);
+  const { role, setRole } = useContext(AuthContext)
 
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
-  const [isProgressing, setIsProgressing] = useState<boolean>(false);
-  const [fileObject, setFileObject] = useState<File | null>();
-  const [fileURL, setFileURL] = useState<string>();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure()
+  const [uploadSuccess, setUploadSuccess] = useState<number>(0)
+  const [isProgressing, setIsProgressing] = useState<boolean>(false)
+  const [fileObject, setFileObject] = useState<File | null>()
+  const [fileURL, setFileURL] = useState<string>()
 
   useEffect(() => {
-    const userRole = getCookie("role") || "未登入";
-    setRole(userRole);
-  }, []);
+    const userRole = getCookie("role") || "未登入"
+    setRole(userRole)
+  })
 
   function renderFilePreview(file: File) {
-    const fileType = file.type;
+    const fileType = file.type
 
     switch (fileType) {
       case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         return (
           <div className="w-full flex justify-center">
             <span className="text-left text-lg">
-              {uploadSuccess ? "上載成功:" : ""}
+              {uploadSuccess ? (uploadSuccess == 200 ? "上載成功:" : "上載失敗:") : ""}
               {file.name}
             </span>
           </div>
-        );
+        )
       case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
         return (
           <div className="w-full flex justify-center">
             <span className="text-left text-lg">
-              {uploadSuccess ? "上載成功:" : ""}
+              {uploadSuccess ? (uploadSuccess == 200 ? "上載成功:" : "上載失敗:") : ""}
               {file.name}
             </span>
           </div>
-        );
+        )
       default:
         return (
           <object
@@ -56,47 +56,51 @@ export const FileUploadButton = () => {
             data={fileURL}
             type="image/png"
           />
-        );
+        )
     }
   }
 
-  function uploadFile(
+  async function uploadFile(
     file: File,
     collection: string = "default",
     tags: Array<string>
-  ): void {
-    const fileFormData = new FormData();
-    let department = "docx";
+  ) {
+    const apiUploadFileURL = new URL(siteConfig.api_url + "/upload/")
+    const fileFormData = new FormData()
+    let department = "None"
 
     switch (file.type) {
       case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        department = "docx";
-        break;
+        department = "docx"
+        break
       case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-        department = "pptx";
-        break;
+        department = "pptx"
+        break
     }
 
-    fileFormData.append("docs_file", file);
-    fileFormData.append("department", department);
-    fileFormData.append("collection", collection);
+    fileFormData.append("docs_file", file)
+    tags.forEach((tag) => fileFormData.append("tags", tag))
 
-    tags.forEach((tag) => fileFormData.append("tags", tag));
+    apiUploadFileURL.searchParams.append("department", department)
+    apiUploadFileURL.searchParams.append("collection", collection)
 
-    fetch(siteConfig.api_url + "/upload/", {
+    const resp = await fetch(apiUploadFileURL, {
       method: "POST",
       body: fileFormData,
-    }).then((response) => {
-      if (response.ok) {
-        console.log("File uploaded successfully");
-        setIsProgressing(false);
-        setUploadSuccess(true);
-      } else {
-        console.error("Error uploading file");
-        setIsProgressing(false);
-        setUploadSuccess(false);
-      }
-    });
+    })
+
+    const respJson = await resp.json()
+    console.log(respJson)
+    if (respJson.status_code === 200) {
+      console.log("File uploaded successfully")
+      setIsProgressing(false)
+      setUploadSuccess(200)
+    } else {
+      console.error("Error uploading file")
+      setIsProgressing(false)
+      setUploadSuccess(422)
+    }
+
   }
 
   return (
@@ -105,11 +109,11 @@ export const FileUploadButton = () => {
         className="bg-transparent text-medium text-center w-full dark:bg-stone-600 shadow-md"
         isDisabled={role == "Admin" ? false : true}
         onPress={() => {
-          onOpen();
-          setIsProgressing(false);
-          setUploadSuccess(false);
-          setFileURL("");
-          setFileObject(null);
+          onOpen()
+          setIsProgressing(false)
+          setUploadSuccess(0)
+          setFileURL("")
+          setFileObject(null)
         }}
       >
         文件上傳
@@ -129,24 +133,24 @@ export const FileUploadButton = () => {
                 <div
                   className="container mx-auto"
                   onDragOver={(e) => {
-                    e.preventDefault();
+                    e.preventDefault()
                   }}
-                  onDragLeave={(e) => {}}
+                  onDragLeave={(e) => { }}
                   onDragEnd={(e) => {
-                    e.preventDefault();
+                    e.preventDefault()
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
                     [...e.dataTransfer.items].forEach((item) => {
                       if (item.kind === "file") {
-                        const droppedFile = e.dataTransfer.items[0].getAsFile();
+                        const droppedFile = e.dataTransfer.items[0].getAsFile()
                         if (droppedFile) {
-                          let blobUrl = URL.createObjectURL(droppedFile);
-                          setFileURL(blobUrl);
-                          setFileObject(droppedFile);
+                          let blobUrl = URL.createObjectURL(droppedFile)
+                          setFileURL(blobUrl)
+                          setFileObject(droppedFile)
                         }
                       }
-                    });
+                    })
                   }}
                 >
                   <div className="container">
@@ -165,13 +169,13 @@ export const FileUploadButton = () => {
                           className="hidden"
                           accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.presentationml.presentation"
                           onChange={(e) => {
-                            let droppedFiles = e.target.files;
+                            let droppedFiles = e.target.files
                             if (droppedFiles && droppedFiles[0]) {
                               let blobUrl = URL.createObjectURL(
                                 droppedFiles[0]
-                              );
-                              setFileURL(blobUrl);
-                              setFileObject(droppedFiles[0]);
+                              )
+                              setFileURL(blobUrl)
+                              setFileObject(droppedFiles[0])
                             }
                           }}
                         />
@@ -181,11 +185,12 @@ export const FileUploadButton = () => {
                         <div className="flex flex-col items-center w-full">
                           {renderFilePreview(fileObject)}
                           <ModalFooter className="flex justify-center">
-                            {uploadSuccess ? (
+                            {uploadSuccess != 0 ? (
                               <Button
                                 onClick={() => {
-                                  setFileURL("");
-                                  setFileObject(null);
+                                  setFileURL("")
+                                  setFileObject(null)
+                                  setUploadSuccess(0)
                                 }}
                                 className="px-5 rounded text-medium bg-gray-400"
                               >
@@ -195,8 +200,8 @@ export const FileUploadButton = () => {
                               <div className="flex justify-center gap-2">
                                 <Button
                                   onClick={() => {
-                                    setFileURL("");
-                                    setFileObject(null);
+                                    setFileURL("")
+                                    setFileObject(null)
                                   }}
                                   className="px-5 rounded text-medium bg-gray-400"
                                 >
@@ -205,8 +210,8 @@ export const FileUploadButton = () => {
                                 <Button
                                   isLoading={isProgressing}
                                   onClick={() => {
-                                    setIsProgressing(true);
-                                    uploadFile(fileObject, "default", [""]);
+                                    setIsProgressing(true)
+                                    uploadFile(fileObject, "default", [""])
                                   }}
                                   className="px-5 rounded text-medium"
                                 >
@@ -226,5 +231,5 @@ export const FileUploadButton = () => {
         </ModalContent>
       </Modal>
     </>
-  );
-};
+  )
+}
