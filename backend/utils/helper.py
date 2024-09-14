@@ -33,7 +33,7 @@ class MySQLHandler(SetupMYSQL):
             str: role name
             None: not found
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.debug(
             pformat(f"create_user {role_name}"))
 
@@ -54,7 +54,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             int: the role_id
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.debug(
             pformat(f"create_role {role_name}"))
 
@@ -89,7 +89,7 @@ class MySQLHandler(SetupMYSQL):
                 302: username exists in database
                 500: database error
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.debug(
             pformat(f"create_user {username} {hashed_password} {role_name}"))
 
@@ -154,7 +154,7 @@ class MySQLHandler(SetupMYSQL):
                 403: password incorrect
                 500: database error
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.debug(f"user: {username} trying to login")
 
         self.cursor.execute("""
@@ -203,7 +203,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: success or failure
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.debug(
             pformat(f"insert_file {file_uuid} {filename} {tags} {collection}"))
 
@@ -225,7 +225,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             success: insert success or failure
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         logging.info(f"inserting rating {question_uuid}:{rating}")
 
         self.cursor.execute("""
@@ -261,7 +261,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: success or failure
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         self.cursor.execute("""SELECT user_id FROM user WHERE username = %s""", (sent_by, ))
         user_id = self.cursor.fetchone()["user_id"]
 
@@ -318,7 +318,7 @@ class MySQLHandler(SetupMYSQL):
     #     Returns:
     #         filename: file name
     #     """
-    #     self.connection.reconnect(attempts=3)
+    #     self.connection.ping(attempts=3)
     #     self.cursor.execute("""SELECT file_id
     #         FROM FCU_LLM.file
     #         WHERE file_name = %s
@@ -340,7 +340,7 @@ class MySQLHandler(SetupMYSQL):
          Returns:
              filename: file name
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
 
         logging.info(pformat("query docs name {docs_id}"))
         self.cursor.execute("""SELECT file_name
@@ -360,7 +360,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             list[dict[file_id, file_name, last_update]]: list of docs
         """
-        self.connection.reconnect(attempts=3)
+        self.connection.ping(attempts=3)
         self.cursor.execute(
             """ SELECT file_id, file_name, last_update
                 FROM FCU_LLM.file
