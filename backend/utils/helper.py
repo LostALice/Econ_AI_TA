@@ -33,6 +33,7 @@ class MySQLHandler(SetupMYSQL):
             str: role name
             None: not found
         """
+        self.connection.reconnect(attempts=3)
         logging.debug(
             pformat(f"create_user {role_name}"))
 
@@ -53,6 +54,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             int: the role_id
         """
+        self.connection.reconnect(attempts=3)
         logging.debug(
             pformat(f"create_role {role_name}"))
 
@@ -87,6 +89,7 @@ class MySQLHandler(SetupMYSQL):
                 302: username exists in database
                 500: database error
         """
+        self.connection.reconnect(attempts=3)
         logging.debug(
             pformat(f"create_user {username} {hashed_password} {role_name}"))
 
@@ -119,6 +122,18 @@ class MySQLHandler(SetupMYSQL):
         return self.commit()
 
     def insert_login_token(self, user_id: str, jwt_token: str) -> bool:
+        """
+            insert jwt to sql
+
+        Args:
+            user_id (str): target user
+            jwt_token (str): jwt token
+
+        Returns:
+            bool: success or not
+        """
+        logging.info(pformat(f"insert_login_token {user_id} {jwt_token}"))
+
         self.cursor.execute("""
             UPDATE login
             SET jwt = %s
@@ -139,7 +154,7 @@ class MySQLHandler(SetupMYSQL):
                 403: password incorrect
                 500: database error
         """
-
+        self.connection.reconnect(attempts=3)
         logging.debug(f"user: {username} trying to login")
 
         self.cursor.execute("""
@@ -159,22 +174,21 @@ class MySQLHandler(SetupMYSQL):
             return 403, "Error"
 
 
-    def check_user(self, username: str, roles: str = None) -> int:
-        """check username and password is inside database
+    # def check_user(self, username: str, roles: str = None) -> int:
+    #     """check username and password is inside database
 
-        Args:
-            username (str): username
-            password (str): hash of password
-            roles (str): admin | user | None roles
+    #     Args:
+    #         username (str): username
+    #         password (str): hash of password
+    #         roles (str): admin | user | None roles
 
-        Returns:
-            int:
-                200: user inside database and password correct
-                401: username not found
-                403: password incorrect
-                500: database error
-        """
-
+    #     Returns:
+    #         int:
+    #             200: user inside database and password correct
+    #             401: username not found
+    #             403: password incorrect
+    #             500: database error
+    #     """
 
 
     def insert_file(self, file_uuid: str, filename: str, tags: str, collection: str = "default") -> bool:
@@ -189,6 +203,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: success or failure
         """
+        self.connection.reconnect(attempts=3)
         logging.debug(
             pformat(f"insert_file {file_uuid} {filename} {tags} {collection}"))
 
@@ -210,6 +225,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             success: insert success or failure
         """
+        self.connection.reconnect(attempts=3)
         logging.info(f"inserting rating {question_uuid}:{rating}")
 
         self.cursor.execute("""
@@ -245,6 +261,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: success or failure
         """
+        self.connection.reconnect(attempts=3)
         self.cursor.execute("""SELECT user_id FROM user WHERE username = %s""", (sent_by, ))
         user_id = self.cursor.fetchone()["user_id"]
 
@@ -291,19 +308,41 @@ class MySQLHandler(SetupMYSQL):
 
         return success
 
-    def query_docs_id(self, docs_name: str) -> str:
-        self.cursor.execute("""SELECT file_id
-            FROM FCU_LLM.file
-            WHERE file_name = %s
-            """, (docs_name,)
-        )
+    # def query_docs_id(self, docs_name: str) -> str:
+    #     """
+    #         search documents by id
 
-        self.sql_query_logger()
-        file_name = self.cursor.fetchone()
-        logging.info(pformat(file_name))
-        return file_name
+    #     Args:
+    #         docs_name: name of the documents
+
+    #     Returns:
+    #         filename: file name
+    #     """
+    #     self.connection.reconnect(attempts=3)
+    #     self.cursor.execute("""SELECT file_id
+    #         FROM FCU_LLM.file
+    #         WHERE file_name = %s
+    #         """, (docs_name,)
+    #     )
+
+    #     self.sql_query_logger()
+    #     file_name = self.cursor.fetchone()
+    #     logging.info(pformat(file_name))
+    #     return file_name
 
     def query_docs_name(self, docs_id: str) -> str:
+        """
+            search documents by id
+
+         Args:
+             docs_id: id of the documents
+
+         Returns:
+             filename: file name
+        """
+        self.connection.reconnect(attempts=3)
+
+        logging.info(pformat("query docs name {docs_id}"))
         self.cursor.execute("""SELECT file_name
             FROM FCU_LLM.file
             WHERE file_id = %s
@@ -321,7 +360,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             list[dict[file_id, file_name, last_update]]: list of docs
         """
-
+        self.connection.reconnect(attempts=3)
         self.cursor.execute(
             """ SELECT file_id, file_name, last_update
                 FROM FCU_LLM.file
