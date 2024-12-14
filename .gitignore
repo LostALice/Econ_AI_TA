@@ -7,6 +7,7 @@
 /Library
 **/.vscode
 setting.*
+**/.venv/**
 
 # LLM
 # ===================
