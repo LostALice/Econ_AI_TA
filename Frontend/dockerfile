@@ -1,0 +1,13 @@
+FROM node AS builder
+
+RUN mkdir -p /home/FCU_LLM
+
+WORKDIR /home/FCU_LLM
+
+COPY . .
+
+RUN npm i
+
+RUN npm run build
+
+CMD ["npm", "run", "dev"]
