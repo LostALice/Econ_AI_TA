@@ -1,0 +1,36 @@
+{
+    "nav": {
+        "title": {
+            "zh": "逢甲大學經濟學智能TA",
+            "en": "FCU Economics AI TA"
+        },
+        "langSwitch": {
+            "zh": "Language",
+            "en": "Language"    
+        }
+    },
+    "chat": {
+        "index": {
+            "Chatroom ID": {
+                "zh": "聊天室 ID",
+                "en": "Chatroom ID"
+            },
+            "role": {
+                "zh": "身份",
+                "en": "Role"
+            },
+            "tips": {
+                "zh": "機械人可能會出錯。請參考文檔核對重要資訊。",
+                "en": "Chatbot responses may be inaccurate. Verify before use."
+            },
+            "send": {
+                "zh": "傳送",
+                "en": "Send"
+            },
+            "text_input_placeholder": {
+                "zh": "傳送訊息給TA",
+                "en": "Send question to TA"
+            }
+        }
+    }
+}

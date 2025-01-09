@@ -1,8 +1,8 @@
-import { Navbar } from "@/components/navbar";
+import { Navbar } from "@/components/navbar/navbar";
 import { Link } from "@nextui-org/link";
 import { Head } from "./head";
 
-import Transition from "@/components/transition";
+import Transition from "@/components/transition/transition";
 
 export default function DefaultLayout({
 	children,

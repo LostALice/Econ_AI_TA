@@ -39,7 +39,7 @@ async def get_uuid() -> str:
     return chatroom_uuid
 
 
-@router.post("/chatroom/rating/", status_code=200)
+@router.patch("/chatroom/rating/", status_code=200)
 async def answer_rating(
     rating_model: RatingModel,
 ) -> AnswerRatingModel:
@@ -93,7 +93,7 @@ async def questioning(
     Args:
         Args:
         chat_id (str): chatroom uuid
-        question (str): question content
+        question (list[str]): question content
         user_id (str): user id
         collection (str, optional): collection of docs database. Defaults to "default".
         language (str): language for the response
@@ -107,6 +107,7 @@ async def questioning(
     user_id = question_model.user_id
     collection = question_model.collection
     language = question_model.language
+    question_type = question_model.question_type
     question_uuid = str(uuid4())
 
     logger.debug(
@@ -144,9 +145,10 @@ async def questioning(
             )
             seen.add(docs.source)
 
-    answer, token_size = response_client.response(
+    answer, token_size = response_client.generate_response(
         question=question,
         queried_document=document_content,
+        question_type=question_type,
         max_tokens=8192,
         language=language,
     )

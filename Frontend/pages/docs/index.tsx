@@ -14,11 +14,11 @@ import {
   TableCell,
 } from "@nextui-org/table";
 
-import { FileUploadButton } from "@/components/fileUpload-btn";
+import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 
 import { fetchDocsList } from "@/pages/api/api";
-import { IDocsFormat } from "@/types/api";
-import { IDepartment } from "@/types/";
+import { IDepartment } from "@/types/global";
+import { IDocsFormat } from "@/types/api/type";
 
 export default function DocsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);

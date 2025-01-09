@@ -19,6 +19,7 @@ class QuestioningModel(BaseModel):
     question: list[str]
     user_id: str
     language: Literal["CHINESE", "ENGLISH"] = "CHINESE"
+    question_type: Literal["CHATTING", "TESTING", "THEOREM"]
     collection: str = "default"
 
 

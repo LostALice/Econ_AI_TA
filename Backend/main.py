@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
 import os
+import json
 
 from dotenv import load_dotenv
 
@@ -18,17 +19,30 @@ logger = CustomLoggerHandler(__name__).setup_logging()
 # fastapi app setup
 app = FastAPI()
 
-CORS_allow_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    os.getenv("CORS_ALLOWED_ORIGIN"),
-]
+
+def CORS_environmental_handler(cors_allowed_origin: str) -> list[str]:
+    default_origin = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
+
+    default_origin.extend([item.strip() for item in cors_allowed_origin.split(",")])
+    return default_origin
+
+
+CORS_env_value = os.getenv("CORS_ALLOWED_ORIGIN")
+
+assert CORS_env_value != None, "Environment variable CORS_ALLOWED_ORIGIN is not set."
+assert isinstance(
+    CORS_env_value, str
+), "Invalid environment variable CORS_ALLOWED_ORIGIN"
+
+CORS_allow_origins = CORS_environmental_handler(CORS_env_value)
 
 app.add_middleware(
     CORSMiddleware,
-    # can alter with time
     allow_origins=CORS_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
