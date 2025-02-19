@@ -20,3 +20,7 @@ class OLLAMAEmbeddingConfig(BaseModel):
     ollama_host: str = Field(..., min_length=1)
     ollama_port: int = Field(..., ge=1, le=65535)
     ollama_embedding_model_name: str = Field(..., min_length=1)
+
+class OPENAIEmbeddingConfig(BaseModel):
+    openai_api_key: str = Field(..., min_length=1)
+    openai_embedding_model_name: str = Field(..., min_length=1)

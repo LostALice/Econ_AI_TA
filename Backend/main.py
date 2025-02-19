@@ -9,9 +9,10 @@ from fastapi import FastAPI
 import os
 import json
 
-from dotenv import load_dotenv
+if __name__ == "__main__":
+    from dotenv import load_dotenv
 
-load_dotenv("./.env")
+    load_dotenv("./.env")
 
 # logging setup
 logger = CustomLoggerHandler(__name__).setup_logging()
@@ -66,7 +67,7 @@ app.include_router(
 )
 
 logger.debug("============================")
-logger.debug("| Main.py Loading Finished |")
+logger.debug("| Backend Loading Finished |")
 logger.debug("============================")
 
 
@@ -74,12 +75,6 @@ logger.debug("============================")
 async def test() -> int:
     return 200
 
-
-if __name__ == "__main__":
-    ...
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
     # development only
     # uvicorn main:app --reload --host 0.0.0.0 --port 8080
     # fastapi dev main.py

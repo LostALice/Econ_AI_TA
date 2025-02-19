@@ -1,13 +1,14 @@
 // Code by AkinoAlice@TyrantRey
 
-import { useState, useEffect, useRef, useContext } from "react";
+import { useState, useEffect, useRef, useContext, useMemo } from "react";
 
 import { askQuestion, getChatroomUUID } from "@/api/chat/index";
 import { MessageBox } from "@/components/chat/messageBox";
-import { IMessageInfo } from "@/types/chat/type";
+import { IMessageInfo, TQuestionMode } from "@/types/chat/types";
 
 import DefaultLayout from "@/layouts/default";
 
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
 import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
 import { ScrollShadow } from "@nextui-org/scroll-shadow";
 import { Spinner } from "@nextui-org/spinner";
@@ -16,10 +17,15 @@ import { Button } from "@nextui-org/button";
 import { getCookie } from "cookies-next";
 
 import { AuthContext } from "@/contexts/AuthContext";
-import { siteConfig } from "@/config/site";
+import { LangContext } from "@/contexts/LangContext";
+import { LanguageTable } from "@/i18n";
 
 export default function ChatPage() {
   const { role, setRole } = useContext(AuthContext);
+  const { language, setLang } = useContext(LangContext);
+
+  const mode: TQuestionMode = "CHATTING"
+  const [selectTarget, setSelectTarget] = useState<TQuestionMode>(mode);
 
   const [inputQuestion, setInputQuestion] = useState<string>("");
   const [chatInfo, setChatInfo] = useState<IMessageInfo[]>([]);
@@ -50,8 +56,9 @@ export default function ChatPage() {
       chatroomUUID,
       historyQuestions,
       "Anonymous",
-      siteConfig.language,
-      "default"
+      language,
+      "default",
+      selectTarget
     );
 
     const message_info: IMessageInfo = {
@@ -82,8 +89,30 @@ export default function ChatPage() {
     <DefaultLayout>
       <Card className="h-[90vh] w-full flex flex-col shadow-md rounded-lg border">
         <CardHeader className="flex justify-between p-4">
-          <span className="text-sm dark:text-gray-400">聊天室 ID: {chatroomUUID}</span>
-          <span className="text-sm dark:text-gray-400">身份: {role}</span>
+          <span className="text-sm dark:text-gray-400">{LanguageTable.chat.page.ChatroomID[language]}: {chatroomUUID}</span>
+          {/* <span className="text-sm dark:text-gray-400">{LanguageTable.chat.page.role[language]}: {role}</span> */}
+          <Dropdown>
+            <DropdownTrigger>
+              <Button className="capitalize" variant="bordered">
+                {LanguageTable.chat.page.target[selectTarget][language]}
+                {/* {selectTarget} */}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              disallowEmptySelection
+              aria-label="selectTarget"
+              selectedKeys={selectTarget}
+              selectionMode="single"
+              variant="flat"
+              onSelectionChange={(keys) => {
+                setSelectTarget(keys.currentKey as TQuestionMode)
+              }}
+            >
+              <DropdownItem key="THEOREM">{LanguageTable.chat.page.target.THEOREM[language]}</DropdownItem>
+              <DropdownItem key="TESTING">{LanguageTable.chat.page.target.TESTING[language]}</DropdownItem>
+              <DropdownItem key="CHATTING">{LanguageTable.chat.page.target.CHATTING[language]}</DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         </CardHeader>
 
         <CardBody className="flex-grow overflow-y-auto p-4 space-y-4 border-t">
@@ -116,7 +145,7 @@ export default function ChatPage() {
           <div className="relative flex-grow">
             <textarea
               className="w-full resize-none pt-2 px-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-              placeholder="傳送訊息給TA"
+              placeholder={LanguageTable.chat.page.text_input_placeholder[language]}
               rows={1}
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}
@@ -135,15 +164,15 @@ export default function ChatPage() {
             onPressEnd={sendMessage}
             disabled={isLoading || inputQuestion.trim() === ""}
           >
-            傳送
+            {LanguageTable.chat.page.send[language]}
           </Button>
         </div>
         <CardFooter className="flex justify-center">
           <span className="text-xs dark:text-gray-400 italic">
-            機械人可能會出錯。請參考文檔核對重要資訊。
+            {LanguageTable.chat.page.tips[language]}
           </span>
         </CardFooter>
       </Card>
-    </DefaultLayout>
+    </DefaultLayout >
   );
 }

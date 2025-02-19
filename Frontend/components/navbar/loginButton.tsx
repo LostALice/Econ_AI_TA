@@ -21,9 +21,12 @@ import {
 import { siteConfig } from "@/config/site";
 
 import { AuthContext } from "@/contexts/AuthContext";
+import { LangContext } from "@/contexts/LangContext";
+import { LanguageTable } from "@/i18n";
 
 export const LoginButton = () => {
   const { role, setRole } = useContext(AuthContext);
+  const { language, setLang } = useContext(LangContext);
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
@@ -33,11 +36,11 @@ export const LoginButton = () => {
 
   useEffect(() => {
     if (hasCookie("role") && hasCookie("jwt")) {
-      const userRole = getCookie("role") || "未登入";
+      const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
       setRole(userRole);
       setIsLoggedIn(true);
     }
-  }, [setRole]);
+  }, [setRole, language]);
 
   function logout() {
     deleteCookie("role");
@@ -45,7 +48,7 @@ export const LoginButton = () => {
     setIsLoggedIn(false);
     setUsername("");
     setPassword("");
-    const userRole = getCookie("role") || "未登入";
+    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
     setRole(userRole);
   }
 
@@ -67,7 +70,7 @@ export const LoginButton = () => {
         if (data.success) {
           setCookie("jwt", data.jwt_token);
           setCookie("role", data.role);
-          const userRole = getCookie("role") || "未登入";
+          const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
           setRole(userRole);
           setIsLoggedIn(true);
           return true;
@@ -92,7 +95,7 @@ export const LoginButton = () => {
             className="bg-transparent text-medium"
             onPressEnd={logoutModal.onOpen}
           >
-            {role}
+            {LanguageTable.nav.loginForm.login[language]}
           </Button>
           <Modal
             isOpen={logoutModal.isOpen}
@@ -101,8 +104,8 @@ export const LoginButton = () => {
             <ModalContent>
               {(onClose) => (
                 <>
-                  <ModalHeader className="flex flex-col gap-1">
-                    登出: {role}
+                  <ModalHeader className="flex flex-col">
+                    {LanguageTable.nav.loginForm.logout[language]}: {role}
                   </ModalHeader>
                   <ModalFooter>
                     <Button
@@ -114,10 +117,10 @@ export const LoginButton = () => {
                         onClose();
                       }}
                     >
-                      確認
+                      {LanguageTable.nav.loginForm.confirm[language]}
                     </Button>
                     <Button color="primary" onPress={onClose}>
-                      取消
+                      {LanguageTable.nav.loginForm.cancel[language]}
                     </Button>
                   </ModalFooter>
                 </>
@@ -128,14 +131,14 @@ export const LoginButton = () => {
       ) : (
         <>
           <Button
-            className="bg-transparent text-medium"
+            className="bg-transparent text-medium mr-3"
             onPressEnd={() => {
               setUsername("");
               setPassword("");
               onOpen();
             }}
           >
-            {role}
+            {LanguageTable.nav.loginForm.login[language]}
           </Button>
           <Modal
             isOpen={isOpen}
@@ -146,23 +149,23 @@ export const LoginButton = () => {
             <ModalContent>
               {(onClose) => (
                 <>
-                  <ModalHeader className="flex flex-col gap-1">
-                    登入
+                  <ModalHeader className="flex flex-col">
+                    {LanguageTable.nav.loginForm.login[language]}
                   </ModalHeader>
                   <ModalBody>
                     <Input
                       value={username}
                       onValueChange={setUsername}
                       autoFocus
-                      label="使用者名稱"
-                      placeholder="輸入您的使用者名稱"
+                      label={LanguageTable.nav.loginForm.username.username[language]}
+                      placeholder={LanguageTable.nav.loginForm.username.input[language]}
                       variant="bordered"
                     />
                     <Input
                       value={password}
                       onValueChange={setPassword}
-                      label="密碼"
-                      placeholder="輸入您的密碼"
+                      label={LanguageTable.nav.loginForm.password.password[language]}
+                      placeholder={LanguageTable.nav.loginForm.password.input[language]}
                       type="password"
                       variant="bordered"
                     />
@@ -174,7 +177,7 @@ export const LoginButton = () => {
                       variant="flat"
                       onPress={onClose}
                     >
-                      關閉
+                      {LanguageTable.nav.loginForm.close[language]}
                     </Button>
                     <Button
                       color="primary"
@@ -182,7 +185,7 @@ export const LoginButton = () => {
                         submitLogin() ? onClose() : {};
                       }}
                     >
-                      登入
+                      {LanguageTable.nav.loginForm.login[language]}
                     </Button>
                   </ModalFooter>
                 </>

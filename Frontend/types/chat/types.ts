@@ -29,3 +29,5 @@ export interface IMessageInfo {
   files: IFiles[];
   time: string;
 }
+
+export type TQuestionMode = "CHATTING" | "TESTING" | "THEOREM";

@@ -53,3 +53,7 @@ class OLLAMAConfig(BaseModel):
     ollama_host: str = Field(..., min_length=1)
     ollama_port: int = Field(..., ge=1, le=65535)
     ollama_model_name: str = Field(..., min_length=1)
+
+class OpenaiConfig(BaseModel):
+    openai_api_key: str = Field(..., min_length=1)
+    openai_model_name: str = Field(..., min_length=1)

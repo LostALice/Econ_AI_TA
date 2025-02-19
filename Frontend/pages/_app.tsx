@@ -6,6 +6,7 @@ import { NextUIProvider } from "@nextui-org/react";
 import { useRouter } from "next/router";
 
 import AuthProvider from "@/contexts/AuthContext";
+import LangProvider from "@/contexts/LangContext";
 
 import "@/styles/globals.css";
 
@@ -15,7 +16,9 @@ export default function App({ Component, pageProps }: AppProps) {
     <NextUIProvider navigate={router.push}>
       <NextThemesProvider>
         <AuthProvider>
-          <Component {...pageProps} />
+          <LangProvider>
+            <Component {...pageProps} />
+          </LangProvider>
         </AuthProvider>
       </NextThemesProvider>
     </NextUIProvider>

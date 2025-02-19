@@ -22,10 +22,10 @@ export default function DefaultLayout({
 				<Link
 					isExternal
 					className="flex items-center gap-1 text-current px-3"
-					href="https://github.com/LostALice"
+					href="https://github.com/LostALice/FCU_Econ_TA"
 					title="Do you know the magic?"
 				>
-					<span className="italic text-small">Copyright © Aki.no.Alice@TyrantRey 張紹謙 2022-2026</span>
+					<span className="italic text-small">Copyright © Aki.no.Alice@TyrantRey 2022-2026</span>
 				</Link>
 			</footer>
 		</div>

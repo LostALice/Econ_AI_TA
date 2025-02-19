@@ -17,8 +17,13 @@ import { LoginButton } from "@/components/navbar/loginButton";
 import { LangSwitch } from "@/components/navbar/langSwitch";
 
 import { Logo } from "@/components/navbar/icons";
+import { LangContext } from "@/contexts/LangContext";
+import { LanguageTable } from "@/i18n";
+import { useContext } from "react";
 
 export const Navbar = () => {
+  const { language, setLang } = useContext(LangContext);
+
   return (
     <NextUINavbar
       maxWidth="xl"
@@ -31,7 +36,7 @@ export const Navbar = () => {
           <NextLink className="flex justify-start items-center gap-1" href="/">
             <Logo />
             <p className="font-bold text-inherit px-1">
-              逢甲大學經濟學課程智能TA
+              {LanguageTable.nav.title[language]}
             </p>
           </NextLink>
         </NavbarBrand>
@@ -47,7 +52,7 @@ export const Navbar = () => {
                 color="foreground"
                 href={item.href}
               >
-                {item.label}
+                {LanguageTable.nav.links[item.label as keyof typeof LanguageTable.nav.links][language]}
               </NextLink>
             </NavbarItem>
           ))}
@@ -55,14 +60,10 @@ export const Navbar = () => {
       </NavbarContent>
 
       <NavbarContent className="flex sm:basis-full" justify="end">
-        <NavbarItem className="flex gap-2">
-          <ButtonGroup
-            className="gap-1"
-          >
+        <NavbarItem className="flex gap-1">
             <LangSwitch />
             <LoginButton />
             <ThemeSwitch />
-          </ButtonGroup>
         </NavbarItem>
       </NavbarContent>
     </NextUINavbar>

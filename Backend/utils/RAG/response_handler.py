@@ -3,14 +3,14 @@
 from Backend.utils.helper.model.RAG.response_handler import (
     AFSConfig,
     OLLAMAConfig,
+    OpenaiConfig,
     DeployModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.RAG.prompt import PROMPT
 
 from ollama import Client
-
-from pydantic import HttpUrl
+from openai import OpenAI
 
 from typing import Literal, Union
 from os import getenv
@@ -38,6 +38,7 @@ class ResponseHandler(object):
             AFSResponser,
             OpenaiCompatibleResponser,
             OllamaResponser,
+            OpenAIResponser,
             # LocalResponser,
         ]
 
@@ -49,6 +50,9 @@ class ResponseHandler(object):
 
         # elif self.LLM_DEPLOY_MODE == "local":
         #     self.Responser = LocalResponser()
+
+        elif self.LLM_DEPLOY_MODE == "openai":
+            self.Responser = OpenAIResponser()
 
         elif self.LLM_DEPLOY_MODE == "afs":
             self.Responser = AFSResponser()
@@ -92,6 +96,10 @@ class ResponseHandler(object):
         # elif self.LLM_DEPLOY_MODE == "local":
         #     self.Responser = LocalResponser()
         #     self.Responser.initialization()
+
+        elif self.LLM_DEPLOY_MODE == "openai":
+            self.Responser = OpenAIResponser()
+            self.Responser.initialization()
 
         elif self.LLM_DEPLOY_MODE == "afs":
             self.Responser = AFSResponser()
@@ -212,11 +220,11 @@ class AFSResponser(object):
         _afs_url = str(getenv("AFS_API_URL"))
         _afs_api_key = str(getenv("AFS_API_KEY"))
         _afs_model_name = str(getenv("AFS_MODEL_NAME"))
-                
+
         self.AFS_config = AFSConfig(
-            afs_url= _afs_url + "/models/conversation",
-            afs_api_key= _afs_api_key,
-            afs_model_name= _afs_model_name,
+            afs_url=_afs_url + "/models/conversation",
+            afs_api_key=_afs_api_key,
+            afs_model_name=_afs_model_name,
         )
 
         self.url = self.AFS_config.afs_url
@@ -360,6 +368,69 @@ class OllamaResponser(object):
             return "", 0
 
         return response.message.content, response.prompt_eval_count
+
+
+class OpenAIResponser(object):
+    def __init__(self) -> None:
+        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.client = OpenAI()
+
+    def initialization(self) -> None:
+        _openai_api_key = getenv("OPENAI_API_KEY")
+        _openai_model_name = getenv("OPENAI_MODEL_NAME")
+
+        assert (
+            not _openai_api_key is None
+        ), "Environment variable OPENAI_API_KEY not set"
+        assert (
+            not _openai_model_name is None
+        ), "Environment variable OPENAI_MODEL_NAME not set"
+
+        self.openai_config = OpenaiConfig(
+            openai_api_key=_openai_api_key,
+            openai_model_name=_openai_model_name,
+        )
+
+        self.openai_model_name = self.openai_config.openai_model_name
+        self.openai_api_key = self.openai_config.openai_api_key
+
+        # try:
+        #     self.openai_client = self.client.completions.create(
+        #         model=self.openai_model_name,
+        #     )
+        # except Exception as e:
+        #     self.logger.error(f"Failed to initialize OpenAI client: {e}")
+
+    def response(
+        self,
+        conversation: list[dict[str, str]],
+        max_tokens: int = 8192,
+        temperature: float = 0.6,
+        top_k: int = 30,
+        top_p: int = 1,
+        frequence_penalty: int = 1,
+    ) -> tuple[str, int]:
+        self.logger.info(conversation)
+
+        response = self.client.chat.completions.create(
+            model=self.openai_model_name,
+            messages=conversation,
+            frequency_penalty=frequence_penalty,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
+
+        if not response.message.content:
+            self.logger.error("Failed to generate OpenAI response")
+            return "", 0
+        if not response.prompt_eval_count:
+            self.logger.error("Failed to generate OpenAI response")
+            return "", 0
+
+        token_count = response.usage.total_tokens if response.usage.total_tokens else 0
+
+        return str(response.choices[0].message), token_count
 
 
 # class LocalResponser(object):

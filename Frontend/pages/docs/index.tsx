@@ -18,7 +18,7 @@ import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 
 import { fetchDocsList } from "@/pages/api/api";
 import { IDepartment } from "@/types/global";
-import { IDocsFormat } from "@/types/api/type";
+import { IDocsFormat } from "@/types/api/types";
 
 export default function DocsPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);

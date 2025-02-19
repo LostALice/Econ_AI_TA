@@ -1,35 +1,36 @@
 // Code by AkinoAlice@TyrantRey
 
-import { useState } from "react";
+import { useContext } from "react";
 import {
     Dropdown,
     DropdownTrigger,
     DropdownMenu,
     DropdownItem
 } from "@nextui-org/dropdown";
+
+import { LangContext } from "@/contexts/LangContext";
+import { TLanguage } from "@/types/contexts/types";
 import { Button } from "@nextui-org/button";
-import { siteConfig } from "@/config/site";
 
 export const LangSwitch = () => {
-    const [language, setLanguage] = useState<string>(siteConfig.language)
+    const { language, setLang } = useContext(LangContext);
 
-    function displayLanguage(language: string) {
+    function displayLanguage(language: TLanguage) {
         switch (language) {
             case "en":
                 return "English";
             case "zh":
                 return "中文";
             default:
-                return "English";
+                return "中文";
         }
     }
 
     return (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
             <Dropdown>
                 <DropdownTrigger>
                     <Button
-                        size="sm"
                         className="border bg-transparent text-medium border-none"
                     >
                         {displayLanguage(language)}
@@ -41,8 +42,7 @@ export const LangSwitch = () => {
                     selectionMode="single"
                     selectedKeys={language}
                     onSelectionChange={(keys) => {
-                        const selectedLanguage = Array.from(keys)[0] as string;
-                        setLanguage(selectedLanguage);
+                        setLang(keys.currentKey?.toString() as TLanguage);
                     }}
                 >
                     <DropdownItem key="en">English</DropdownItem>

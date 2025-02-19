@@ -1,14 +1,14 @@
+// Code by AkinoAlice@TyrantRey
+
 import { createContext, useState } from "react";
 
-export type TAuthRole = {
-  role: string;
-  setRole: (role: string) => void;
-};
+import { TAuthRole } from "@/types/contexts/types"
 
 export const AuthContext = createContext<TAuthRole>({
   role: "未登入",
-  setRole: (role: string) => {},
+  setRole: (role: string) => { },
 });
+
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

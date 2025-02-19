@@ -1,6 +1,6 @@
 // Code by AkinoAlice@TyrantRey
 
-import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/api/type";
+import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/api/types";
 
 import { siteConfig } from "@/config/site";
 

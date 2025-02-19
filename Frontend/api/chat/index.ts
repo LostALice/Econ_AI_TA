@@ -1,6 +1,6 @@
 // Code by AkinoAlice@TyrantRey
 
-import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/chat/type";
+import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/chat/types";
 import { siteConfig } from "@/config/site";
 
 export async function askQuestion(

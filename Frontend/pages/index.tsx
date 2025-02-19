@@ -7,19 +7,25 @@ import NextLink from "next/link";
 import { Card, CardBody } from "@nextui-org/card";
 import { Image } from "@nextui-org/image";
 
+import { LangContext } from "@/contexts/LangContext";
+import { LanguageTable } from "@/i18n";
+import { useContext } from "react";
+
 export default function MainPage() {
+  const { language, setLang } = useContext(LangContext);
+
   return (
     <DefaultLayout>
       <section className="flex flex-col items-center justify-center">
         <div className="inline-block text-center justify-center">
-          <h1 className={title()}>逢甲大學經濟學課程智能TA</h1>
+          <h1 className={title()}>{LanguageTable.home.title[language]}</h1>
         </div>
       </section>
       <section className="flex flex-col items-center justify-center p-4">
         <div className="inline-block text-center justify-center">
-          <h2>歡迎來到經濟學課程智能TA的專屬頁面！</h2>
+          <h2>{LanguageTable.home.description.welcome[language]}</h2>
           <h2>
-            在這裡，無論你有關於經濟學理論、數據分析、作業輔導，還是任何其他相關問題，我都樂意提供幫助。
+            {LanguageTable.home.description.content[language]}
           </h2>
         </div>
       </section>
@@ -36,9 +42,9 @@ export default function MainPage() {
                 <NextLink color="foreground" href={item.href}>
                   <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0 brightness-[1]">
                     <span className="font-bold text-2xl md:text-3xl text-center bg-transparent">
-                      {item.title}
+                      {item.title[language]}
                     </span>
-                    <span className="text-center p-1">{item.descriptions}</span>
+                    <span className="text-center p-1">{item.description[language]}</span>
                   </CardBody>
                 </NextLink>
                 <Image
@@ -53,5 +59,6 @@ export default function MainPage() {
         </div>
       </section>
     </DefaultLayout>
+
   );
 }

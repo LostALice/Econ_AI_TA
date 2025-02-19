@@ -95,6 +95,8 @@ async def get_documentation_list(
     if not docs_list:
         raise HTTPException(406, detail="No documents found")
 
+    logger.debug(pformat(f"Return: {docs_list}"))
+
     return QueryDocumentListModel(
         status_code=200,
         docs_list=docs_list,

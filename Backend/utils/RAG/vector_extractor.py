@@ -4,16 +4,17 @@ from Backend.utils.helper.model.RAG.vector_extractor import (
     AFSEmbeddingConfig,
     OLLAMAEmbeddingConfig,
     EmbeddingDeployModel,
+    OPENAIEmbeddingConfig,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 
-from typing import Union, overload
+from typing import Union
+from openai import OpenAI
 from ollama import Client
 from os import getenv
 
 import numpy as np
 import requests  # type: ignore
-import ollama
 import json
 
 
@@ -79,7 +80,7 @@ class VectorHandler(object):
 class OllamaEmbeddingEncoder(object):
     def __init__(self):
         self.logger = CustomLoggerHandler(__name__).setup_logging()
-    
+
     def initialization(self) -> None:
         _ollama_host = getenv("OLLAMA_HOST")
         _ollama_port = getenv("OLLAMA_PORT")
@@ -103,15 +104,28 @@ class OllamaEmbeddingEncoder(object):
             self.ollama_config.ollama_embedding_model_name
         )
         self.ollama_host_url = f"{self.ollama_host}:{self.ollama_port}"
-        
+
         try:
-            self.ollama_client = Client(
-                host=self.ollama_host_url
-            )
+            self.ollama_client = Client(host=self.ollama_host_url)
         except Exception as e:
             self.logger.error(f"Failed to initialize OLLAMA client: {e}")
 
     def encode(self, text: str) -> list[float]:
+        """
+        Encode the input text into a vector embedding using ollama's API.
+
+        This method sends the input text to ollama's embedding service and returns
+        the resulting vector representation.
+
+        Args:
+            text (str): The input text to be encoded into a vector embedding.
+
+        Returns:
+            list[float]: A list of floats representing the vector embedding of the input text.
+
+        Raises:
+            Exception: If there's an error in calling the ollama API or processing the response.
+        """
         vector = self.ollama_client.embeddings(
             model=self.ollama_embedding_model_name,
             prompt=text,
@@ -146,13 +160,20 @@ class AfsEmbeddingEncoder(object):
         self.embedding_model_name = self.config.embedding_model_name
 
     def encode(self, text: str) -> np.ndarray:
-        """convert text to ndarray (vector)
+        """
+        Encode the input text into a vector embedding using AFS's API.
+
+        This method sends the input text to AFS's embedding service and returns
+        the resulting vector representation.
 
         Args:
-            text (str): text to be converted
+            text (str): The input text to be encoded into a vector embedding.
 
         Returns:
-            ndarray: numpy array (vector)
+            list[float]: A list of floats representing the vector embedding of the input text.
+
+        Raises:
+            Exception: If there's an error in calling the AFS API or processing the response.
         """
 
         headers = {
@@ -213,5 +234,53 @@ class AfsEmbeddingEncoder(object):
 
 
 class OpenaiEmbeddingEncoder(object):
-    def initialization(self): ...
-    def encode(self, text: str) -> list[float]: ...
+    def __init__(self):
+        self.logger = CustomLoggerHandler(__name__).setup_logging()
+
+    def initialization(self) -> None:
+        _openai_api_key = getenv("OPENAI_API_KEY")
+        _openai_embedding_model_name = getenv("OPENAI_EMBEDDING_MODEL_NAME")
+
+        assert (
+            not _openai_api_key is None
+        ), "Environment variable OPENAI_API_KEY not set"
+        assert (
+            not _openai_embedding_model_name is None
+        ), "Environment variable OPENAI_EMBEDDING_MODEL_NAME not set"
+
+        self.openai_config = OPENAIEmbeddingConfig(
+            openai_api_key=_openai_api_key,
+            openai_embedding_model_name=_openai_embedding_model_name,
+        )
+
+        self.openai_api_key = self.openai_config.openai_api_key
+        self.openai_embedding_model_name = (
+            self.openai_config.openai_embedding_model_name
+        )
+
+        try:
+            self.openai_client = OpenAI()
+        except Exception as e:
+            self.logger.error(f"Failed to initialize OLLAMA client: {e}")
+
+    def encode(self, text: str) -> list[float]:
+        """
+        Encode the input text into a vector embedding using OpenAI's API.
+
+        This method sends the input text to OpenAI's embedding service and returns
+        the resulting vector representation.
+
+        Args:
+            text (str): The input text to be encoded into a vector embedding.
+
+        Returns:
+            list[float]: A list of floats representing the vector embedding of the input text.
+
+        Raises:
+            Exception: If there's an error in calling the OpenAI API or processing the response.
+        """
+        response = self.openai_client.embeddings.create(
+            model=self.openai_embedding_model_name,
+            input=text,
+        )
+        return response.data[0].embedding
