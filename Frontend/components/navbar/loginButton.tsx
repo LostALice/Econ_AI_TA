@@ -7,7 +7,7 @@ import {
   Button,
   useDisclosure,
   Input,
-} from "@nextui-org/react";
+} from "@heroui/react";
 
 import { useState, useEffect, useContext } from "react";
 import { sha3_256 } from "js-sha3";

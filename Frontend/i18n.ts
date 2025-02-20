@@ -50,7 +50,7 @@ export const LanguageTable = {
     },
     links: {
       docs: {
-        zh: "文檔",
+        zh: "題庫",
         en: "Docs",
       },
       chat: {
@@ -147,10 +147,30 @@ export const LanguageTable = {
         zh: "傳送",
         en: "Send",
       },
-      text_input_placeholder: {
+      textInputPlaceholder: {
         zh: "傳送訊息給TA",
         en: "Send question to TA",
       },
     },
   },
+  docs: {
+    page: {
+      lessonName: {
+        zh: "課程名稱",
+        en: "Lesson Name",
+      },
+      // lessonDescription: {
+      //   zh: "課程簡介",
+      //   en: "Lesson Description",
+      // },
+      lastUpdate: {
+        zh: "最後更新時間",
+        en: "Last Update Time",
+      },
+      loading: {
+        zh: "載入中...",
+        en: "Loading...",
+      }
+    }
+  }
 };

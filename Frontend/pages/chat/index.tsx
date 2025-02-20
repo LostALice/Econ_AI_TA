@@ -3,16 +3,24 @@
 import { useState, useEffect, useRef, useContext, useMemo } from "react";
 
 import { askQuestion, getChatroomUUID } from "@/api/chat/index";
-import { MessageBox } from "@/components/chat/messageBox";
 import { IMessageInfo, TQuestionMode } from "@/types/chat/types";
+import { MessageBox } from "@/components/chat/messageBox";
 
 import DefaultLayout from "@/layouts/default";
 
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
-import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
-import { ScrollShadow } from "@nextui-org/scroll-shadow";
-import { Spinner } from "@nextui-org/spinner";
-import { Button } from "@nextui-org/button";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  ScrollShadow,
+  Spinner,
+  Button
+} from "@heroui/react";
 
 import { getCookie } from "cookies-next";
 
@@ -145,7 +153,7 @@ export default function ChatPage() {
           <div className="relative flex-grow">
             <textarea
               className="w-full resize-none pt-2 px-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-              placeholder={LanguageTable.chat.page.text_input_placeholder[language]}
+              placeholder={LanguageTable.chat.page.textInputPlaceholder[language]}
               rows={1}
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}

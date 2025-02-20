@@ -2,7 +2,7 @@ import type { AppProps } from "next/app";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { fontSans, fontMono } from "@/config/fonts";
-import { NextUIProvider } from "@nextui-org/react";
+import { HeroUIProvider } from "@heroui/react";
 import { useRouter } from "next/router";
 
 import AuthProvider from "@/contexts/AuthContext";
@@ -13,7 +13,7 @@ import "@/styles/globals.css";
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   return (
-    <NextUIProvider navigate={router.push}>
+    <HeroUIProvider navigate={router.push}>
       <NextThemesProvider>
         <AuthProvider>
           <LangProvider>
@@ -21,7 +21,7 @@ export default function App({ Component, pageProps }: AppProps) {
           </LangProvider>
         </AuthProvider>
       </NextThemesProvider>
-    </NextUIProvider>
+    </HeroUIProvider>
   );
 }
 

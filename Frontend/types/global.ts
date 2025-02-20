@@ -20,6 +20,7 @@ export interface IMessageInfo {
   time: string;
 }
 
+// to modify
 type TDepartmentName = "pptx" | "docx";
 
 export interface IDepartment {

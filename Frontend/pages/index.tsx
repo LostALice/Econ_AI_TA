@@ -4,8 +4,7 @@ import { siteConfig } from "@/config/site";
 
 import NextLink from "next/link";
 
-import { Card, CardBody } from "@nextui-org/card";
-import { Image } from "@nextui-org/image";
+import { Card, CardBody, Image } from "@heroui/react";
 
 import { LangContext } from "@/contexts/LangContext";
 import { LanguageTable } from "@/i18n";

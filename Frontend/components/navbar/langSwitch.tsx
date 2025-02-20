@@ -5,12 +5,12 @@ import {
     Dropdown,
     DropdownTrigger,
     DropdownMenu,
-    DropdownItem
-} from "@nextui-org/dropdown";
+    DropdownItem,
+    Button
+} from "@heroui/react";
 
 import { LangContext } from "@/contexts/LangContext";
 import { TLanguage } from "@/types/contexts/types";
-import { Button } from "@nextui-org/button";
 
 export const LangSwitch = () => {
     const { language, setLang } = useContext(LangContext);

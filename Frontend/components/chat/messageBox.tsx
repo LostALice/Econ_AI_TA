@@ -1,11 +1,7 @@
 import { FC } from "react";
 import { siteConfig } from "@/config/site";
 
-import { Divider } from "@nextui-org/divider";
-import { Tooltip } from "@nextui-org/tooltip";
-import { Link } from "@nextui-org/link";
-import { Button, ButtonGroup } from "@nextui-org/button";
-
+import { Divider, Tooltip, Link, Button, ButtonGroup } from "@heroui/react"
 import { IMessageInfo } from "@/types/chat/types";
 import { useState } from "react";
 

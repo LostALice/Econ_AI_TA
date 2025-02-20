@@ -1,26 +1,29 @@
 import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
-import { useState } from "react";
+import { useState, useContext } from "react";
 
-import { Listbox, ListboxItem } from "@nextui-org/listbox";
-import { Spinner } from "@nextui-org/spinner";
-import { Link } from "@nextui-org/link";
 import {
+  Listbox,
+  ListboxItem,
+  Spinner,
+  Link,
   Table,
   TableHeader,
   TableBody,
   TableColumn,
   TableRow,
   TableCell,
-} from "@nextui-org/table";
+} from "@heroui/react";
 
-import { FileUploadButton } from "@/components/upload/fileUpload-btn";
+import { LanguageTable } from "@/i18n";
+import { LangContext } from "@/contexts/LangContext";
 
 import { fetchDocsList } from "@/pages/api/api";
 import { IDepartment } from "@/types/global";
 import { IDocsFormat } from "@/types/api/types";
 
 export default function DocsPage() {
+  const { language, setLang } = useContext(LangContext);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fileList, setFileList] = useState<IDocsFormat[]>([]);
 
@@ -29,7 +32,7 @@ export default function DocsPage() {
     { departmentName: "docx" },
   ];
 
-  async function loadFileList(departmentName: React.Key) {
+  async function loadFileList(departmentName: IDepartment) {
     setIsLoading(true);
     setFileList(await fetchDocsList(departmentName.toString()));
     setIsLoading(false);
@@ -39,18 +42,18 @@ export default function DocsPage() {
     <DefaultLayout>
       <div className="flex">
         <div className="mt-1 mx-3">
-           <FileUploadButton />
+          {/* <FileUploadButton /> */}
           <Listbox
             disallowEmptySelection
             aria-label="Actions"
             className="h-full w-[15rem]"
-            onAction={(key) => loadFileList(key)}
+            onAction={(key: IDepartment) => loadFileList(key)}
             variant="flat"
             selectionMode="single"
             items={departmentList}
-            emptyContent={<Spinner color="success" label="加載中..." />}
+            emptyContent={<Spinner color="success" label={LanguageTable.docs.page.loading[language]} />}
           >
-            {(item) => (
+            {(item: IDepartment) => (
               <ListboxItem key={item.departmentName}>
                 {item.departmentName}
               </ListboxItem>
@@ -59,15 +62,15 @@ export default function DocsPage() {
         </div>
         <Table aria-label="file table" isStriped>
           <TableHeader>
-            <TableColumn key="name">文件名稱</TableColumn>
-            <TableColumn key="height">最後更新日期</TableColumn>
+            <TableColumn key="name">{LanguageTable.docs.page.lessonName[language]}</TableColumn>
+            <TableColumn key="height">{LanguageTable.docs.page.lastUpdate[language]}</TableColumn>
           </TableHeader>
           <TableBody
             items={fileList}
             isLoading={isLoading}
-            loadingContent={<Spinner color="success" label="加載中..." />}
+            loadingContent={<Spinner color="success" label={LanguageTable.docs.page.loading[language]} />}
           >
-            {(item) => (
+            {(item: IDocsFormat) => (
               <TableRow key={item.fileID}>
                 <TableCell>
                   <Link

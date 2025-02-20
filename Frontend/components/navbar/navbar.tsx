@@ -3,10 +3,7 @@ import {
   NavbarContent,
   NavbarBrand,
   NavbarItem,
-  ButtonGroup
-} from "@nextui-org/react";
-
-import { link as linkStyles } from "@nextui-org/theme";
+} from "@heroui/react";
 
 import { siteConfig } from "@/config/site";
 import NextLink from "next/link";
@@ -35,20 +32,16 @@ export const Navbar = () => {
         <NavbarBrand className="gap-3 max-w-fit">
           <NextLink className="flex justify-start items-center gap-1" href="/">
             <Logo />
-            <p className="font-bold text-inherit px-1">
+            <p className="hidden sm:inline font-bold text-inherit px-1">
               {LanguageTable.nav.title[language]}
             </p>
           </NextLink>
         </NavbarBrand>
 
-        <div className="hidden lg:flex gap-4 justify-start ml-2">
+        <div className="flex gap-4 justify-start ml-2">
           {siteConfig.navItems.map((item) => (
             <NavbarItem key={item.href}>
               <NextLink
-                className={clsx(
-                  linkStyles({ color: "foreground" }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium"
-                )}
                 color="foreground"
                 href={item.href}
               >
@@ -61,9 +54,9 @@ export const Navbar = () => {
 
       <NavbarContent className="flex sm:basis-full" justify="end">
         <NavbarItem className="flex gap-1">
-            <LangSwitch />
-            <LoginButton />
-            <ThemeSwitch />
+          <LangSwitch />
+          <LoginButton />
+          <ThemeSwitch />
         </NavbarItem>
       </NavbarContent>
     </NextUINavbar>
