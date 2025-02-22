@@ -1,10 +1,11 @@
 // Code by AkinoAlice@TyrantRey
 
-import { useState, useEffect, useRef, useContext, useMemo } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 
 import { askQuestion, getChatroomUUID } from "@/api/chat/index";
 import { IMessageInfo, TQuestionMode } from "@/types/chat/types";
 import { MessageBox } from "@/components/chat/messageBox";
+import { Image } from "@heroui/image";
 
 import DefaultLayout from "@/layouts/default";
 
@@ -34,6 +35,8 @@ export default function ChatPage() {
 
   const mode: TQuestionMode = "CHATTING"
   const [selectTarget, setSelectTarget] = useState<TQuestionMode>(mode);
+  const [base64Image, setBase64Image] = useState<string>("");
+
 
   const [inputQuestion, setInputQuestion] = useState<string>("");
   const [chatInfo, setChatInfo] = useState<IMessageInfo[]>([]);
@@ -93,6 +96,19 @@ export default function ChatPage() {
     setRole(userRole);
   }, [setRole]);
 
+  // window.addEventListener("paste", function (e) {
+  //   if (e.clipboardData === null || e.clipboardData === undefined) {
+  //     return;
+  //   }
+
+  //   const item = Array.from(e.clipboardData.items).find(x => /^image\//.test(x.type));
+
+  //   if (item !== undefined) {
+
+  //   }
+
+  // });
+
   return (
     <DefaultLayout>
       <Card className="h-[90vh] w-full flex flex-col shadow-md rounded-lg border">
@@ -151,6 +167,13 @@ export default function ChatPage() {
         </CardBody>
         <div className="sticky bottom-0 pt-1 px-4 flex items-center space-x-2">
           <div className="relative flex-grow">
+            <div className="pb-1">
+\
+              <Image
+                src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABNElEQVR4nOzRQQkAIADAQBEb+Le1fY1xD3cJBlv37BFn6oDfNQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYA3AGoA1AGsA1gCsAVgDsAZgDcAagDUAawDWAKwBWAOwBmANwBqANQBrANYArAFYA7AGYC8AAP//Mn4ByWZTIHwAAAAASUVORK5CYII="
+                alt="asd"
+              />
+            </div>
             <textarea
               className="w-full resize-none pt-2 px-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-400 focus:outline-none"
               placeholder={LanguageTable.chat.page.textInputPlaceholder[language]}

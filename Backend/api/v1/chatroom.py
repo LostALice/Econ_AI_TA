@@ -99,8 +99,10 @@ async def questioning(
         language (str): language for the response
 
     Returns:
-        answer: response of the question
-        server_status_code: 200 | 500
+        status_code: int
+        question_uuid: str
+        answer: str
+        files: list[dict[str, str]]
     """
     chat_id = question_model.chat_id
     question = question_model.question
