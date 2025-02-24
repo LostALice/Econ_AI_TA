@@ -14,6 +14,10 @@ export const siteConfig = {
             label: "問答",
             href: "/chat",
         },
+        {
+            label: "題庫",
+            href: "/question-bank",
+        },
     ],
     links: {
         github: "https://github.com/LostALice",
