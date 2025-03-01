@@ -5,8 +5,9 @@
 /Include
 /share
 /Library
-**/.vscode/**
+/.vscode/**
 **/setting.*
+/.vscode/setting.json
 **/.venv/**
 **/__pycache__/**
 **/node_modules/**
