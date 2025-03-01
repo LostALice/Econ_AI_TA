@@ -1,7 +1,7 @@
 # Code by AkinoAlice@TyrantRey
 
-from pydantic import BaseModel, Field, HttpUrl
-from typing import Literal, Union
+from typing import Union, List, Literal
+from pydantic import BaseModel, Field
 
 
 class DeployModel(BaseModel):
@@ -54,6 +54,32 @@ class OLLAMAConfig(BaseModel):
     ollama_port: int = Field(..., ge=1, le=65535)
     ollama_model_name: str = Field(..., min_length=1)
 
+
 class OpenaiConfig(BaseModel):
     openai_api_key: str = Field(..., min_length=1)
     openai_model_name: str = Field(..., min_length=1)
+
+
+class ContentModel(BaseModel):
+    type: str
+
+
+class TextContentModel(ContentModel):
+    text: str
+
+
+class ImageURLModel(BaseModel):
+    url: str
+
+
+class ImagesContentModel(ContentModel):
+    image_url: ImageURLModel
+
+
+class MessageModel(BaseModel):
+    role: str
+    content: List[Union[TextContentModel | ImagesContentModel]]
+
+
+class ConversationMessagesModel(BaseModel):
+    message: list[MessageModel]

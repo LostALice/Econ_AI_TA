@@ -9,8 +9,8 @@ from Backend.utils.helper.model.RAG.vector_extractor import (
 from Backend.utils.helper.logger import CustomLoggerHandler
 
 from typing import Union
-from openai import OpenAI
-from ollama import Client
+from openai import OpenAI # type: ignore
+from ollama import Client # type: ignore
 from os import getenv
 
 import numpy as np

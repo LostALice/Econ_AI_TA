@@ -1,7 +1,7 @@
 # Code by AkinoAlice@TyrantRey
 
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 
 
 class RatingModel(BaseModel):
@@ -17,10 +17,11 @@ class AnswerRatingModel(BaseModel):
 class QuestioningModel(BaseModel):
     chat_id: str
     question: list[str]
-    user_id: str
+    sent_by_username: str
     language: Literal["CHINESE", "ENGLISH"] = "CHINESE"
     question_type: Literal["CHATTING", "TESTING", "THEOREM"]
     collection: str = "default"
+    images: Optional[list[str] | None] = None
 
 
 class QuestionResponseModel(BaseModel):

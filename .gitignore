@@ -1,28 +1,33 @@
-# setting file
+# Setting file
 # ===================
 /Scripts
 /Lib
 /Include
 /share
 /Library
-**/.vscode
-setting.*
+**/.vscode/**
+**/setting.*
 **/.venv/**
 **/__pycache__/**
 **/node_modules/**
 **/.next/**
 
+# Backend
+# ===================
+/Backend/images/**
+**/*.png
+
 # LLM
 # ===================
 *.gguf
 
-# files
+# Files
 # ===================
 pyvenv.cfg
 *.pyc
 *.pdf
 
-# testing file
+# Testing file
 # ===================
 test.*
 *.log

@@ -18,6 +18,78 @@ graph TD
     N --> Q[簡易表單]
 ```
 
+```mermaid
+erDiagram
+    ROLE {
+      INT role_id PK "Auto Increment"
+      VARCHAR role_name
+    }
+    
+    USER {
+      INT user_id PK "Auto Increment"
+      VARCHAR username
+      INT role_id FK
+    }
+    
+    LOGIN {
+      INT user_id PK
+      VARCHAR password
+      VARCHAR jwt "Default: ``"
+      TIMESTAMP last_login "Default: NOW()"
+    }
+    
+    CHAT {
+      VARCHAR chat_id PK
+      INT user_id FK
+      VARCHAR chat_name
+    }
+    
+    FILE {
+      VARCHAR file_id PK
+      VARCHAR collection PK "Default: 'default'"
+      VARCHAR file_name
+      TIMESTAMP last_update "Default: NOW()"
+      TINYINT expired "Default: 0"
+      JSON tags "Default: JSON_OBJECT()"
+    }
+    
+    QA {
+      VARCHAR chat_id PK
+      VARCHAR qa_id PK
+      LONGTEXT question
+      VARCHAR images
+      LONGTEXT answer
+      INT token_size "Default: 0"
+      TINYINT rating
+      TIMESTAMP sent_time "Default: CURRENT_TIMESTAMP"
+      VARCHAR sent_by
+    }
+    
+    ATTACHMENT {
+      VARCHAR chat_id
+      VARCHAR qa_id PK
+      VARCHAR file_id PK
+    }
+    
+    IMAGES {
+      VARCHAR chat_id
+      VARCHAR qa_id PK
+      VARCHAR images_file_id PK
+    }
+    
+    %% Relationships
+    ROLE ||--o{ USER : "assigned to"
+    USER ||--|| LOGIN : "has"
+    USER ||--o{ CHAT : "creates"
+    CHAT ||--o{ QA : "contains"
+    CHAT ||--o{ ATTACHMENT : "has"
+    CHAT ||--o{ IMAGES : "has"
+    QA ||--o{ ATTACHMENT : "linked"
+    QA ||--o{ IMAGES : "has"
+    FILE ||--o{ ATTACHMENT : "attached in"
+
+```
+
 # Backend API
 
 ## Authentication
