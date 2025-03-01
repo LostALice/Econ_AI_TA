@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+
 class UserInfoModel(BaseModel):
     user_id: int
     username: str
@@ -9,7 +10,8 @@ class UserInfoModel(BaseModel):
     jwt: str
     last_login: str
     role_name: str
-    
+
+
 class QueryDocumentationTypeListModel(BaseModel):
     file_id: str
     file_name: str

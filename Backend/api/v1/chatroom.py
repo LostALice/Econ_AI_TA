@@ -18,6 +18,9 @@ from fastapi import APIRouter, HTTPException
 from pprint import pformat
 from uuid import uuid4
 
+import base64
+import os
+
 router = APIRouter()
 mysql_client = MySQLHandler()
 milvus_client = MilvusHandler()
@@ -94,9 +97,10 @@ async def questioning(
         Args:
         chat_id (str): chatroom uuid
         question (list[str]): question content
-        user_id (str): user id
+        sent_by_username (str): user name
         collection (str, optional): collection of docs database. Defaults to "default".
         language (str): language for the response
+        images: (optional: list[str] | None): list of base64 encoded images
 
     Returns:
         status_code: int
@@ -106,23 +110,45 @@ async def questioning(
     """
     chat_id = question_model.chat_id
     question = question_model.question
-    user_id = question_model.user_id
+    sent_by_username = question_model.sent_by_username
     collection = question_model.collection
     language = question_model.language
     question_type = question_model.question_type
     question_uuid = str(uuid4())
+    images = question_model.images
 
     logger.debug(
         pformat(
             {
                 "chat_id": chat_id,
                 "question": question,
-                "user_id": user_id,
+                "sent_by_username": sent_by_username,
                 "collection": collection,
                 "question_uuid": question_uuid,
             }
         )
     )
+
+    # save image
+    # assume not more than 3 image in a single request
+    if images:
+        for base64_image in images:
+            image_file_data = base64.b64decode(base64_image)
+            image_uuid = str(uuid4())
+            image_path = f"./images/{chat_id}/{question_uuid}/{image_uuid}.png"
+
+            while os.path.exists(image_path):
+                image_uuid = str(uuid4())
+                image_path = f"./images/{chat_id}/{question_uuid}/{image_uuid}.png"
+                logger.warning(f"Image file already exists: {image_path}")
+            else:
+                logger.info(f"Saving image: {image_path}")
+                os.makedirs(os.path.dirname(image_path), exist_ok=True)
+                with open(image_path, "wb") as f:
+                    f.write(image_file_data)
+                mysql_client.insert_image(
+                    chat_id=chat_id, qa_id=question_uuid, image_uuid=image_uuid
+                )
 
     # search question
     question_text = question[-1] if isinstance(question, list) else question
@@ -153,6 +179,7 @@ async def questioning(
         question_type=question_type,
         max_tokens=8192,
         language=language,
+        images=images
     )
     answer = "".join(answer).replace("\n\n", "\n")
 
@@ -163,7 +190,7 @@ async def questioning(
         answer=answer,
         question=question[-1],
         token_size=token_size,
-        sent_by=user_id,
+        sent_by_username=sent_by_username,
         file_ids=document_file_uuid,
     )
 

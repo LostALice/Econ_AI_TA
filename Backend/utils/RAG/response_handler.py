@@ -5,14 +5,20 @@ from Backend.utils.helper.model.RAG.response_handler import (
     OLLAMAConfig,
     OpenaiConfig,
     DeployModel,
+    ConversationMessagesModel,
+    MessageModel,
+    ImagesContentModel,
+    ImageURLModel,
+    TextContentModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.RAG.prompt import PROMPT
 
-from ollama import Client
-from openai import OpenAI
+from ollama import Client  # type: ignore
+from openai import OpenAI  # type: ignore
 
-from typing import Literal, Union
+from typing import Literal, Union, Optional
+from pprint import pformat
 from os import getenv
 
 import requests  # type: ignore
@@ -45,7 +51,7 @@ class ResponseHandler(object):
         if self.LLM_DEPLOY_MODE == "ollama":
             self.Responser = OllamaResponser()
 
-        elif self.LLM_DEPLOY_MODE == "openai":
+        elif self.LLM_DEPLOY_MODE == "openai_compatible":
             self.Responser = OpenaiCompatibleResponser()
 
         # elif self.LLM_DEPLOY_MODE == "local":
@@ -89,9 +95,9 @@ class ResponseHandler(object):
             self.Responser = OllamaResponser()
             self.Responser.initialization()
 
-        elif self.LLM_DEPLOY_MODE == "openai":
-            self.Responser = OpenaiCompatibleResponser()
-            self.Responser.initialization()
+        # elif self.LLM_DEPLOY_MODE == "openaiCommerce":
+        #     self.Responser = OpenaiCompatibleResponser()
+        #     self.Responser.initialization()
 
         # elif self.LLM_DEPLOY_MODE == "local":
         #     self.Responser = LocalResponser()
@@ -115,6 +121,7 @@ class ResponseHandler(object):
         self,
         question: list[str],
         queried_document: list[str],
+        images: Optional[list[str] | None] = None,
         question_type: Literal["CHATTING", "TESTING", "THEOREM"] = "CHATTING",
         language: Literal["ENGLISH", "CHINESE"] = "CHINESE",
         max_tokens: int = 8192,
@@ -131,6 +138,8 @@ class ResponseHandler(object):
             queried_document=queried_document,
         )
 
+        self.logger.debug(pformat(conversation.model_dump(mode="python")))
+
         answer, token = self.Responser.response(
             conversation=conversation,
             max_tokens=max_tokens,
@@ -138,6 +147,7 @@ class ResponseHandler(object):
             top_k=top_k,
             top_p=top_p,
             frequence_penalty=frequence_penalty,
+            images=images
         )
 
         self.logger.debug(f"Response: {answer} ,Token count: {token}")
@@ -150,7 +160,8 @@ class ResponseHandler(object):
         chat_history: list[str] = [""],
         language: Literal["ENGLISH", "CHINESE"] = "CHINESE",
         question_type: Literal["CHATTING", "TESTING", "THEOREM"] = "CHATTING",
-    ) -> list[dict[str, str]]:
+        # ) -> list[dict[str, Union[str, list[dict[str, Union[str, dict[str, str]]]]]]]:
+    ) -> ConversationMessagesModel:
         """
         Format the conversation messages for the RAG system.
 
@@ -166,29 +177,89 @@ class ResponseHandler(object):
         system_content = PROMPT[language][question_type]["system"]
         assistant_content = PROMPT[language][question_type]["assistant"]
 
-        conversation_messages = [
-            {
-                "role": "system",
-                "content": system_content,
-            },
-            {
-                "role": "assistant",
-                "content": assistant_content,
-            },
-        ]
+        # list[dict[str, Union[str, list[dict[str, Union[str, dict[str, str]]]]]]]
+        # [
+        #     {
+        #         "role": "system",
+        #         "content": system_content,
+        #     },
+        #     {
+        #         "role": "assistant",
+        #         "content": assistant_content,
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": [
+        #             {
+        #                 "type": "text",
+        #                 "text": "human_message_content",
+        #             },
+        #             {
+        #                 "type": "image_url",
+        #                 "image_url": {
+        #                     "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg",
+        #                 },
+        #             },
+        #             {
+        #                 "type": "image_url",
+        #                 "image_url": {"url": "data:image/jpeg;base64,{base64_image}"},
+        #             },
+        #         ],
+        #     },
+        #     {
+        #         "role": "assistant",
+        #         "content": [
+        #             {
+        #                 "type": "text",
+        #                 "text": "chats",
+        #             }
+        #         ],
+        #     },
+        # ]
+
+        # conversation_messages: list[
+        #     dict[str, Union[str, list[dict[str, Union[str, dict[str, str]]]]]]
+        # ] = [
+        #     {
+        #         "role": "system",
+        #         "content": system_content,
+        #     },
+        #     {
+        #         "role": "assistant",
+        #         "content": assistant_content,
+        #     },
+        # ]
+
+        conversation_messages: ConversationMessagesModel = ConversationMessagesModel(
+            message=[
+                MessageModel(
+                    role="system",
+                    content=[TextContentModel(type="text", text=system_content)],
+                ),
+                MessageModel(
+                    role="assistant",
+                    content=[TextContentModel(type="text", text=assistant_content)],
+                ),
+            ]
+        )
 
         if len(chat_history) == 1:
             human_content = PROMPT[language][question_type]["user"]
             search_documents = "".join(queried_document)
+            human_message_content = human_content.format(
+                question=chat_history[-1],
+                search_documents=search_documents,
+            )
 
-            conversation_messages.append(
-                {
-                    "role": "user",
-                    "content": human_content.format(
-                        question=chat_history[-1],
-                        search_documents=search_documents,
-                    ),
-                }
+            # conversation_messages.append(
+            #     {"role": "user", "content": human_message_content}
+            # )
+
+            conversation_messages.message.append(
+                MessageModel(
+                    role="user",
+                    content=[TextContentModel(type="text", text=human_message_content)],
+                )
             )
         else:
             for i, chats in enumerate(chat_history):
@@ -196,20 +267,25 @@ class ResponseHandler(object):
                 # second question = RAG response, so on
                 # odd number = user question
                 # even number = RAG response
-                if i % 2 == 1:
-                    conversation_messages.append(
-                        {
-                            "role": "user",
-                            "content": chats,
-                        }
+                role = ["user", "assistant"]
+                # conversation_messages.append(
+                #     {
+                #         "role": role[i % 2],
+                #         "content": [
+                #             {
+                #                 "type": "text",
+                #                 "text": chats,
+                #             }
+                #         ],
+                #     }
+                # )
+
+                conversation_messages.message.append(
+                    MessageModel(
+                        role=role[i % 2],
+                        content=[TextContentModel(type="text", text=chats)],
                     )
-                else:
-                    conversation_messages.append(
-                        {
-                            "role": "assistant",
-                            "content": chats,
-                        }
-                    )
+                )
 
         return conversation_messages
 
@@ -233,7 +309,8 @@ class AFSResponser(object):
 
     def response(
         self,
-        conversation: list[dict[str, str]],
+        conversation: ConversationMessagesModel,
+        images: Optional[list[str] | None] = None,
         max_tokens: int = 8192,
         temperature: float = 0.6,
         top_k: int = 30,
@@ -295,7 +372,8 @@ class OpenaiCompatibleResponser(object):
     def initialization(self) -> None: ...
     def response(
         self,
-        conversation: list[dict[str, str]],
+        conversation: ConversationMessagesModel,
+        images: Optional[list[str] | None] = None,
         max_tokens: int = 8192,
         temperature: float = 0.6,
         top_k: int = 30,
@@ -340,7 +418,8 @@ class OllamaResponser(object):
 
     def response(
         self,
-        conversation: list[dict[str, str]],
+        conversation: ConversationMessagesModel,
+        images: Optional[list[str] | None] = None,
         max_tokens: int = 8192,
         temperature: float = 0.6,
         top_k: int = 30,
@@ -403,28 +482,37 @@ class OpenAIResponser(object):
 
     def response(
         self,
-        conversation: list[dict[str, str]],
+        conversation: ConversationMessagesModel,
+        images: Optional[list[str] | None] = None,
         max_tokens: int = 8192,
         temperature: float = 0.6,
         top_k: int = 30,
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-        self.logger.info(conversation)
+
+        if images:
+            for base64_image in images:
+                conversation.message[-1].content.append(
+                    ImagesContentModel(
+                        type="image_url",
+                        image_url=ImageURLModel(
+                            url=f"data:image/jpeg;base64,{base64_image}"
+                        ),
+                    )
+                )
 
         response = self.client.chat.completions.create(
             model=self.openai_model_name,
-            messages=conversation,
+            messages=conversation.message,
             frequency_penalty=frequence_penalty,
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p,
         )
 
-        if not response.message.content:
-            self.logger.error("Failed to generate OpenAI response")
-            return "", 0
-        if not response.prompt_eval_count:
+        self.logger.debug(pformat(response.model_dump(mode="python")))
+        if not response:
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
 
@@ -441,6 +529,7 @@ class OpenAIResponser(object):
 #     def response(
 #         self,
 #         conversation: list[dict[str, str]],
+#         images: Optional[list[str] | None] = None,
 #         max_tokens: int = 8192,
 #         temperature: float = 0.6,
 #         top_k: int = 30,
