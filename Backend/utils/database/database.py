@@ -31,34 +31,38 @@ class SetupMYSQL(object):
         return cls._instance
 
     def _initialize(self) -> None:
-        self.DEBUG = getenv("MYSQL_DEBUG")
+        self._DEBUG = getenv("MYSQL_DEBUG")
 
-        self.HOST = getenv("MYSQL_HOST")
-        self.USER = getenv("MYSQL_USER_NAME")
-        self.PASSWORD = getenv("MYSQL_PASSWORD")
-        self.DATABASE = getenv("MYSQL_DATABASE")
-        self.PORT = getenv("MYSQL_PORT")
+        self._HOST = getenv("MYSQL_HOST")
+        self._USER = getenv("MYSQL_USER_NAME")
+        self._PASSWORD = getenv("MYSQL_PASSWORD")
+        self._DATABASE = getenv("MYSQL_DATABASE")
+        self._PORT = getenv("MYSQL_PORT")
 
-        self.ATTENDANCE = getenv("MYSQL_CONNECTION_RETRY")
-        self.ROOT_USERNAME = getenv("MYSQL_ROOT_USERNAME")
-        self.ROOT_PASSWORD = getenv("MYSQL_ROOT_PASSWORD")
+        self._ATTENDANCE = getenv("MYSQL_CONNECTION_RETRY")
+        self._ROOT_USERNAME = getenv("MYSQL_ROOT_USERNAME")
+        self._ROOT_PASSWORD = getenv("MYSQL_ROOT_PASSWORD")
 
-        assert self.DEBUG is not None, "Missing MYSQL_DEBUG environment variable"
+        assert self._DEBUG is not None, "Missing MYSQL_DEBUG environment variable"
 
-        assert self.HOST is not None, "Missing MYSQL_HOST environment variable"
-        assert self.USER is not None, "Missing MYSQL_USER_NAME environment variable"
-        assert self.PASSWORD is not None, "Missing MYSQL_PASSWORD environment variable"
-        assert self.DATABASE is not None, "Missing MYSQL_DATABASE environment variable"
-        assert self.PORT is not None, "Missing MYSQL_PORT environment variable"
+        assert self._HOST is not None, "Missing MYSQL_HOST environment variable"
+        assert self._USER is not None, "Missing MYSQL_USER_NAME environment variable"
+        assert (
+            self._PASSWORD is not None
+        ), "Missing MYSQL_PASSWORD environment variable"
+        assert (
+            self._DATABASE is not None
+        ), "Missing MYSQL_DATABASE environment variable"
+        assert self._PORT is not None, "Missing MYSQL_PORT environment variable"
 
         assert (
-            self.ATTENDANCE is not None
+            self._ATTENDANCE is not None
         ), "Missing MYSQL_CONNECTION_RETRY environment variable"
         assert (
-            self.ROOT_USERNAME is not None
+            self._ROOT_USERNAME is not None
         ), "Missing MYSQL_ROOT_USERNAME environment variable"
         assert (
-            self.ROOT_PASSWORD is not None
+            self._ROOT_PASSWORD is not None
         ), "Missing MYSQL_ROOT_PASSWORD environment variable"
 
         # logger
@@ -94,41 +98,42 @@ class SetupMYSQL(object):
             This method is called internally during the initialization of the SetupMYSQL class.
         """
         self.connection = connector.connect(
-            host=self.HOST,
-            user=self.USER,
-            password=self.PASSWORD,
-            port=self.PORT,
+            host=self._HOST,
+            user=self._USER,
+            password=self._PASSWORD,
+            port=self._PORT,
         )
 
         self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
         try:
-            self.connection.database = self.DATABASE
-            if self.DEBUG in ["True", "true"]:
+            self.connection.database = self._DATABASE
+            self.logger.debug(f"Debug Mode: {self._DEBUG}")
+            if self._DEBUG in ["True", "true"]:
                 self.logger.warning("Dropping database")
-                self.cursor.execute(f"DROP DATABASE {self.DATABASE}")
-                self.commit()
+                self.cursor.execute(f"DROP DATABASE {self._DATABASE}")
+                self.connection.commit()
                 self.create_database()
             else:
-                self.logger.info(f"Skipped recrate database, Debug: {self.DEBUG}")
+                self.logger.info(f"Skipped recrate database, Debug: {self._DEBUG}")
         except connector.Error as error:
             self.logger.error(error)
-            self.logger.debug(pformat(f"Creating MYSQL database {self.DATABASE}"))
+            self.logger.debug(pformat(f"Creating MYSQL database {self._DATABASE}"))
             self.create_database()
         finally:
-            self.logger.debug(f"Using MYSQL database {self.DATABASE}")
-            self.connection.database = self.DATABASE
+            self.logger.debug(f"Using MYSQL database {self._DATABASE}")
+            self.connection.database = self._DATABASE
             self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
     def create_database(self) -> None:
-        self.cursor.execute(f"CREATE DATABASE {self.DATABASE};")
-        self.connection.connect(database=self.DATABASE)
+        self.cursor.execute(f"CREATE DATABASE {self._DATABASE};")
+        self.connection.connect(database=self._DATABASE)
         self.connection.commit()
 
         # ROLE table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`role` (
+            CREATE TABLE `{self._DATABASE}`.`role` (
                 `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`role_id`),
@@ -142,7 +147,7 @@ class SetupMYSQL(object):
         # USER table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`user` (
+            CREATE TABLE `{self._DATABASE}`.`user` (
                 `user_id` INT NOT NULL AUTO_INCREMENT,
                 `username` VARCHAR(45) NOT NULL,
                 `role_id` INT UNSIGNED NOT NULL,
@@ -156,7 +161,7 @@ class SetupMYSQL(object):
         # LOGIN table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`login` (
+            CREATE TABLE `{self._DATABASE}`.`login` (
                 `user_id` INT NOT NULL,
                 `password` VARCHAR(64) NOT NULL,
                 `jwt` VARCHAR(255) NOT NULL DEFAULT "",
@@ -171,7 +176,7 @@ class SetupMYSQL(object):
         # CHAT table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`chat` (
+            CREATE TABLE `{self._DATABASE}`.`chat` (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `user_id` INT NOT NULL,
                 `chat_name` VARCHAR(45) NOT NULL,
@@ -185,7 +190,7 @@ class SetupMYSQL(object):
         # FILE table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`file` (
+            CREATE TABLE `{self._DATABASE}`.`file` (
                 `file_id` VARCHAR(45) NOT NULL,
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
@@ -201,10 +206,11 @@ class SetupMYSQL(object):
         # QA table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`qa` (
+            CREATE TABLE `{self._DATABASE}`.`qa` (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `question` LONGTEXT NOT NULL,
+                `images` VARCHAR(45) NULL,
                 `answer` LONGTEXT NOT NULL,
                 `token_size` INT NOT NULL DEFAULT 0,
                 `rating`TINYINT DEFAULT NULL,
@@ -220,7 +226,7 @@ class SetupMYSQL(object):
         # ATTACHMENT table
         self.cursor.execute(
             f"""
-            CREATE TABLE `{self.DATABASE}`.`attachment` (
+            CREATE TABLE `{self._DATABASE}`.`attachment` (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `file_id` VARCHAR(45) NOT NULL,
@@ -232,11 +238,25 @@ class SetupMYSQL(object):
             """
         )
 
+        # IMAGES table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE `{self._DATABASE}`.`images` (
+                `chat_id` VARCHAR(45) NOT NULL,
+                `qa_id` VARCHAR(45) NOT NULL,
+                `images_file_id` VARCHAR(45) NOT NULL,
+                PRIMARY KEY (`qa_id`, `images_file_id`),
+                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+                FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+            );
+            """
+        )
+
         self.connection.commit()
 
         # Admin account
-        admin_username = str(self.ROOT_USERNAME)
-        admin_password = str(self.ROOT_PASSWORD)
+        admin_username = str(self._ROOT_USERNAME)
+        admin_password = str(self._ROOT_PASSWORD)
 
         import hashlib
 
@@ -279,7 +299,7 @@ class SetupMYSQL(object):
         )
         self.connection.commit()
 
-        self.logger.debug(pformat(f"Created MYSQL database {self.DATABASE}"))
+        self.logger.debug(pformat(f"Created MYSQL database {self._DATABASE}"))
 
 
 class MySQLHandler(SetupMYSQL):
@@ -551,6 +571,11 @@ class MySQLHandler(SetupMYSQL):
         success = self.commit()
         return success
 
+    def insert_image(self, chat_id: str, qa_id: str, image_uuid: str):
+        """
+        Insert a new image record into the database.
+        """
+
     def insert_chatting(
         self,
         chat_id: str,
@@ -558,7 +583,7 @@ class MySQLHandler(SetupMYSQL):
         question: str,
         answer: str,
         token_size: int,
-        sent_by: str,
+        sent_by_username: str,
         file_ids: list[str],
     ) -> bool:
         """
@@ -580,10 +605,6 @@ class MySQLHandler(SetupMYSQL):
             bool: True if the chat record was successfully inserted, False otherwise.
         """
         self.connection.ping(attempts=3)
-        self.cursor.execute(
-            """SELECT user_id FROM user WHERE username = %s""", (sent_by,)
-        )
-        user_id = self.cursor.fetchone()["user_id"]
 
         self.logger.debug(
             pformat(
@@ -593,16 +614,22 @@ class MySQLHandler(SetupMYSQL):
                     "question": question,
                     "answer": answer,
                     "token_size": token_size,
-                    "sent_by": sent_by,
+                    "sent_by_username": sent_by_username,
                     "file_ids": file_ids,
-                    "user_id": user_id,
                 }
             )
         )
 
         self.cursor.execute(
+            """SELECT user_id FROM user WHERE username = %s""", (sent_by_username,)
+        )
+        user_id = self.cursor.fetchone()["user_id"]
+
+        self.logger.debug(f"Fetched user: {sent_by_username}, user_id: {user_id}")
+
+        self.cursor.execute(
             f"""
-            INSERT IGNORE INTO `{self.DATABASE}`.`chat` (chat_id, user_id, chat_name)
+            INSERT IGNORE INTO `{self._DATABASE}`.`chat` (chat_id, user_id, chat_name)
             VALUES (
                 %s, %s, %s
             );""",
@@ -614,12 +641,12 @@ class MySQLHandler(SetupMYSQL):
 
         self.cursor.execute(
             f"""
-            INSERT INTO `{self.DATABASE}`.`qa` (chat_id, qa_id, question, answer, token_size, sent_by)
+            INSERT INTO `{self._DATABASE}`.`qa` (chat_id, qa_id, question, answer, token_size, sent_by)
             VALUES (
                 %s, %s, %s, %s, %s, %s
             );
         """,
-            (chat_id, qa_id, question, answer, token_size, sent_by),
+            (chat_id, qa_id, question, answer, token_size, sent_by_username),
         )
 
         success = self.commit()
@@ -629,7 +656,7 @@ class MySQLHandler(SetupMYSQL):
             for file_id in set(file_ids):
                 self.cursor.execute(
                     f"""
-                    INSERT INTO `{self.DATABASE}`.`attachment` (chat_id, qa_id, file_id)
+                    INSERT INTO `{self._DATABASE}`.`attachment` (chat_id, qa_id, file_id)
                     VALUES (
                         %s, %s, %s
                     );
@@ -652,7 +679,7 @@ class MySQLHandler(SetupMYSQL):
     #     f"""
     #     self.connection.ping(attempts=3)
     #     self.cursor.execute("""SELECT file_id
-    #         FROM {self.DATABASE}.file
+    #         FROM {self._DATABASE}.file
     #         WHERE file_name = %s
     #         """, (docs_name,)
     #     )
@@ -682,7 +709,7 @@ class MySQLHandler(SetupMYSQL):
         self.logger.info(pformat("query docs name {docs_id}"))
         self.cursor.execute(
             f"""SELECT file_name
-            FROM {self.DATABASE}.file
+            FROM {self._DATABASE}.file
             WHERE file_id = %s
             """,
             (docs_id,),
@@ -719,7 +746,7 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f""" SELECT file_id, file_name, last_update
-                FROM {self.DATABASE}.file
+                FROM {self._DATABASE}.file
                 WHERE `expired` = 0 AND `tags` -> "$.documentation_type" = %s
             """,
             (documentation_type,),
