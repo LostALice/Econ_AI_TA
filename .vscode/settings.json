@@ -12,6 +12,23 @@
             "name": "test",
             "database": "FCU_LLM",
             "username": "root"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "Econ_TA",
+            "database": "FCU",
+            "username": "root",
+            "password": "example_password"
         }
+    ],
+    "cSpell.words": [
+        "frequence"
     ]
 }
