@@ -28,6 +28,12 @@ export interface IMessageInfo {
   answer: string;
   files: IFiles[];
   time: string;
+  images: string[]
+}
+
+export interface IImage {
+  base64Image: string;
+  onClose?: () => void;
 }
 
 export type TQuestionMode = "CHATTING" | "TESTING" | "THEOREM";

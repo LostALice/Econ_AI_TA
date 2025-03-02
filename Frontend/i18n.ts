@@ -152,6 +152,22 @@ export const LanguageTable = {
         en: "Send question to TA",
       },
     },
+    component: {
+      messageBox: {
+        thankForResponse: {
+          zh: "感謝你的回饋!",
+          en: "Thank you for your response!",
+        },
+        helpful: {
+          zh: "有幫助",
+          en: "Helpful.",
+        },
+        unhelpful: {
+          zh: "沒有幫助",
+          en: "Not helpful.",
+        },
+      },
+    },
   },
   docs: {
     page: {
@@ -170,7 +186,43 @@ export const LanguageTable = {
       loading: {
         zh: "載入中...",
         en: "Loading...",
-      }
-    }
-  }
+      },
+    },
+    component: {
+      fileUploadButton: {
+        fileUpload: {
+          zh: "文件上傳",
+          en: "Upload File",
+        },
+        uploadSuccess: {
+          zh: "上載成功",
+          en: "Upload successful",
+        },
+        uploadFailed: {
+          zh: "上載失敗",
+          en: "Upload failed",
+        },
+        clickToUpload: {
+          zh: "點擊上傳",
+          en: "Click here to upload",
+        },
+        dropToUpload: {
+          zh: "或拖放文件",
+          en: "Or drop files here",
+        },
+        close: {
+          zh: "關閉",
+          en: "Close",
+        },
+        reset: {
+          zh: "重置",
+          en: "Reset",
+        },
+        upload: {
+          zh: "上傳",
+          en: "Upload",
+        },
+      },
+    },
+  },
 };

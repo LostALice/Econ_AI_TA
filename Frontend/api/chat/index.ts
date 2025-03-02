@@ -9,6 +9,7 @@ export async function askQuestion(
   userID: string,
   language: string,
   collection: string | "default" = "default",
+  images: string[],
   question_type: "CHATTING" | "TESTING" | "THEOREM" = "CHATTING"
 ): Promise<TAskQuestionResponseFormat> {
   if (language === "en") {
@@ -19,31 +20,28 @@ export async function askQuestion(
     language = "CHINESE";
   }
 
-  console.log(
-    JSON.stringify({
-      chat_id: chatUUID,
-      question: question,
-      user_id: userID,
-      language: language, 
-      collection: collection,
-      question_type: question_type
-    })
-  );
+  const postBody = JSON.stringify({
+    chat_id: chatUUID,
+    question: question,
+    sent_by_username: userID,
+    language: language,
+    question_type: question_type,
+    collection: collection,
+    images: images,
+  });
+
+  console.log(postBody);
   const resp = await fetch(`${siteConfig.api_url}/chatroom/${chatUUID}/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      chat_id: chatUUID,
-      question: question,
-      user_id: userID,
-      language: language,
-      collection: collection,
-      question_type: question_type,
-    }),
+    body: postBody
   });
   const data = await resp.json();
+  
+  console.log(data);
+
   return {
     questionUUID: data.question_uuid,
     answer: data.answer,

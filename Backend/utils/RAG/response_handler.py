@@ -40,6 +40,7 @@ class ResponseHandler(object):
         self.LLM_DEPLOY_MODE = DeployModel(mode=mode).mode
 
         self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger.debug(f"LLM DEPLOY MODE: {self.LLM_DEPLOY_MODE}")
         self.Responser: Union[
             AFSResponser,
             OpenaiCompatibleResponser,
@@ -511,14 +512,18 @@ class OpenAIResponser(object):
             top_p=top_p,
         )
 
-        self.logger.debug(pformat(response.model_dump(mode="python")))
+        response_dump = response.model_dump(mode="python")
+
+        self.logger.debug(pformat(response_dump))
         if not response:
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
 
-        token_count = response.model_dump(mode="python")["usage"]["total_tokens"] if response.model_dump(mode="python")["usage"]["total_tokens"] else 0
+        token_count = response_dump["usage"]["total_tokens"] if response_dump["usage"]["total_tokens"] else 0
 
-        return str(response.choices[0].message), token_count
+        message_dump = response.choices[0].message.model_dump(mode="python")
+
+        return str(message_dump["content"]), token_count
 
 
 # class LocalResponser(object):

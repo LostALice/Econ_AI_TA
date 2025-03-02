@@ -1,3 +1,4 @@
+import { VisuallyHidden } from "@react-aria/visually-hidden";
 import { SwitchProps, useSwitch } from "@heroui/react";
 import { FC, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
@@ -27,6 +28,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
     slots,
     isSelected,
     getBaseProps,
+    getInputProps,
     getWrapperProps,
   } = useSwitch({
     isSelected: theme === "dark",
@@ -50,6 +52,9 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
         ),
       })}
     >
+      <VisuallyHidden>
+        <input {...getInputProps()} />
+      </VisuallyHidden>
       <div
         {...getWrapperProps()}
         className={slots.wrapper({
