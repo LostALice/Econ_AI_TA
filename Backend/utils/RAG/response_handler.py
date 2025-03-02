@@ -511,20 +511,15 @@ class OpenAIResponser(object):
             temperature=temperature,
             top_p=top_p,
         )
-
         response_dump = response.model_dump(mode="python")
 
         self.logger.debug(pformat(response_dump))
+        
         if not response:
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
 
-        token_count = (
-            response_dump["usage"]["total_tokens"]
-            if response_dump["usage"]["total_tokens"]
-            else 0
-        )
-
+        token_count = response_dump["usage"]["total_tokens"] or 0
         message_dump = response.choices[0].message.model_dump(mode="python")
 
         return str(message_dump["content"]), token_count

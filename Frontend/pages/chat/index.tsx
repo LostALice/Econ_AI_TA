@@ -105,7 +105,7 @@ export default function ChatPage() {
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const item = event.clipboardData?.items[0]
-      if (!item) return
+      if (!item) { return }
 
       if (item.type.includes("image")) {
         const file = item.getAsFile()
@@ -115,7 +115,7 @@ export default function ChatPage() {
             let base64String = e.target?.result as string
             if (base64String) {
               base64String = base64String.split(",")[1]
-              setBase64ImageList([...base64ImageList, base64String])
+              setBase64ImageList(prev => [...prev, base64String])
             }
           }
           reader.readAsDataURL(file)
@@ -129,10 +129,10 @@ export default function ChatPage() {
   }, [base64ImageList])
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
+    const { files } = event.target
+    if (!files || files.length === 0) { return }
     console.log(base64ImageList.length)
-    if (base64ImageList.length > 3) return
+    if (base64ImageList.length > 3) { return }
 
     const reader = new FileReader()
     reader.readAsDataURL(files[0])
