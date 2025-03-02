@@ -57,7 +57,7 @@
 
 
 ### Frontend .env file
-| **Section**                  | **Variable**                   | **Value**                    |
-| ---------------------------- | ------------------------------ | ---------------------------- |
-| **API URL**                  | NEXT_PUBLIC_API_URL            | http://localhost:8000/api/v1 |
-|                              | NEXT_PUBLIC_DEBUG_MODE         | true                         |
+| **Section** | **Variable**           | **Value**                    |
+| ----------- | ---------------------- | ---------------------------- |
+| **API URL** | NEXT_PUBLIC_API_URL    | http://localhost:8000/api/v1 |
+|             | NEXT_PUBLIC_DEBUG_MODE | true                         |

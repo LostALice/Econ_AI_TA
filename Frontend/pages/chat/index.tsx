@@ -51,9 +51,9 @@ export default function ChatPage() {
       return
     }
     setLoading(true)
-    
+
     const historyQuestions: string[] = []
-    
+
     if (chatInfo.length > 0) {
       for (const chat of chatInfo) {
         console.log(chat)
@@ -84,7 +84,7 @@ export default function ChatPage() {
       time: new Date().toDateString(),
       images: base64ImageList
     }
-    
+
     setChatInfo([...chatInfo, message_info])
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
     setLoading(false)

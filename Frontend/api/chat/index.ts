@@ -36,10 +36,10 @@ export async function askQuestion(
     headers: {
       "Content-Type": "application/json",
     },
-    body: postBody
+    body: postBody,
   });
   const data = await resp.json();
-  
+
   console.log(data);
 
   return {

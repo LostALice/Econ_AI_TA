@@ -179,7 +179,7 @@ async def questioning(
         question_type=question_type,
         max_tokens=8192,
         language=language,
-        images=images
+        images=images,
     )
 
     # insert into mysql

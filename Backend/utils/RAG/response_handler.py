@@ -148,7 +148,7 @@ class ResponseHandler(object):
             top_k=top_k,
             top_p=top_p,
             frequence_penalty=frequence_penalty,
-            images=images
+            images=images,
         )
 
         self.logger.debug(f"Response: {answer} ,Token count: {token}")
@@ -519,7 +519,11 @@ class OpenAIResponser(object):
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
 
-        token_count = response_dump["usage"]["total_tokens"] if response_dump["usage"]["total_tokens"] else 0
+        token_count = (
+            response_dump["usage"]["total_tokens"]
+            if response_dump["usage"]["total_tokens"]
+            else 0
+        )
 
         message_dump = response.choices[0].message.model_dump(mode="python")
 
