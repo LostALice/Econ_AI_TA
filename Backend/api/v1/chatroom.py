@@ -181,7 +181,6 @@ async def questioning(
         language=language,
         images=images
     )
-    answer = "".join(answer).replace("\n\n", "\n")
 
     # insert into mysql
     mysql_client.insert_chatting(

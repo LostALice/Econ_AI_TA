@@ -12,6 +12,8 @@ import { useEffect, useState, useContext } from "react"
 import { getCookie } from "cookies-next"
 import { siteConfig } from "@/config/site"
 import { AuthContext } from "@/contexts/AuthContext"
+import { LangContext } from "@/contexts/LangContext"
+import { LanguageTable } from "@/i18n";
 
 export const FileUploadButton = () => {
   const { role, setRole } = useContext(AuthContext)
@@ -21,9 +23,10 @@ export const FileUploadButton = () => {
   const [isProgressing, setIsProgressing] = useState<boolean>(false)
   const [fileObject, setFileObject] = useState<File | null>()
   const [fileURL, setFileURL] = useState<string>()
+  const { language, setLang } = useContext(LangContext);
 
   useEffect(() => {
-    const userRole = getCookie("role") || "未登入"
+    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language]
     setRole(userRole)
   })
 
@@ -35,7 +38,7 @@ export const FileUploadButton = () => {
         return (
           <div className="w-full flex justify-center">
             <span className="text-left text-lg">
-              {uploadSuccess ? (uploadSuccess == 200 ? "上載成功:" : "上載失敗:") : ""}
+              {uploadSuccess ? (uploadSuccess == 200 ? LanguageTable.docs.component.fileUploadButton.uploadSuccess[language] : LanguageTable.docs.component.fileUploadButton.uploadFailed[language]) : ""}
               {file.name}
             </span>
           </div>
@@ -44,7 +47,7 @@ export const FileUploadButton = () => {
         return (
           <div className="w-full flex justify-center">
             <span className="text-left text-lg">
-              {uploadSuccess ? (uploadSuccess == 200 ? "上載成功:" : "上載失敗:") : ""}
+              {uploadSuccess ? (uploadSuccess == 200 ? LanguageTable.docs.component.fileUploadButton.uploadSuccess[language] : LanguageTable.docs.component.fileUploadButton.uploadFailed[language]) : ""}
               {file.name}
             </span>
           </div>
@@ -116,7 +119,7 @@ export const FileUploadButton = () => {
           setFileObject(null)
         }}
       >
-        文件上傳
+        {LanguageTable.docs.component.fileUploadButton.fileUpload[language]}
       </Button>
       <Modal
         isOpen={isOpen}
@@ -128,7 +131,7 @@ export const FileUploadButton = () => {
         <ModalContent>
           {(onClose) => (
             <div>
-              <ModalHeader>文件上傳</ModalHeader>
+              <ModalHeader>{LanguageTable.docs.component.fileUploadButton.fileUpload[language]}</ModalHeader>
               <ModalBody className="mb-3">
                 <div
                   className="container mx-auto"
@@ -160,8 +163,8 @@ export const FileUploadButton = () => {
                           htmlFor="file"
                           className="flex justify-center text-center h-full w-full items-center"
                         >
-                          <span className="text-blue-500">點擊上傳</span>
-                          <span>或拖放文件</span>
+                          <span className="text-blue-500">{LanguageTable.docs.component.fileUploadButton.clickToUpload[language]}</span>
+                          <span>{LanguageTable.docs.component.fileUploadButton.dropToUpload[language]}</span>
                         </label>
                         <input
                           id="file"
@@ -187,35 +190,35 @@ export const FileUploadButton = () => {
                           <ModalFooter className="flex justify-center">
                             {uploadSuccess != 0 ? (
                               <Button
-                                onClick={() => {
+                                onPress={() => {
                                   setFileURL("")
                                   setFileObject(null)
                                   setUploadSuccess(0)
                                 }}
                                 className="px-5 rounded text-medium bg-gray-400"
                               >
-                                關閉
+                                {LanguageTable.docs.component.fileUploadButton.close[language]}
                               </Button>
                             ) : (
                               <div className="flex justify-center gap-2">
                                 <Button
-                                  onClick={() => {
+                                  onPress={() => {
                                     setFileURL("")
                                     setFileObject(null)
                                   }}
                                   className="px-5 rounded text-medium bg-gray-400"
                                 >
-                                  重設
+                                  {LanguageTable.docs.component.fileUploadButton.reset[language]}
                                 </Button>
                                 <Button
                                   isLoading={isProgressing}
-                                  onClick={() => {
+                                  onPress={() => {
                                     setIsProgressing(true)
                                     uploadFile(fileObject, "default", [""])
                                   }}
                                   className="px-5 rounded text-medium"
                                 >
-                                  上傳
+                                  {LanguageTable.docs.component.fileUploadButton.upload[language]}
                                 </Button>
                               </div>
                             )}
