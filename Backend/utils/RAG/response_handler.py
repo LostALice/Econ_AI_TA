@@ -14,8 +14,8 @@ from Backend.utils.helper.model.RAG.response_handler import (
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.RAG.prompt import PROMPT
 
-from ollama import Client  # type: ignore
-from openai import OpenAI  # type: ignore
+from ollama import Client
+from openai import OpenAI
 
 from typing import Literal, Union, Optional
 from pprint import pformat
@@ -95,7 +95,7 @@ class ResponseHandler(object):
             self.Responser = OllamaResponser()
             self.Responser.initialization()
 
-        # elif self.LLM_DEPLOY_MODE == "openaiCommerce":
+        # elif self.LLM_DEPLOY_MODE == "openaiCompatible":
         #     self.Responser = OpenaiCompatibleResponser()
         #     self.Responser.initialization()
 
@@ -429,7 +429,7 @@ class OllamaResponser(object):
         self.logger.info(conversation)
         response = self.ollama_client.chat(
             model=self.ollama_model_name,
-            messages=conversation,
+            messages=conversation.model_dump(mode="python")["message"],
             options={
                 "max_tokens": max_tokens,
                 "temperature": temperature,
@@ -504,7 +504,7 @@ class OpenAIResponser(object):
 
         response = self.client.chat.completions.create(
             model=self.openai_model_name,
-            messages=conversation.message,
+            messages=conversation.model_dump(mode="python")["message"],
             frequency_penalty=frequence_penalty,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -516,7 +516,7 @@ class OpenAIResponser(object):
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
 
-        token_count = response.usage.total_tokens if response.usage.total_tokens else 0
+        token_count = response.model_dump(mode="python")["usage"]["total_tokens"] if response.model_dump(mode="python")["usage"]["total_tokens"] else 0
 
         return str(response.choices[0].message), token_count
 
