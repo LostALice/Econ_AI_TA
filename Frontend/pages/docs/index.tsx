@@ -1,6 +1,6 @@
 import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
-import { useState, useContext } from "react";
+import { useState, useContext, Key } from "react";
 
 import {
   Listbox,
@@ -19,22 +19,32 @@ import { LanguageTable } from "@/i18n";
 import { LangContext } from "@/contexts/LangContext";
 
 import { fetchDocsList } from "@/pages/api/api";
-import { IDepartment } from "@/types/global";
 import { IDocsFormat } from "@/types/api/types";
+
+import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 
 export default function DocsPage() {
   const { language, setLang } = useContext(LangContext);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fileList, setFileList] = useState<IDocsFormat[]>([]);
 
-  const departmentList: IDepartment[] = [
-    { departmentName: "pptx" },
-    { departmentName: "docx" },
+  // Not recommended to change following key, unless you know what you are doing.
+  // Not recommended to change following key, unless you know what you are doing.
+  // Not recommended to change following key, unless you know what you are doing.
+  const documentationTypeList = [
+    {
+      key: "TESTING",
+      label: LanguageTable.docs.page.testing[language],
+    },
+    {
+      key: "THEOREM",
+      label: LanguageTable.docs.page.theorem[language],
+    }
   ];
 
-  async function loadFileList(departmentName: IDepartment) {
+  async function loadFileList(documentationType: string) {
     setIsLoading(true);
-    setFileList(await fetchDocsList(departmentName.toString()));
+    setFileList(await fetchDocsList(documentationType));
     setIsLoading(false);
   }
 
@@ -47,15 +57,15 @@ export default function DocsPage() {
             disallowEmptySelection
             aria-label="Actions"
             className="h-full w-[15rem]"
-            onAction={(key: IDepartment) => loadFileList(key)}
+            onAction={(key) => loadFileList(key as string)}
             variant="flat"
             selectionMode="single"
-            items={departmentList}
+            items={documentationTypeList}
             emptyContent={<Spinner color="success" label={LanguageTable.docs.page.loading[language]} />}
           >
-            {(item: IDepartment) => (
-              <ListboxItem key={item.departmentName}>
-                {item.departmentName}
+            {(item) => (
+              <ListboxItem key={item.key}>
+                {item.label}
               </ListboxItem>
             )}
           </Listbox>

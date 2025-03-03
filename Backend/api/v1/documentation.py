@@ -107,7 +107,7 @@ async def get_documentation_list(
 async def file_upload(
     docs_file: UploadFile,
     tags: Annotated[list[str], Form()],
-    docs_format: str = "docx",
+    docs_type: str,
     collection: str = "default",
 ) -> FileUploadSuccessModel:
     """
@@ -116,11 +116,14 @@ async def file_upload(
     This function handles the upload of a document file, splits its content,
     generates vector representations, and stores the information in both
     MySQL and Milvus databases.
+    Current only support following document type:
+        docx,
+        pptx
 
     Args:
         docs_file (UploadFile): The uploaded document file.
         tags (Annotated[list[str], Form()]): A list of tags associated with the document.
-        docs_format (str, optional): The format of the document. Defaults to "docx".
+        docs_type (str, optional): The types of the document.
         collection (str, optional): The name of the collection to store the document in. Defaults to "default".
 
     Returns:
@@ -130,7 +133,7 @@ async def file_upload(
         HTTPException: If there's an error in file type, format, or database operations.
     """
 
-    file_tags = str(json.dumps({"docs_format": docs_format, "tags": tags}))
+    file_tags = str(json.dumps({"docs_type": docs_type, "tags": tags}))
     filename = str(docs_file.filename)
     file_extension = filename.split(".")[-1]
     file_uuid = str(uuid.uuid4())
@@ -139,12 +142,13 @@ async def file_upload(
         pformat(f"""docs_file: {filename} file_uuid: {file_uuid} tags: {file_tags}""")
     )
 
-    if file_extension != docs_format:
-        # exclude non invalid files
-        logger.warning(
-            pformat(f"Invalid file type: {file_extension}, prefer: {docs_format}")
-        )
-        raise HTTPException(status_code=422, detail="Invalid file type")
+    # User need to specify the type of document to upload
+    # if file_extension != docs_type:
+    #     # exclude non invalid files
+    #     logger.warning(
+    #         pformat(f"Invalid file type: {file_extension}, prefer: {docs_format}")
+    #     )
+    #     raise HTTPException(status_code=422, detail="Invalid file type")
 
     # save uploaded pdf file
     docs_contents = docs_file.file.read()
@@ -152,19 +156,19 @@ async def file_upload(
         f.write(docs_contents)
 
     # files identify
-    if docs_format == "docx":
+    if file_extension == "docx":
         splitted_content = docs_client.document_splitter(
             f"./files/{file_uuid}.docx", "docx"
         )
         logger.debug(pformat(splitted_content))
 
-    elif docs_format == "pptx":
+    elif file_extension == "pptx":
         splitted_content = docs_client.document_splitter(
             f"./files/{file_uuid}.pptx", "pptx"
         )
         logger.debug(pformat(splitted_content))
     else:
-        logger.error(pformat(f"Unsupported file format: {docs_format}"))
+        logger.error(pformat(f"Unsupported file docs: {filename}"))
         raise HTTPException(status_code=422, detail="Unsupported file format")
 
     # insert to milvus

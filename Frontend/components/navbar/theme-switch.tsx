@@ -28,6 +28,7 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
     slots,
     isSelected,
     getBaseProps,
+    getInputProps,
     getWrapperProps,
   } = useSwitch({
     isSelected: theme === "dark",
@@ -51,6 +52,9 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
         ),
       })}
     >
+      <VisuallyHidden>
+        <input {...getInputProps()} />
+      </VisuallyHidden>
       <div
         {...getWrapperProps()}
         className={slots.wrapper({

@@ -7,12 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
 import os
-import json
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
 
 # logging setup
 logger = CustomLoggerHandler(__name__).setup_logging()

@@ -57,6 +57,10 @@ export const LanguageTable = {
         zh: "問答",
         en: "Chat",
       },
+      mock: {
+        zh: "模擬考",
+        en: "Mock",
+      },
     },
     role: {
       unsigned: {
@@ -114,17 +118,23 @@ export const LanguageTable = {
         en: "Cancel",
       },
     },
+    modal: {
+      menu: {
+        zh: "選單",
+        en: "Menu",
+      },
+    },
   },
   chat: {
     page: {
       target: {
         THEOREM: {
           zh: "大一經濟學原理",
-          en: "Economics Theory",
+          en: "Basic of Economics",
         },
         TESTING: {
           zh: "公務員高普考",
-          en: "Economics Exam",
+          en: "Civil Service Examination",
         },
         CHATTING: {
           zh: "智能助教",
@@ -175,10 +185,6 @@ export const LanguageTable = {
         zh: "課程名稱",
         en: "Lesson Name",
       },
-      // lessonDescription: {
-      //   zh: "課程簡介",
-      //   en: "Lesson Description",
-      // },
       lastUpdate: {
         zh: "最後更新時間",
         en: "Last Update Time",
@@ -186,6 +192,14 @@ export const LanguageTable = {
       loading: {
         zh: "載入中...",
         en: "Loading...",
+      },
+      testing: {
+        zh: "公務員高普考",
+        en: "Civil Service Examination",
+      },
+      theorem: {
+        zh: "大一經濟學原理",
+        en: "Basic of Economics",
       },
     },
     component: {
@@ -222,6 +236,22 @@ export const LanguageTable = {
           zh: "上傳",
           en: "Upload",
         },
+      },
+    },
+  },
+  mock: {
+    index: {
+      basic: {
+        zh: "模擬大一經濟學原理考試",
+        en: "Basic of Economics",
+      },
+      cse: {
+        zh: "模擬公務員高普考試",
+        en: "Civil Service Examination",
+      },
+      create: {
+        zh: "新增模擬考試",
+        en: "New Examination",
       },
     },
   },

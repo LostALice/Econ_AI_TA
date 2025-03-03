@@ -103,7 +103,6 @@ export const FileUploadButton = () => {
       setIsProgressing(false)
       setUploadSuccess(422)
     }
-
   }
 
   return (

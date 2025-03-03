@@ -485,7 +485,7 @@ class MySQLHandler(SetupMYSQL):
                 username=temp_fetch["username"],
                 password=temp_fetch["password"],
                 jwt=temp_fetch["jwt"],
-                last_login=temp_fetch["last_login"],
+                last_login=str(temp_fetch["last_login"]),
                 role_name=temp_fetch["role_name"],
             )
 

@@ -7,6 +7,7 @@ from Backend.utils.helper.model.api.v1.authorization import (
     UserInfoModel,
     SingUpSuccessModel,
 )
+from  Backend.utils.helper.model.database.database import UserInfoModel as DatabaseUserInfoModel
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import MySQLHandler
 
@@ -46,7 +47,7 @@ async def login(
             - hashed_password (str): The hashed password of the user.
 
     Returns:
-        Union[LoginFormSuccessModel, LoginFormUnsuccessModel]: 
+        Union[LoginFormSuccessModel, LoginFormUnsuccessModel]:
             - If login is successful, returns a LoginFormSuccessModel containing:
                 - status_code (int): HTTP status code (200 for success).
                 - success (bool): True for successful login.
@@ -58,7 +59,7 @@ async def login(
                 - response (int): The error status code.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 500 status code if there's an unknown issue during token insertion.
             - 401 status code if the credentials are unrecognized.
     """
@@ -75,7 +76,7 @@ async def login(
             response=_status,
         )
 
-    if _status == 200 and isinstance(user_info, UserInfoModel):
+    if _status == 200 and isinstance(user_info, DatabaseUserInfoModel):
         _jwt_secret = str(os.getenv("JWT_SECRET"))
         _jwt_algorithm = os.getenv("JWT_ALGORITHM")
 
@@ -142,7 +143,7 @@ async def sign_in(username: str, password: str) -> SingUpSuccessModel:
             - success (bool): True if the user was successfully created.
 
     Raises:
-        HTTPException: 
+        HTTPException:
             - 500 status code if there's an internal server error during user creation.
     """
     hash_function = hashlib.sha3_256()

@@ -3,6 +3,7 @@ import { Link } from "@heroui/link";
 import { Head } from "./head";
 
 import Transition from "@/components/transition/transition";
+import ToastMessageProvider from "@/contexts/ToastContextProvider";
 
 export default function DefaultLayout({
 	children,
@@ -13,10 +14,12 @@ export default function DefaultLayout({
 		<div className="relative flex flex-col h-screen">
 			<Head />
 			<Navbar />
-			<main className="h-screen md:h-[90svh] container mx-auto max-w-7xl px-3 flex-grow">
-				<Transition>
-					{children}
-				</Transition>
+			<main className="h-screen md:h-[90svh] container mx-auto max-w-7xl px-3 flex-grow my-3">
+				<ToastMessageProvider>
+					<Transition>
+						{children}
+					</Transition>
+				</ToastMessageProvider>
 			</main>
 			<footer className="h-[5svh] w-full flex items-center justify-center overflow-hidden">
 				<Link
