@@ -1,3 +1,5 @@
+// Code by AkinoAlice@TyrantRey
+
 import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
 import { useState, useContext, Key } from "react";
@@ -21,7 +23,7 @@ import { LangContext } from "@/contexts/LangContext";
 import { fetchDocsList } from "@/pages/api/api";
 import { IDocsFormat } from "@/types/api/types";
 
-import { FileUploadButton } from "@/components/upload/fileUpload-btn";
+// import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 
 export default function DocsPage() {
   const { language, setLang } = useContext(LangContext);
@@ -55,11 +57,11 @@ export default function DocsPage() {
           {/* <FileUploadButton /> */}
           <Listbox
             disallowEmptySelection
-            aria-label="Actions"
             className="h-full w-[15rem]"
             onAction={(key) => loadFileList(key as string)}
             variant="flat"
             selectionMode="single"
+            aria-label="Actions"
             items={documentationTypeList}
             emptyContent={<Spinner color="success" label={LanguageTable.docs.page.loading[language]} />}
           >
@@ -70,7 +72,10 @@ export default function DocsPage() {
             )}
           </Listbox>
         </div>
-        <Table aria-label="file table" isStriped>
+        <Table
+          isStriped
+          aria-label="Docs page"
+        >
           <TableHeader>
             <TableColumn key="name">{LanguageTable.docs.page.lessonName[language]}</TableColumn>
             <TableColumn key="height">{LanguageTable.docs.page.lastUpdate[language]}</TableColumn>

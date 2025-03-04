@@ -254,5 +254,31 @@ export const LanguageTable = {
         en: "New Examination",
       },
     },
+    crate: {
+      examList: {
+        zh: "模擬考列表",
+        en: "Examination List",
+      },
+      newExam: {
+        zh: "新增模擬考",
+        en: "New mock exam",
+      },
+      question: {
+        zh: "題目列表:",
+        en: "Question list:",
+      },
+      new: {
+        zh: "新增題目",
+        en: "New question",
+      },
+      delete: {
+        zh: "刪除題目",
+        en: "Delete question",
+      },
+      noItem: {
+        zh: "目前沒有任何題目 點擊新增題目",
+        en: "No questions yet, click to add new question",
+      },
+    },
   },
 };
