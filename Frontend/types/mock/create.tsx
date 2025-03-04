@@ -26,9 +26,3 @@ interface IExamOption {
     option_text: string;
     is_correct: boolean;
 }
-
-interface IStudentAnswer {
-    exam_id: string;
-    question_id: string;
-    student_answer: number;
-}

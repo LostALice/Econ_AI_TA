@@ -259,6 +259,14 @@ export const LanguageTable = {
         zh: "模擬考列表",
         en: "Examination List",
       },
+      selected:{
+        zh: "左側選取模擬考",
+        en: "Select mock exam from exam list",
+      },
+      currentExam: {
+        zh: "目前模擬考:",
+        en: "Current mock exam:",
+      },
       newExam: {
         zh: "新增模擬考",
         en: "New mock exam",
@@ -274,6 +282,10 @@ export const LanguageTable = {
       delete: {
         zh: "刪除題目",
         en: "Delete question",
+      },
+      newOrDelete: {
+        zh: "新增或刪除題目",
+        en: "Create New or delete question",
       },
       noItem: {
         zh: "目前沒有任何題目 點擊新增題目",

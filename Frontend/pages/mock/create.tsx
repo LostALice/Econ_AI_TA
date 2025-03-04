@@ -14,12 +14,12 @@ import {
     DrawerFooter,
     Listbox,
     ListboxItem,
-    Dropdown,
-    DropdownTrigger,
-    DropdownMenu,
-    DropdownItem,
+    ListboxSection,
     useDisclosure,
-    ButtonGroup
+    Textarea,
+    Input,
+    Tooltip,
+    Checkbox
 } from "@heroui/react";
 
 function fetchCourse(): IExamsInfo[] {
@@ -174,7 +174,7 @@ function fetchCourse(): IExamsInfo[] {
                 {
                     exam_id: 2,
                     question_id: 1,
-                    question_text: "1 + asffasf2 = ?",
+                    question_text: "1 + asd = ?",
                     question_images: null,
                     question_options: [
                         {
@@ -211,7 +211,7 @@ function fetchCourse(): IExamsInfo[] {
                 {
                     exam_id: 2,
                     question_id: 1,
-                    question_text: "1 asdads+ 2 = ?",
+                    question_text: "1 nigga+ 2 = ?",
                     question_images: null,
                     question_options: [
                         {
@@ -245,14 +245,14 @@ function fetchCourse(): IExamsInfo[] {
 export default function MockPage() {
     const { language, setLang } = useContext(LangContext);
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
-    const [examId, setExamId] = useState<number>(0);
+    const [examInfo, setExamInfo] = useState<IExamsInfo>();
     const [displayExamQuestionList, setDisplayExamQuestionList] = useState<IExamQuestion[] | []>([]);
 
     const handleExamChange = (exam_id: number): IExamQuestion[] => {
         const examQuestionList = fetchCourse().filter(
             (exam) => exam.exam_id === exam_id
         )
-
+        setExamInfo(examQuestionList[0])
         return examQuestionList[0].exam_questions
     }
 
@@ -299,58 +299,114 @@ export default function MockPage() {
                         {LanguageTable.mock.crate.examList[language]}
                     </Button>
                     <div className="flex items-center justify-center">
-                        <Dropdown>
-                            <DropdownTrigger>
-                                <Button className="capitalize">
-                                    {LanguageTable.mock.crate.question[language]}
-                                </Button>
-                            </DropdownTrigger>
-                            <DropdownMenu aria-label="Dropdown Variants">
-                                {
-                                    fetchCourse().map((question, index) => (
-                                        <DropdownItem
-                                            key={index}
-                                            className="capitalize"
-                                            color="primary"
-                                        >
-                                            {index + 1}: {question.exam_questions[0].question_text}
-                                        </DropdownItem>
-                                    ))
-                                }
-                            </DropdownMenu>
-                        </Dropdown>
+                        {LanguageTable.mock.crate.currentExam[language]} {examInfo?.exam_name || LanguageTable.mock.crate.selected[language]}
                     </div>
-                    <ButtonGroup className="flex items-center justify-center">
+                    {/* <ButtonGroup className="flex items-center justify-center">
                         <Button>
                             {LanguageTable.mock.crate.new[language]}
                         </Button>
                         <Button color="danger">
                             {LanguageTable.mock.crate.delete[language]}
                         </Button>
-                    </ButtonGroup>
+                    </ButtonGroup> */}
                 </div>
-                <div className="w-1/4">
-                    <Listbox aria-label="Actions">
-                        {
-                            displayExamQuestionList.length > 0 ?
-                                (displayExamQuestionList.map((question, index) => {
-                                    return (
-                                        <ListboxItem key={index}
-                                            textValue={index + 1 + " " + question.question_text}
-                                        >
-                                            {index + 1}. {question.question_text}
-                                        </ListboxItem>
-                                    )
-                                })) : (
-                                    <ListboxItem
-                                        textValue={LanguageTable.mock.crate.noItem[language]}
-                                    >
-                                        {LanguageTable.mock.crate.noItem[language]}
-                                    </ListboxItem>
+                <div className="flex justify-normal">
+                    <div className="w-1/4 h-full">
+                        <Listbox aria-label="Actions">
+                            <ListboxSection title={LanguageTable.mock.crate.question[language]}>
+                                {
+                                    displayExamQuestionList.length > 0 ?
+                                        (displayExamQuestionList.map((question, index) => {
+                                            return (
+                                                <ListboxItem key={index}
+                                                    textValue={index + 1 + " " + question.question_text}
+                                                >
+                                                    {index + 1}. {question.question_text}
+                                                </ListboxItem>
+                                            )
+                                        })) : (
+                                            <ListboxItem
+                                                textValue={LanguageTable.mock.crate.noItem[language]}
+                                            >
+                                                {LanguageTable.mock.crate.noItem[language]}
+                                            </ListboxItem>
 
-                                )
-                        }
-                    </Listbox>
+                                        )
+                                }
+                            </ListboxSection>
+                            <ListboxSection title={LanguageTable.mock.crate.newOrDelete[language]}>
+                                <ListboxItem
+                                    color="danger"
+                                >
+                                    {LanguageTable.mock.crate.new[language]}
+                                </ListboxItem>
+                                <ListboxItem
+                                    className="text-danger"
+                                    color="primary"
+                                >
+                                    {LanguageTable.mock.crate.delete[language]}
+                                </ListboxItem>
+                            </ListboxSection>
+                        </Listbox>
+                    </div>
+                    <div
+                        className="w-full"
+                    >
+                        <div className="max-w mx-auto p-6">
+                            <div className="grid grid-cols-1 gap-6">
+                                {/* Question Text */}
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl mb-1">
+                                        Question Text
+                                    </h2>
+                                    <Textarea
+                                        rows={4}
+                                        placeholder="Enter question text..."
+                                    >
+                                    </Textarea>
+                                </div>
+
+                                {/* Question Images */}
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl mb-1">
+                                        Question Images (comma-separated URLs)
+                                    </h2>
+                                    <Input
+                                        type="text"
+                                        placeholder="http://example.com/image1.jpg, http://example.com/image2.jpg"
+                                        className="rounded-md shadow-sm focus:outline-none"
+                                    />
+                                </div>
+
+                                {/* Options */}
+                                <div>
+                                    <h2 className="text-xl mb-3">Options</h2>
+                                    <div className="space-y-4">
+                                        {[1, 2, 3, 4].map((option) => (
+                                            <div key={option} className="flex items-center space-x-4 -py-3">
+                                                <Textarea
+                                                    type="text"
+                                                    placeholder={`Option 1 text`}
+                                                    className="flex-2 rounded-md shadow-sm focus:outline-none"
+                                                />
+                                                <Checkbox value="1" />
+                                            </div>
+                                        )
+                                        )
+
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Save Button */}
+                            <div className="mt-6">
+                                <Button className="w-full px-4 py-2 rounded-md focus:outline-none">
+                                    Save Question
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </DefaultLayout>
         </>
