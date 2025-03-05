@@ -1,6 +1,6 @@
 # Code by AkinoAlice@TyrantRey
 
-from Backend.api.v1 import authorization, chatroom, documentation
+from Backend.api.v1 import authorization, chatroom, documentation, mock
 from Backend.utils.helper.logger import CustomLoggerHandler
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +58,11 @@ app.include_router(
     documentation.router,
     prefix="/api/v1",
     tags=["Documentation", "v1"],
+)
+app.include_router(
+    mock.router,
+    prefix="/api/v1",
+    tags=["Mock", "v1"],
 )
 
 logger.debug("============================")

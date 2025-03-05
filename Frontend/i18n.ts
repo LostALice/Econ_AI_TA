@@ -259,7 +259,7 @@ export const LanguageTable = {
         zh: "模擬考列表",
         en: "Examination List",
       },
-      selected:{
+      selected: {
         zh: "左側選取模擬考",
         en: "Select mock exam from exam list",
       },
@@ -290,6 +290,54 @@ export const LanguageTable = {
       noItem: {
         zh: "目前沒有任何題目 點擊新增題目",
         en: "No questions yet, click to add new question",
+      },
+      questionContent: {
+        zh: "題目",
+        en: "Question Content",
+      },
+      enterQuestionText: {
+        zh: "輸入題目文字...",
+        en: "Enter question text...",
+      },
+      questionImages: {
+        zh: "題目圖片",
+        en: "Question Images",
+      },
+      options: {
+        zh: "選項",
+        en: "Options",
+      },
+      optionText: {
+        zh: "選項文字",
+        en: "Option Text",
+      },
+      correct: {
+        zh: "正確答案",
+        en: "Correct Answer",
+      },
+      saveQuestion: {
+        zh: "儲存題目",
+        en: "Save Question",
+      },
+      missingEnterQuestionText: {
+        zh: "未輸入題目文字...",
+        en: "No question text input yet.",
+      },
+      missingQuestionImages: {
+        zh: "題目圖片",
+        en: "Question Images",
+      },
+      missingOptionText: {
+        zh: "未輸入選項文字",
+        en: "No option text input yet.",
+      },
+      missingCorrect: {
+        zh: "未輸入正確答案",
+        en: "No correct answer input yet.",
+      },
+      tooManyCorrectAnswer: {
+        zh: "只能有一個正確答案",
+        en: "There can only be one correct answer.",
       },
     },
   },

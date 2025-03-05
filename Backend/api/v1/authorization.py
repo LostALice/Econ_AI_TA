@@ -7,7 +7,7 @@ from Backend.utils.helper.model.api.v1.authorization import (
     UserInfoModel,
     SingUpSuccessModel,
 )
-from  Backend.utils.helper.model.database.database import UserInfoModel as DatabaseUserInfoModel
+from Backend.utils.helper.model.database.database import UserInfoModel as DatabaseUserInfoModel
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import MySQLHandler
 

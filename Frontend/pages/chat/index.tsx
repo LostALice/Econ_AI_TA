@@ -135,7 +135,7 @@ export default function ChatPage() {
     if (base64ImageList.length > 3) { return }
 
     const reader = new FileReader()
-    reader.readAsDataURL(files[0])
+    reader.readAsDataURL(files[-1])
     reader.onload = () => {
       if (reader.result) {
         let base64ImageString = reader.result as string
