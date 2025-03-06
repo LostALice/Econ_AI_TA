@@ -255,6 +255,14 @@ export const LanguageTable = {
       },
     },
     crate: {
+      confirm:{
+        zh: "確認",
+        en: "Confirm",
+      },
+      close: {
+        zh: "關閉",
+        en: "Close",
+      },
       examList: {
         zh: "模擬考列表",
         en: "Examination List",
@@ -275,17 +283,49 @@ export const LanguageTable = {
         zh: "題目列表:",
         en: "Question list:",
       },
-      new: {
+      newMockExam: {
+        zh: "新增模擬考",
+        en: "New question",
+      },
+      deleteExam: {
+        zh: "刪除模擬考",
+        en: "Delete question",
+      },
+      examTitle: {
+        zh: "模擬考標題:",
+        en: "Exam Title:",
+      },
+      examDuration: {
+        zh: "模擬考時長:",
+        en: "Exam duration:",
+      },
+      typeOfExam: {
+        zh: "模擬考類型:",
+        en: "Exam type:",
+      },
+      basic: {
+        zh: "模擬大一經濟學原理考試",
+        en: "Basic of Economics",
+      },
+      cse: {
+        zh: "模擬公務員高普考試",
+        en: "Civil Service Examination",
+      },
+      newQuestion: {
         zh: "新增題目",
         en: "New question",
       },
-      delete: {
+      deleteQuestion: {
         zh: "刪除題目",
         en: "Delete question",
       },
-      newOrDelete: {
+      newOrDeleteQuestion: {
         zh: "新增或刪除題目",
         en: "Create New or delete question",
+      },
+      newOrDeleteExam: {
+        zh: "新增或刪除模擬考",
+        en: "Create New or delete mock exam",
       },
       noItem: {
         zh: "目前沒有任何題目 點擊新增題目",
@@ -338,6 +378,30 @@ export const LanguageTable = {
       tooManyCorrectAnswer: {
         zh: "只能有一個正確答案",
         en: "There can only be one correct answer.",
+      },
+      titleNoNullError: {
+        zh: "模擬考標題不可為空",
+        en: "Exam title cannot be null.",
+      },
+      durationSubZeroError: {
+        zh: "模擬考時長不可小於等於 0",
+        en: "Exam duration cannot be less than or equal to 0.",
+      },
+      noExamSelectedError: {
+        zh: "未選取任何模擬考",
+        en: "No mock exam selected yet.",
+      },
+      newTempQuestion: {
+        zh: "新題目",
+        en: "New Question",
+      },
+      examCreateSuccess: {
+        zh: "模擬考建立成功",
+        en: "Mock exam created successfully.",
+      },
+      questionCreateSuccess: {
+        zh: "題目建立成功",
+        en: "Question created successfully.",
       },
     },
   },

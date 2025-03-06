@@ -20,6 +20,14 @@ import {
     Textarea,
     Input,
     Checkbox,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    NumberInput,
+    RadioGroup,
+    Radio,
     addToast
 } from "@heroui/react";
 
@@ -27,13 +35,19 @@ import { ImageBox } from "@/components/chat/imageBox"
 
 export default function MockPage() {
     const { language, setLang } = useContext(LangContext);
-    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const { isOpen: isOpenDrawer, onOpen: onOpenDrawer, onOpenChange: onOpenDrawerChange } = useDisclosure();
+    const { isOpen: isOpenModal, onOpen: onOpenModal, onOpenChange: onOpenModalChange } = useDisclosure();
 
     const [examInfo, setExamInfo] = useState<IExamsInfo>();
     const [examLists, setExamLists] = useState<IExamsInfo[] | []>([]);
 
     const [displayExamQuestionList, setDisplayExamQuestionList] = useState<IExamQuestion[] | []>([]);
     const [currentDisplayExamQuestion, setCurrentDisplayExamQuestion] = useState<IExamQuestion | null>()
+
+    // create exam logic
+    const [createExamName, setCreateExamName] = useState<string>("")
+    const [createExamDuration, setCreateExamDuration] = useState<number>(0)
+    const [createExamType, setCreateExamType] = useState<TExamType>("basic")
 
     const [questionTextFelid, setQuestionTextFelid] = useState<string>("");
     const [base64ImageList, setBase64ImageList] = useState<string[] | []>([])
@@ -180,30 +194,103 @@ export default function MockPage() {
 
         console.log(updatedQuestion)
 
-        // update example question list 
-        // update exam info
+        // displayExamQuestionList
+
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.crate.questionCreateSuccess[language],
+        })
     }
 
     const handleCreateExam = () => {
-        // TODO: Implement create exam logic
+        const newExamId: number = examLists.length
+
+        // validate
+        if (createExamName == "") {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.titleNoNullError[language],
+            });
+            return
+        }
+
+        if (createExamDuration <= 0) {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.titleNoNullError[language],
+            });
+            return
+        }
+
+        const tempExam: IExamsInfo = {
+            exam_id: newExamId + 1,
+            exam_name: createExamName,
+            exam_questions: [],
+            exam_duration: createExamDuration,
+            exam_type: createExamType,
+            exam_date: new Date().toISOString().split('T')[0]
+        }
+
+        console.log(tempExam)
+        setExamLists([...examLists, tempExam])
+
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.crate.examCreateSuccess[language],
+        })
+
+        setDisplayExamQuestionList(handleExamChange(newExamId))
     }
 
-    const handleCreateQuestion = () => {
+    const handleCreateQuestion = (examId: number) => {
+        // TODO: Implement create question logic
+        const newQuestionId: number = displayExamQuestionList.length + 1
+        console.log(displayExamQuestionList)
+        // validate
+        if (createExamName == "") {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.titleNoNullError[language],
+            });
+            return
+        }
+
+        if (createExamDuration <= 0) {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.titleNoNullError[language],
+            });
+            return
+        }
+
+        const tempQuestion: IExamQuestion = {
+            exam_id: examId,
+            question_id: newQuestionId,
+            question_text: LanguageTable.mock.crate.newTempQuestion[language],
+            question_options: [
+                { option_id: 1, option_text: "", is_correct: false },
+                { option_id: 2, option_text: "", is_correct: false },
+                { option_id: 3, option_text: "", is_correct: false },
+                { option_id: 4, option_text: "", is_correct: false },
+            ],
+            question_images: null
+        }
+
+        setDisplayExamQuestionList([...displayExamQuestionList, tempQuestion])
+    }
+
+    const handleDeleteExam = (examId: number) => {
         // TODO: Implement create question logic
     }
 
-    const handleDeleteExam = () => {
-        // TODO: Implement create question logic
-    }
-
-    const handleDeleteQuestion = () => {
+    const handleDeleteQuestion = (examId: number, questionId: number) => {
         // TODO: Implement create question logic
     }
 
     return (
         <>
             <DefaultLayout>
-                <Drawer isOpen={isOpen} placement="left" onOpenChange={onOpenChange}>
+                <Drawer isOpen={isOpenDrawer} placement="left" onOpenChange={onOpenDrawerChange}>
                     <DrawerContent>
                         {(onClose) => (
                             <>
@@ -225,21 +312,74 @@ export default function MockPage() {
                                         ))
                                     }
                                 </DrawerBody>
-                                <DrawerFooter>
+                                {/* <DrawerFooter>
                                     <Button
                                         color="primary"
                                         onPress={() => {
-                                            onClose
+                                            onOpenModal
                                         }}>
                                         {LanguageTable.mock.crate.newExam[language]}
                                     </Button>
-                                </DrawerFooter>
+                                </DrawerFooter> */}
                             </>
                         )}
                     </DrawerContent>
                 </Drawer>
+                {/* <Button onPress={onOpenModal}></Button> */}
+                <Modal isOpen={isOpenModal} onOpenChange={onOpenModalChange}>
+                    <ModalContent>
+                        {(onClose) => (
+                            <>
+                                <ModalHeader className="flex flex-col gap-1"></ModalHeader>
+                                <ModalBody>
+                                    <span>{LanguageTable.mock.crate.examTitle[language]}</span>
+                                    <Input
+                                        onValueChange={setCreateExamName}
+                                        validate={(value) => {
+                                            if (value == "") {
+                                                return LanguageTable.mock.crate.titleNoNullError[language]
+                                            }
+                                        }}
+                                    />
+                                    <span>{LanguageTable.mock.crate.examDuration[language]}</span>
+                                    <NumberInput
+                                        defaultValue={0}
+                                        aria-label="exam duration"
+                                        onValueChange={setCreateExamDuration}
+                                        validate={(value) => {
+                                            if (value <= 0) {
+                                                return LanguageTable.mock.crate.durationSubZeroError[language]
+                                            }
+                                        }}
+                                    />
+                                    <RadioGroup
+                                        label={LanguageTable.mock.crate.typeOfExam[language]}
+                                        className="flex justify-between"
+                                        defaultValue="basic"
+                                        value={createExamType}
+                                        onValueChange={(value) => setCreateExamType(value as TExamType)}
+                                    >
+                                        <Radio value="basic">{LanguageTable.mock.crate.basic[language]}</Radio>
+                                        <Radio value="cse">{LanguageTable.mock.crate.cse[language]}</Radio>
+                                    </RadioGroup>
+                                </ModalBody>
+                                <ModalFooter>
+                                    <Button variant="light" onPress={onClose}>
+                                        {LanguageTable.mock.crate.close[language]}
+                                    </Button>
+                                    <Button color="primary" onPress={() => {
+                                        onClose()
+                                        handleCreateExam()
+                                    }}>
+                                        {LanguageTable.mock.crate.confirm[language]}
+                                    </Button>
+                                </ModalFooter>
+                            </>
+                        )}
+                    </ModalContent>
+                </Modal>
                 <div className="flex justify-between p-1">
-                    <Button onPress={onOpen}>
+                    <Button onPress={onOpenDrawer}>
                         {LanguageTable.mock.crate.examList[language]}
                     </Button>
                     <div className="flex items-center justify-center">
@@ -267,9 +407,66 @@ export default function MockPage() {
                                         )
                                 }
                             </ListboxSection>
-                            <ListboxSection title={LanguageTable.mock.crate.newOrDelete[language]}>
-                                <ListboxItem color="primary" description={LanguageTable.mock.crate.new[language]} textValue="1" />
-                                <ListboxItem className="text-danger" color="danger" description={LanguageTable.mock.crate.delete[language]} textValue="1" />
+                            <ListboxSection title={LanguageTable.mock.crate.newOrDeleteExam[language]}>
+                                <ListboxItem
+                                    onPress={() => {
+                                        setCreateExamName("")
+                                        setCreateExamDuration(0)
+                                        onOpenModal()
+                                    }}
+                                    color="primary"
+                                    description={LanguageTable.mock.crate.newMockExam[language]}
+                                    textValue="1"
+                                />
+                                <ListboxItem
+                                    className="text-danger"
+                                    color="danger"
+                                    description={LanguageTable.mock.crate.deleteExam[language]}
+                                    textValue="1"
+                                />
+                            </ListboxSection>
+                            <ListboxSection
+                                title={LanguageTable.mock.crate.newOrDeleteQuestion[language]}
+                            >
+                                <ListboxItem
+                                    color="primary"
+                                    onPress={() => {
+                                        setBase64ImageList([])
+                                        setQuestionTextFelid("")
+                                        setOptions([
+                                            { option_id: 1, option_text: "", is_correct: false },
+                                            { option_id: 2, option_text: "", is_correct: false },
+                                            { option_id: 3, option_text: "", is_correct: false },
+                                            { option_id: 4, option_text: "", is_correct: false },
+                                        ])
+                                        if (examInfo) {
+                                            handleCreateQuestion(examInfo?.exam_id)
+                                        } else {
+                                            return addToast({
+                                                color: "warning",
+                                                title: LanguageTable.mock.crate.noExamSelectedError[language]
+                                            })
+                                        }
+                                    }}
+                                    description={LanguageTable.mock.crate.newQuestion[language]}
+                                    textValue="1"
+                                />
+                                <ListboxItem
+                                    className="text-danger"
+                                    color="danger"
+                                    onPress={() => {
+                                        if (examInfo) {
+                                            // handleCreateQuestion(examInfo?.exam_id)
+                                        } else {
+                                            return addToast({
+                                                color: "warning",
+                                                title: LanguageTable.mock.crate.noExamSelectedError[language]
+                                            })
+                                        }
+                                    }}
+                                    description={LanguageTable.mock.crate.deleteQuestion[language]}
+                                    textValue="1"
+                                />
                             </ListboxSection>
                         </Listbox>
                     </div>

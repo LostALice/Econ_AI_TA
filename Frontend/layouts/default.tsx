@@ -10,13 +10,12 @@ export default function DefaultLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	console.clear();
-	console.log(
-		"%c\n\nDo you know the magic?",
-		"color:red; font-size: 64px font-weight: bold",
-		"\n\nhttps://github.com/LostALice/Econ_AI_TA",
-		"\n\nCopyright © Aki.no.Alice@TyrantRey 2022-2026"
-	)
+	// console.log(
+	// 	"%c\n\nDo you know the magic?",
+	// 	"color:red; font-size: 64px font-weight: bold",
+	// 	"\n\nhttps://github.com/LostALice/Econ_AI_TA",
+	// 	"\n\nCopyright © Aki.no.Alice@TyrantRey 2022-2026"
+	// )
 	return (
 		<div className="relative flex flex-col h-screen">
 			<Head />
