@@ -4,7 +4,6 @@ from Backend.utils.helper.model.api.v1.authorization import (
     LoginFormModel,
     LoginFormUnsuccessModel,
     LoginFormSuccessModel,
-    UserInfoModel,
     SingUpSuccessModel,
 )
 from Backend.utils.helper.model.database.database import UserInfoModel as DatabaseUserInfoModel

@@ -7,8 +7,7 @@ interface IExamsInfo {
     exam_name: string;
     exam_type: TExamType
     exam_date: string;
-    // in minutes
-    exam_duration: number;
+    exam_duration: number;  // in minutes 
     exam_questions: IExamQuestion[];
 }
 

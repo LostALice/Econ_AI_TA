@@ -1,10 +1,10 @@
 // Code by AkinoAlice@TyrantRey
 
-import { LangContext } from "@/contexts/LangContext";
-import DefaultLayout from "@/layouts/default";
 import { useContext, useState, useEffect } from "react";
-import { LanguageTable } from "@/i18n";
+import { LangContext } from "@/contexts/LangContext";
 import { fetchExamLists } from "@/api/mock/create";
+import DefaultLayout from "@/layouts/default";
+import { LanguageTable } from "@/i18n";
 
 import {
     Button,
@@ -12,7 +12,6 @@ import {
     DrawerContent,
     DrawerHeader,
     DrawerBody,
-    DrawerFooter,
     Listbox,
     ListboxItem,
     ListboxSection,
@@ -38,10 +37,10 @@ export default function MockPage() {
     const { isOpen: isOpenDrawer, onOpen: onOpenDrawer, onOpenChange: onOpenDrawerChange } = useDisclosure();
     const { isOpen: isOpenModal, onOpen: onOpenModal, onOpenChange: onOpenModalChange } = useDisclosure();
 
-    const [examInfo, setExamInfo] = useState<IExamsInfo>();
+    const [currentExam, setCurrentExam] = useState<IExamsInfo>();
     const [examLists, setExamLists] = useState<IExamsInfo[] | []>([]);
 
-    const [displayExamQuestionList, setDisplayExamQuestionList] = useState<IExamQuestion[] | []>([]);
+    const [questionsList, setQuestionsList] = useState<IExamQuestion[] | []>([]);
     const [currentDisplayExamQuestion, setCurrentDisplayExamQuestion] = useState<IExamQuestion | null>()
 
     // create exam logic
@@ -50,31 +49,16 @@ export default function MockPage() {
     const [createExamType, setCreateExamType] = useState<TExamType>("basic")
 
     const [questionTextFelid, setQuestionTextFelid] = useState<string>("");
-    const [base64ImageList, setBase64ImageList] = useState<string[] | []>([])
-    const [options, setOptions] = useState<IExamOption[]>([
+    const [base64ImageFelidList, setBase64ImageFelidList] = useState<string[] | []>([])
+    const [optionsFelid, setOptionsFelid] = useState<IExamOption[]>([
         { option_id: 1, option_text: "", is_correct: false },
         { option_id: 2, option_text: "", is_correct: false },
         { option_id: 3, option_text: "", is_correct: false },
         { option_id: 4, option_text: "", is_correct: false },
     ]);
 
-    const handleExamChange = (exam_id: number): IExamQuestion[] => {
-        console.log(examLists)
-        const examQuestionList = examLists.filter(
-            (exam) => exam.exam_id === exam_id
-        )
-        setExamInfo(examQuestionList[0])
-        return examQuestionList[0].exam_questions
-    }
-
-    const handleRemoveImage = (indexToRemove: number) => {
-        setBase64ImageList(prevList =>
-            prevList.filter((_, index) => index !== indexToRemove)
-        )
-    }
-
     useEffect(() => {
-        const data = fetchExamLists().then((data) => {
+        fetchExamLists().then((data) => {
             if (data.length > 1) {
                 setExamLists(data)
             } else {
@@ -82,9 +66,6 @@ export default function MockPage() {
             }
 
         })
-    }, [])
-
-    useEffect(() => {
         const handlePaste = (event: ClipboardEvent) => {
             const item = event.clipboardData?.items[0]
             if (!item) { return }
@@ -97,7 +78,7 @@ export default function MockPage() {
                         let base64String = e.target?.result as string
                         if (base64String) {
                             base64String = base64String.split(",")[1]
-                            setBase64ImageList(prev => [...prev, base64String])
+                            setBase64ImageFelidList(prev => [...prev, base64String])
                         }
                     }
                     reader.readAsDataURL(file)
@@ -108,12 +89,17 @@ export default function MockPage() {
         return () => {
             window.removeEventListener("paste", handlePaste)
         }
-    }, [base64ImageList])
+    }, [base64ImageFelidList])
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleRemoveImage = (indexToRemove: number) => {
+        setBase64ImageFelidList(prevList =>
+            prevList.filter((_, index) => index !== indexToRemove)
+        )
+    }
+    const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const { files } = event.target
         if (!files || files.length === 0) { return }
-        if (base64ImageList.length > 3) { return }
+        if (base64ImageFelidList.length > 3) { return }
 
         const reader = new FileReader()
         reader.readAsDataURL(files[0])
@@ -121,7 +107,7 @@ export default function MockPage() {
             if (reader.result) {
                 let base64ImageString = reader.result as string
                 base64ImageString = base64ImageString.split(",")[1]
-                setBase64ImageList([...base64ImageList, base64ImageString])
+                setBase64ImageFelidList([...base64ImageFelidList, base64ImageString])
             }
             else {
                 console.error("File reader failed")
@@ -129,86 +115,38 @@ export default function MockPage() {
         }
     }
 
+    const handleExamChange = (exam_id: number): IExamQuestion[] => {
+        // console.log(examLists)
+        const examQuestionList = examLists.filter(
+            (exam) => exam.exam_id == exam_id
+        )
+        setCurrentExam(examQuestionList[0])
+        // console.log(examQuestionList)
+        return examQuestionList[0].exam_questions
+    }
+
     const handleOptionChange = (index: number, field: keyof IExamOption, value: string | boolean) => {
-        const newOptions = [...options];
+        const newOptions = [...optionsFelid];
         newOptions[index] = { ...newOptions[index], [field]: value };
-        setOptions(newOptions);
+        setOptionsFelid(newOptions);
     };
 
     const handleSelectedQuestion = (selectedQuestion: IExamQuestion) => {
-        // console.log(selectedQuestion)
         setCurrentDisplayExamQuestion(selectedQuestion)
         setQuestionTextFelid(selectedQuestion.question_text)
         if (selectedQuestion.question_images && selectedQuestion.question_images.length > 0) {
-            setBase64ImageList(selectedQuestion.question_images)
+            setBase64ImageFelidList(selectedQuestion.question_images)
         }
         else {
-            setBase64ImageList([])
+            setBase64ImageFelidList([])
         }
-        setOptions(selectedQuestion.question_options)
-    }
-
-    const handleSaveQuestion = (currentExamQuestion: IExamQuestion) => {
-        // update question content
-
-        if (questionTextFelid == "") {
-            addToast({
-                color: "danger",
-                title: LanguageTable.mock.crate.missingEnterQuestionText[language],
-            });
-        }
-        let haveCorrectAnswer = 0
-        for (const option of options) {
-            if (option.option_text == "") {
-                addToast({
-                    color: "danger",
-                    title: LanguageTable.mock.crate.missingOptionText[language],
-                });
-                return;
-            }
-            if (option.is_correct) {
-                haveCorrectAnswer++;
-            }
-        }
-        if (haveCorrectAnswer === 0) {
-            addToast({
-                color: "danger",
-                title: LanguageTable.mock.crate.missingCorrect[language],
-            });
-            return;
-        }
-        else if (haveCorrectAnswer > 1) {
-            addToast({
-                color: "danger",
-                title: LanguageTable.mock.crate.tooManyCorrectAnswer[language],
-            });
-        }
-
-        const updatedQuestion: IExamQuestion = {
-            exam_id: currentExamQuestion.exam_id,
-            question_id: currentExamQuestion.question_id,
-            question_text: currentExamQuestion.question_text,
-            question_images: base64ImageList,
-            question_options: currentExamQuestion.question_options,
-        }
-
-        console.debug(displayExamQuestionList)
-
-        displayExamQuestionList.map((question) => {
-            question.question_id === updatedQuestion.question_id ? updatedQuestion : question
-        })
-
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.crate.questionCreateSuccess[language],
-        })
+        setOptionsFelid(selectedQuestion.question_options)
     }
 
     const handleCreateExam = () => {
         const newExamId: number = examLists.length + 1
 
         // validate
-        console.debug(createExamName)
         if (createExamName == "") {
             addToast({
                 color: "warning",
@@ -243,14 +181,12 @@ export default function MockPage() {
             title: LanguageTable.mock.crate.examCreateSuccess[language],
         })
 
-        setDisplayExamQuestionList(handleExamChange(newExamId))
-        console.log(displayExamQuestionList)
     }
 
     const handleCreateQuestion = (examId: number) => {
         // TODO: Implement create question logic
-        const newQuestionId: number = displayExamQuestionList.length + 1
-        console.log(displayExamQuestionList)
+        const newQuestionId: number = questionsList.length + 1
+        console.log(questionsList)
 
         const tempQuestion: IExamQuestion = {
             exam_id: examId,
@@ -265,15 +201,130 @@ export default function MockPage() {
             question_images: null
         }
 
-        setDisplayExamQuestionList([...displayExamQuestionList, tempQuestion])
+        setQuestionsList([...questionsList, tempQuestion])
     }
 
     const handleDeleteExam = (examId: number) => {
         // TODO: Implement create question logic
+        if (!currentExam) { return }
     }
 
     const handleDeleteQuestion = (examId: number, questionId: number) => {
         // TODO: Implement create question logic
+        if (!currentExam) { return }
+    }
+
+    const handleUpdateQuestionList = (currentQuestion: IExamQuestion) => {
+        setQuestionsList((question) => {
+            return question.map((question) => {
+                if (question.question_id === currentQuestion.question_id) {
+                    return {
+                        exam_id: currentQuestion.exam_id,
+                        question_id: question.question_id,
+                        question_text: questionTextFelid,
+                        question_images: base64ImageFelidList,
+                        question_options: optionsFelid,
+                    }
+                } else {
+                    return question
+                }
+            })
+        })
+    }
+
+    const handleUpdateExamList = (currentExam: IExamsInfo) => {
+        setExamLists((exam) => {
+            return exam.map((exam) => {
+                if (exam.exam_id === currentExam.exam_id) {
+                    return {
+                        exam_id: exam.exam_id,
+                        exam_name: exam.exam_name,
+                        exam_type: exam.exam_type,
+                        exam_date: exam.exam_date,
+                        exam_duration: exam.exam_duration,
+                        exam_questions: currentExam.exam_questions
+                    }
+                } else {
+                    return exam
+                }
+            })
+        })
+    }
+
+    const handleSaveQuestion = (currentExamQuestion: IExamQuestion) => {
+        // update question content
+        if (!currentExam) { return }
+
+        if (questionTextFelid == "") {
+            addToast({
+                color: "danger",
+                title: LanguageTable.mock.crate.missingEnterQuestionText[language],
+            });
+        }
+        let haveCorrectAnswer = 0
+        for (const option of optionsFelid) {
+            if (option.option_text == "") {
+                addToast({
+                    color: "danger",
+                    title: LanguageTable.mock.crate.missingOptionText[language],
+                });
+                return;
+            }
+            if (option.is_correct) {
+                haveCorrectAnswer++;
+            }
+        }
+        if (haveCorrectAnswer === 0) {
+            addToast({
+                color: "danger",
+                title: LanguageTable.mock.crate.missingCorrect[language],
+            });
+            return;
+        }
+        else if (haveCorrectAnswer > 1) {
+            addToast({
+                color: "danger",
+                title: LanguageTable.mock.crate.tooManyCorrectAnswer[language],
+            });
+        }
+
+        const tempQuestion: IExamQuestion[] = [...questionsList].map((question) => {
+            if (question.question_id === currentExamQuestion.question_id) {
+                return {
+                    exam_id: currentExamQuestion.exam_id,
+                    question_id: question.question_id,
+                    question_text: questionTextFelid,
+                    question_images: base64ImageFelidList,
+                    question_options: optionsFelid,
+                }
+            } else {
+                return question
+            }
+        })
+
+        setQuestionsList(tempQuestion)
+
+        setExamLists((exam) => {
+            return exam.map((exam) => {
+                if (exam.exam_id === currentExamQuestion.exam_id) {
+                    return {
+                        exam_id: exam.exam_id,
+                        exam_name: exam.exam_name,
+                        exam_type: exam.exam_type,
+                        exam_date: exam.exam_date,
+                        exam_duration: exam.exam_duration,
+                        exam_questions: tempQuestion
+                    }
+                } else {
+                    return exam
+                }
+            })
+        })
+
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.crate.questionCreateSuccess[language],
+        })
     }
 
     return (
@@ -292,7 +343,7 @@ export default function MockPage() {
                                             <Button
                                                 key={exam.exam_id}
                                                 onPress={() => {
-                                                    setDisplayExamQuestionList(handleExamChange(exam.exam_id))
+                                                    setQuestionsList(handleExamChange(exam.exam_id))
                                                     onClose()
                                                 }}
                                             >
@@ -305,7 +356,7 @@ export default function MockPage() {
                         )}
                     </DrawerContent>
                 </Drawer>
-                {/* <Button onPress={onOpenModal}></Button> */}
+
                 <Modal isOpen={isOpenModal} onOpenChange={onOpenModalChange}>
                     <ModalContent>
                         {(onClose) => (
@@ -314,7 +365,7 @@ export default function MockPage() {
                                 <ModalBody>
                                     <span>{LanguageTable.mock.crate.examTitle[language]}</span>
                                     <Input
-                                        onValueChange={(value) =>{
+                                        onValueChange={(value) => {
                                             setCreateExamName(value)
                                         }}
                                         validate={(value) => {
@@ -350,7 +401,7 @@ export default function MockPage() {
                                     </Button>
                                     <Button color="primary" onPress={() => {
                                         handleCreateExam()
-                                        onClose
+                                        onClose()
                                     }}>
                                         {LanguageTable.mock.crate.confirm[language]}
                                     </Button>
@@ -364,7 +415,7 @@ export default function MockPage() {
                         {LanguageTable.mock.crate.examList[language]}
                     </Button>
                     <div className="flex items-center justify-center">
-                        {LanguageTable.mock.crate.currentExam[language]} {examInfo?.exam_name || LanguageTable.mock.crate.selected[language]}
+                        {LanguageTable.mock.crate.currentExam[language]} {currentExam?.exam_name || LanguageTable.mock.crate.selected[language]}
                     </div>
                 </div>
                 <div className="flex justify-normal">
@@ -372,14 +423,14 @@ export default function MockPage() {
                         <Listbox aria-label="Actions" className="truncate">
                             <ListboxSection title={LanguageTable.mock.crate.question[language]}>
                                 {
-                                    displayExamQuestionList.length > 0 ?
-                                        (displayExamQuestionList.map((question, index) => {
+                                    questionsList.length > 0 ?
+                                        (questionsList.map((question, index) => {
                                             return (
                                                 <ListboxItem
                                                     onPress={() => handleSelectedQuestion(question)}
                                                     key={index}
                                                     className="truncate"
-                                                    description={index + 1 + " " + question.question_text}
+                                                    description={index + 1 + ". " + question.question_text}
                                                     textValue="1"
                                                 />
                                             )
@@ -388,8 +439,8 @@ export default function MockPage() {
                                                 description={LanguageTable.mock.crate.noItem[language]}
                                                 textValue="1"
                                                 onPress={() => {
-                                                    if (examInfo) {
-                                                        handleCreateQuestion(examInfo.exam_id)
+                                                    if (currentExam) {
+                                                        handleCreateQuestion(currentExam.exam_id)
                                                     }
                                                     else {
                                                         return addToast({
@@ -426,16 +477,16 @@ export default function MockPage() {
                                 <ListboxItem
                                     color="primary"
                                     onPress={() => {
-                                        setBase64ImageList([])
+                                        setBase64ImageFelidList([])
                                         setQuestionTextFelid("")
-                                        setOptions([
+                                        setOptionsFelid([
                                             { option_id: 1, option_text: "", is_correct: false },
                                             { option_id: 2, option_text: "", is_correct: false },
                                             { option_id: 3, option_text: "", is_correct: false },
                                             { option_id: 4, option_text: "", is_correct: false },
                                         ])
-                                        if (examInfo) {
-                                            handleCreateQuestion(examInfo?.exam_id)
+                                        if (currentExam) {
+                                            handleCreateQuestion(currentExam?.exam_id)
                                         } else {
                                             return addToast({
                                                 color: "warning",
@@ -450,8 +501,8 @@ export default function MockPage() {
                                     className="text-danger"
                                     color="danger"
                                     onPress={() => {
-                                        if (examInfo) {
-                                            // handleCreateQuestion(examInfo?.exam_id)
+                                        if (currentExam) {
+                                            // handleCreateQuestion(currentExam?.exam_id)
                                         } else {
                                             return addToast({
                                                 color: "warning",
@@ -487,7 +538,7 @@ export default function MockPage() {
                                         {LanguageTable.mock.crate.questionImages[language]}
                                     </h2>
                                     <div className="gap-1">
-                                        {base64ImageList.map((image, index) => (
+                                        {base64ImageFelidList.map((image, index) => (
                                             <ImageBox
                                                 key={index}
                                                 base64Image={image}
@@ -499,7 +550,7 @@ export default function MockPage() {
                                         type="file"
                                         accept="image/*"
                                         className="rounded-md shadow-sm focus:outline-none"
-                                        onChange={handleFileChange}
+                                        onChange={handleImageFileChange}
                                     />
                                 </div>
 
@@ -509,7 +560,7 @@ export default function MockPage() {
                                         {LanguageTable.mock.crate.options[language]}
                                     </h2>
                                     <div className="space-y-4">
-                                        {options.map((option, index) => (
+                                        {optionsFelid.map((option, index) => (
                                             <div key={index} className="flex items-center space-x-4">
                                                 <Textarea
                                                     type="text"

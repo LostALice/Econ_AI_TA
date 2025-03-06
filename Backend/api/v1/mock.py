@@ -29,7 +29,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
             exam_questions=[
                 ExamQuestion(
                     exam_id=1,
-                    question_id=101,
+                    question_id=1,
                     question_text="What is 2 + 2?iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC",
                     question_options=[
                         ExamOption(option_id=1, option_text="3", is_correct=False),
@@ -43,7 +43,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=102,
+                    question_id=2,
                     question_text="What is the capital of France?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Paris", is_correct=True),
@@ -55,7 +55,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=103,
+                    question_id=3,
                     question_text="Which language is primarily used for iOS development?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Swift", is_correct=True),
@@ -76,7 +76,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
             exam_questions=[
                 ExamQuestion(
                     exam_id=1,
-                    question_id=101,
+                    question_id=1,
                     question_text="What is 2 + 2?",
                     question_options=[
                         ExamOption(option_id=1, option_text="3", is_correct=False),
@@ -90,7 +90,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=102,
+                    question_id=2,
                     question_text="What is the capital of France?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Paris", is_correct=True),
@@ -102,7 +102,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=103,
+                    question_id=2,
                     question_text="Which language is primarily used for iOS development?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Swift", is_correct=True),
@@ -123,7 +123,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
             exam_questions=[
                 ExamQuestion(
                     exam_id=1,
-                    question_id=101,
+                    question_id=1,
                     question_text="What is 2 + 2?",
                     question_options=[
                         ExamOption(option_id=1, option_text="3", is_correct=False),
@@ -137,7 +137,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=102,
+                    question_id=2,
                     question_text="What is the capital of France?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Paris", is_correct=True),
@@ -149,7 +149,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=103,
+                    question_id=3,
                     question_text="Which language is primarily used for iOS development?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Swift", is_correct=True),
@@ -170,7 +170,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
             exam_questions=[
                 ExamQuestion(
                     exam_id=1,
-                    question_id=101,
+                    question_id=1,
                     question_text="What is 2 + 2?",
                     question_options=[
                         ExamOption(option_id=1, option_text="3", is_correct=False),
@@ -184,7 +184,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=102,
+                    question_id=2,
                     question_text="What is the capital of France?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Paris", is_correct=True),
@@ -196,7 +196,7 @@ async def get_mock_info() -> Union[list[ExamsInfo], ExamsInfo]:
                 ),
                 ExamQuestion(
                     exam_id=1,
-                    question_id=103,
+                    question_id=3,
                     question_text="Which language is primarily used for iOS development?",
                     question_options=[
                         ExamOption(option_id=1, option_text="Swift", is_correct=True),

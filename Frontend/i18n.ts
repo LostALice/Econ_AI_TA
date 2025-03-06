@@ -400,7 +400,7 @@ export const LanguageTable = {
         en: "Mock exam created successfully.",
       },
       questionCreateSuccess: {
-        zh: "題目建立成功",
+        zh: "題目儲存成功",
         en: "Question created successfully.",
       },
     },
