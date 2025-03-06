@@ -46,7 +46,7 @@ export default function MockPage() {
 
     // create exam logic
     const [createExamName, setCreateExamName] = useState<string>("")
-    const [createExamDuration, setCreateExamDuration] = useState<number>(0)
+    const [createExamDuration, setCreateExamDuration] = useState<number>(10)
     const [createExamType, setCreateExamType] = useState<TExamType>("basic")
 
     const [questionTextFelid, setQuestionTextFelid] = useState<string>("");
@@ -59,6 +59,7 @@ export default function MockPage() {
     ]);
 
     const handleExamChange = (exam_id: number): IExamQuestion[] => {
+        console.log(examLists)
         const examQuestionList = examLists.filter(
             (exam) => exam.exam_id === exam_id
         )
@@ -129,7 +130,6 @@ export default function MockPage() {
     }
 
     const handleOptionChange = (index: number, field: keyof IExamOption, value: string | boolean) => {
-        console.log(index, field, value)
         const newOptions = [...options];
         newOptions[index] = { ...newOptions[index], [field]: value };
         setOptions(newOptions);
@@ -192,9 +192,11 @@ export default function MockPage() {
             question_options: currentExamQuestion.question_options,
         }
 
-        console.log(updatedQuestion)
+        console.debug(displayExamQuestionList)
 
-        // displayExamQuestionList
+        displayExamQuestionList.map((question) => {
+            question.question_id === updatedQuestion.question_id ? updatedQuestion : question
+        })
 
         addToast({
             color: "success",
@@ -203,9 +205,10 @@ export default function MockPage() {
     }
 
     const handleCreateExam = () => {
-        const newExamId: number = examLists.length
+        const newExamId: number = examLists.length + 1
 
         // validate
+        console.debug(createExamName)
         if (createExamName == "") {
             addToast({
                 color: "warning",
@@ -214,16 +217,17 @@ export default function MockPage() {
             return
         }
 
+        console.debug(createExamDuration)
         if (createExamDuration <= 0) {
             addToast({
                 color: "warning",
-                title: LanguageTable.mock.crate.titleNoNullError[language],
+                title: LanguageTable.mock.crate.durationSubZeroError[language],
             });
             return
         }
 
         const tempExam: IExamsInfo = {
-            exam_id: newExamId + 1,
+            exam_id: newExamId,
             exam_name: createExamName,
             exam_questions: [],
             exam_duration: createExamDuration,
@@ -231,7 +235,7 @@ export default function MockPage() {
             exam_date: new Date().toISOString().split('T')[0]
         }
 
-        console.log(tempExam)
+        // console.log(tempExam)
         setExamLists([...examLists, tempExam])
 
         addToast({
@@ -240,28 +244,13 @@ export default function MockPage() {
         })
 
         setDisplayExamQuestionList(handleExamChange(newExamId))
+        console.log(displayExamQuestionList)
     }
 
     const handleCreateQuestion = (examId: number) => {
         // TODO: Implement create question logic
         const newQuestionId: number = displayExamQuestionList.length + 1
         console.log(displayExamQuestionList)
-        // validate
-        if (createExamName == "") {
-            addToast({
-                color: "warning",
-                title: LanguageTable.mock.crate.titleNoNullError[language],
-            });
-            return
-        }
-
-        if (createExamDuration <= 0) {
-            addToast({
-                color: "warning",
-                title: LanguageTable.mock.crate.titleNoNullError[language],
-            });
-            return
-        }
 
         const tempQuestion: IExamQuestion = {
             exam_id: examId,
@@ -312,15 +301,6 @@ export default function MockPage() {
                                         ))
                                     }
                                 </DrawerBody>
-                                {/* <DrawerFooter>
-                                    <Button
-                                        color="primary"
-                                        onPress={() => {
-                                            onOpenModal
-                                        }}>
-                                        {LanguageTable.mock.crate.newExam[language]}
-                                    </Button>
-                                </DrawerFooter> */}
                             </>
                         )}
                     </DrawerContent>
@@ -334,7 +314,9 @@ export default function MockPage() {
                                 <ModalBody>
                                     <span>{LanguageTable.mock.crate.examTitle[language]}</span>
                                     <Input
-                                        onValueChange={setCreateExamName}
+                                        onValueChange={(value) =>{
+                                            setCreateExamName(value)
+                                        }}
                                         validate={(value) => {
                                             if (value == "") {
                                                 return LanguageTable.mock.crate.titleNoNullError[language]
@@ -343,7 +325,6 @@ export default function MockPage() {
                                     />
                                     <span>{LanguageTable.mock.crate.examDuration[language]}</span>
                                     <NumberInput
-                                        defaultValue={0}
                                         aria-label="exam duration"
                                         onValueChange={setCreateExamDuration}
                                         validate={(value) => {
@@ -368,8 +349,8 @@ export default function MockPage() {
                                         {LanguageTable.mock.crate.close[language]}
                                     </Button>
                                     <Button color="primary" onPress={() => {
-                                        onClose()
                                         handleCreateExam()
+                                        onClose
                                     }}>
                                         {LanguageTable.mock.crate.confirm[language]}
                                     </Button>
@@ -403,7 +384,21 @@ export default function MockPage() {
                                                 />
                                             )
                                         })) : (
-                                            <ListboxItem description={LanguageTable.mock.crate.noItem[language]} textValue="1" />
+                                            <ListboxItem
+                                                description={LanguageTable.mock.crate.noItem[language]}
+                                                textValue="1"
+                                                onPress={() => {
+                                                    if (examInfo) {
+                                                        handleCreateQuestion(examInfo.exam_id)
+                                                    }
+                                                    else {
+                                                        return addToast({
+                                                            color: "warning",
+                                                            title: LanguageTable.mock.crate.noExamSelectedError[language],
+                                                        })
+                                                    }
+                                                }}
+                                            />
                                         )
                                 }
                             </ListboxSection>
