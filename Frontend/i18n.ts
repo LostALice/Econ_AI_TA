@@ -391,6 +391,10 @@ export const LanguageTable = {
         zh: "未選取任何模擬考",
         en: "No mock exam selected yet.",
       },
+      noQuestionSelectedError: {
+        zh: "未選取任何題目",
+        en: "No mock question selected yet.",
+      },
       newTempQuestion: {
         zh: "新題目",
         en: "New Question",

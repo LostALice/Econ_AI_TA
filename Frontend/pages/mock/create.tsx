@@ -41,7 +41,7 @@ export default function MockPage() {
     const [examLists, setExamLists] = useState<IExamsInfo[] | []>([]);
 
     const [questionsList, setQuestionsList] = useState<IExamQuestion[] | []>([]);
-    const [currentDisplayExamQuestion, setCurrentDisplayExamQuestion] = useState<IExamQuestion | null>()
+    const [currentQuestion, SetCurrentQuestion] = useState<IExamQuestion | null>()
 
     // create exam logic
     const [createExamName, setCreateExamName] = useState<string>("")
@@ -132,7 +132,7 @@ export default function MockPage() {
     };
 
     const handleSelectedQuestion = (selectedQuestion: IExamQuestion) => {
-        setCurrentDisplayExamQuestion(selectedQuestion)
+        SetCurrentQuestion(selectedQuestion)
         setQuestionTextFelid(selectedQuestion.question_text)
         if (selectedQuestion.question_images && selectedQuestion.question_images.length > 0) {
             setBase64ImageFelidList(selectedQuestion.question_images)
@@ -155,7 +155,6 @@ export default function MockPage() {
             return
         }
 
-        console.debug(createExamDuration)
         if (createExamDuration <= 0) {
             addToast({
                 color: "warning",
@@ -173,7 +172,6 @@ export default function MockPage() {
             exam_date: new Date().toISOString().split('T')[0]
         }
 
-        // console.log(tempExam)
         setExamLists([...examLists, tempExam])
 
         addToast({
@@ -184,7 +182,6 @@ export default function MockPage() {
     }
 
     const handleCreateQuestion = (examId: number) => {
-        // TODO: Implement create question logic
         const newQuestionId: number = questionsList.length + 1
         console.log(questionsList)
 
@@ -200,55 +197,46 @@ export default function MockPage() {
             ],
             question_images: null
         }
-
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.crate.questionCreateSuccess[language],
+        })
         setQuestionsList([...questionsList, tempQuestion])
     }
 
-    const handleDeleteExam = (examId: number) => {
+    const handleDeleteExam = (currentExam: IExamsInfo) => {
         // TODO: Implement create question logic
-        if (!currentExam) { return }
+        if (!currentExam) {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.noExamSelectedError[language],
+            })
+            return
+        }
+        const updatedExamLists = examLists.filter(
+            (exam) => exam.exam_id !== currentExam.exam_id
+        )
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.crate.questionCreateSuccess[language],
+        })
+        setExamLists(updatedExamLists)
     }
 
-    const handleDeleteQuestion = (examId: number, questionId: number) => {
+    const handleDeleteQuestion = (currentQuestion: IExamQuestion) => {
         // TODO: Implement create question logic
-        if (!currentExam) { return }
-    }
-
-    const handleUpdateQuestionList = (currentQuestion: IExamQuestion) => {
-        setQuestionsList((question) => {
-            return question.map((question) => {
-                if (question.question_id === currentQuestion.question_id) {
-                    return {
-                        exam_id: currentQuestion.exam_id,
-                        question_id: question.question_id,
-                        question_text: questionTextFelid,
-                        question_images: base64ImageFelidList,
-                        question_options: optionsFelid,
-                    }
-                } else {
-                    return question
-                }
+        if (!currentExam) {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.noQuestionSelectedError[language],
             })
-        })
-    }
+            return
+        }
 
-    const handleUpdateExamList = (currentExam: IExamsInfo) => {
-        setExamLists((exam) => {
-            return exam.map((exam) => {
-                if (exam.exam_id === currentExam.exam_id) {
-                    return {
-                        exam_id: exam.exam_id,
-                        exam_name: exam.exam_name,
-                        exam_type: exam.exam_type,
-                        exam_date: exam.exam_date,
-                        exam_duration: exam.exam_duration,
-                        exam_questions: currentExam.exam_questions
-                    }
-                } else {
-                    return exam
-                }
-            })
-        })
+        const updatedQuestionsList = questionsList.filter(
+            (question) => question.question_id !== currentQuestion.question_id
+        )
+        setQuestionsList(updatedQuestionsList)
     }
 
     const handleSaveQuestion = (currentExamQuestion: IExamQuestion) => {
@@ -467,6 +455,16 @@ export default function MockPage() {
                                 <ListboxItem
                                     className="text-danger"
                                     color="danger"
+                                    onPress={() => {
+                                        if (currentExam) {
+                                            handleDeleteExam(currentExam)
+                                        } else {
+                                            return addToast({
+                                                color: "warning",
+                                                title: LanguageTable.mock.crate.noExamSelectedError[language]
+                                            })
+                                        }
+                                    }}
                                     description={LanguageTable.mock.crate.deleteExam[language]}
                                     textValue="1"
                                 />
@@ -501,12 +499,13 @@ export default function MockPage() {
                                     className="text-danger"
                                     color="danger"
                                     onPress={() => {
-                                        if (currentExam) {
-                                            // handleCreateQuestion(currentExam?.exam_id)
+                                        if (currentQuestion) {
+                                            // handleDeleteQuestion(currentExam?.exam_id)
+                                            handleDeleteQuestion(currentQuestion)
                                         } else {
                                             return addToast({
                                                 color: "warning",
-                                                title: LanguageTable.mock.crate.noExamSelectedError[language]
+                                                title: LanguageTable.mock.crate.noQuestionSelectedError[language]
                                             })
                                         }
                                     }}
@@ -583,11 +582,11 @@ export default function MockPage() {
                             {/* Save Button */}
                             <div className="mt-6">
                                 <Button
-                                    isDisabled={currentDisplayExamQuestion ? false : true}
+                                    isDisabled={currentQuestion ? false : true}
                                     className="w-full px-4 py-2 rounded-md focus:outline-none"
                                     onPress={() => {
-                                        if (currentDisplayExamQuestion) {
-                                            handleSaveQuestion(currentDisplayExamQuestion)
+                                        if (currentQuestion) {
+                                            handleSaveQuestion(currentQuestion)
                                         }
                                     }}
                                 >
