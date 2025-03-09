@@ -14,6 +14,12 @@ logger = CustomLoggerHandler(__name__).setup_logging()
 # fastapi app setup
 app = FastAPI()
 
+# development
+if os.getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
+
 
 def CORS_environmental_handler(cors_allowed_origin: str) -> list[str]:
     default_origin = [
