@@ -7,7 +7,6 @@ from Backend.utils.helper.model.database.database import (
 from Backend.utils.helper.model.api.v1.mock import *
 from Backend.utils.helper.logger import CustomLoggerHandler
 from typing import Literal, Union, Optional
-from pydantic import TypeAdapter
 
 import mysql.connector as connector
 import json
@@ -17,9 +16,10 @@ from os import getenv
 
 
 # development
-from dotenv import load_dotenv
+if getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
 
-load_dotenv("./.env")
+    load_dotenv("./.env")
 
 
 class SetupMYSQL(object):

@@ -24,6 +24,11 @@ from os import getenv
 import requests  # type: ignore
 import json
 
+# development
+if getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
 
 class ResponseHandler(object):
     """https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/conversation-api"""

@@ -13,10 +13,10 @@ from os import getenv
 import numpy as np
 
 # development
-from dotenv import load_dotenv
+if getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
 
-load_dotenv("./.env")
-
+    load_dotenv("./.env")
 
 class SetupMilvus(object):
     _instance = None

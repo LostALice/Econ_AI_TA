@@ -17,6 +17,11 @@ import numpy as np
 import requests  # type: ignore
 import json
 
+# development
+if getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
 
 class VectorHandler(object):
     """API: https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api"""

@@ -20,9 +20,10 @@ import jwt
 import os
 
 # development
-from dotenv import load_dotenv
+if os.getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
 
-load_dotenv("./.env")
+    load_dotenv("./.env")
 
 router = APIRouter()
 mysql_client = MySQLHandler()
