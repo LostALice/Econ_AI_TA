@@ -2,7 +2,6 @@
 
 import { useContext, useState, useEffect } from "react";
 import { LangContext } from "@/contexts/LangContext";
-import { fetchExamLists } from "@/api/mock/create";
 import DefaultLayout from "@/layouts/default";
 import { LanguageTable } from "@/i18n";
 
@@ -30,6 +29,15 @@ import {
     addToast
 } from "@heroui/react";
 
+import {
+    fetchExamLists,
+    createNewExam,
+    createNewQuestion,
+    deleteExam,
+    deleteQuestion,
+    modifyQuestion,
+    createNewOptions
+} from "@/api/mock/create";
 import { ImageBox } from "@/components/chat/imageBox"
 
 export default function MockPage() {
@@ -59,12 +67,11 @@ export default function MockPage() {
 
     useEffect(() => {
         fetchExamLists().then((data) => {
-            if (data.length > 1) {
-                setExamLists(data)
+            if (data.length == 0) {
+                setExamLists([])
             } else {
-                setExamLists([data])
+                setExamLists(data)
             }
-
         })
         const handlePaste = (event: ClipboardEvent) => {
             const item = event.clipboardData?.items[0]
@@ -116,13 +123,18 @@ export default function MockPage() {
     }
 
     const handleExamChange = (exam_id: number): IExamQuestion[] => {
-        // console.log(examLists)
         const examQuestionList = examLists.filter(
             (exam) => exam.exam_id == exam_id
         )
         setCurrentExam(examQuestionList[0])
-        // console.log(examQuestionList)
-        return examQuestionList[0].exam_questions
+
+        if (examQuestionList[0].exam_questions) {
+            return examQuestionList[0].exam_questions
+        }
+        else {
+            return []
+        }
+
     }
 
     const handleOptionChange = (index: number, field: keyof IExamOption, value: string | boolean) => {
@@ -134,18 +146,21 @@ export default function MockPage() {
     const handleSelectedQuestion = (selectedQuestion: IExamQuestion) => {
         SetCurrentQuestion(selectedQuestion)
         setQuestionTextFelid(selectedQuestion.question_text)
+
         if (selectedQuestion.question_images && selectedQuestion.question_images.length > 0) {
             setBase64ImageFelidList(selectedQuestion.question_images)
         }
         else {
             setBase64ImageFelidList([])
         }
-        setOptionsFelid(selectedQuestion.question_options)
+
+        if (selectedQuestion.question_options) {
+            setOptionsFelid(selectedQuestion.question_options)
+        }
+
     }
 
-    const handleCreateExam = () => {
-        const newExamId: number = examLists.length + 1
-
+    const handleCreateExam = async () => {
         // validate
         if (createExamName == "") {
             addToast({
@@ -163,48 +178,73 @@ export default function MockPage() {
             return
         }
 
-        const tempExam: IExamsInfo = {
-            exam_id: newExamId,
+        const examPrams: ICreateNewExamPrams = {
             exam_name: createExamName,
-            exam_questions: [],
-            exam_duration: createExamDuration,
             exam_type: createExamType,
-            exam_date: new Date().toISOString().split('T')[0]
+            exam_date: new Date().toISOString().split('T')[0],
+            exam_duration: createExamDuration,
         }
-
-        setExamLists([...examLists, tempExam])
-
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.crate.examCreateSuccess[language],
-        })
-
+        const newMockData = await createNewExam(examPrams)
+        console.log(newMockData)
+        if (newMockData) {
+            setExamLists([...examLists, newMockData])
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.crate.examCreateSuccess[language],
+            })
+        }
+        else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.examCreateFailed[language],
+            })
+        }
     }
 
-    const handleCreateQuestion = (examId: number) => {
-        const newQuestionId: number = questionsList.length + 1
-        console.log(questionsList)
-
-        const tempQuestion: IExamQuestion = {
+    const handleCreateQuestion = async (examId: number) => {
+        const questionPrams: ICreateNewQuestionPrams = {
             exam_id: examId,
-            question_id: newQuestionId,
             question_text: LanguageTable.mock.crate.newTempQuestion[language],
-            question_options: [
-                { option_id: 1, option_text: "", is_correct: false },
-                { option_id: 2, option_text: "", is_correct: false },
-                { option_id: 3, option_text: "", is_correct: false },
-                { option_id: 4, option_text: "", is_correct: false },
-            ],
-            question_images: null
         }
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.crate.questionCreateSuccess[language],
-        })
-        setQuestionsList([...questionsList, tempQuestion])
+
+        const newQuestionData = await createNewQuestion(questionPrams)
+
+        const optionsPrams: ICreateNewQuestionOptionsPrams[] = [
+            { question_id: newQuestionData.question_id, option_text: "", is_correct: false },
+            { question_id: newQuestionData.question_id, option_text: "", is_correct: false },
+            { question_id: newQuestionData.question_id, option_text: "", is_correct: false },
+            { question_id: newQuestionData.question_id, option_text: "", is_correct: false },
+        ]
+
+        const newOptionsData = await createNewOptions(optionsPrams)
+
+        console.log(newQuestionData)
+        console.log(newOptionsData)
+
+        if (newQuestionData && newOptionsData) {
+            const newEmptyQuestion: IExamQuestion = {
+                exam_id: newQuestionData.exam_id,
+                question_id: newQuestionData.question_id,
+                question_text: newQuestionData.question_text,
+                question_options: newOptionsData,
+                question_images: [],
+            }
+
+            setQuestionsList([...questionsList, newEmptyQuestion])
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.crate.questionCreateSuccess[language],
+            })
+        }
+        else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.questionCreateFailed[language],
+            })
+        }
     }
 
-    const handleDeleteExam = (currentExam: IExamsInfo) => {
+    const handleDeleteExam = async (currentExam: IExamsInfo) => {
         // TODO: Implement create question logic
         if (!currentExam) {
             addToast({
@@ -216,15 +256,23 @@ export default function MockPage() {
         const updatedExamLists = examLists.filter(
             (exam) => exam.exam_id !== currentExam.exam_id
         )
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.crate.questionCreateSuccess[language],
-        })
-        setExamLists(updatedExamLists)
+
+        const success = await deleteExam(currentExam.exam_id)
+        if (success) {
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.crate.questionCreateSuccess[language],
+            })
+            setExamLists(updatedExamLists)
+        } else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.questionCreateFailed[language],
+            })
+        }
     }
 
-    const handleDeleteQuestion = (currentQuestion: IExamQuestion) => {
-        // TODO: Implement create question logic
+    const handleDeleteQuestion = async (currentQuestion: IExamQuestion) => {
         if (!currentExam) {
             addToast({
                 color: "warning",
@@ -232,14 +280,28 @@ export default function MockPage() {
             })
             return
         }
+        console.log(currentQuestion.question_id)
+        const success = await deleteQuestion(currentQuestion.question_id)
+        console.log(success)
 
-        const updatedQuestionsList = questionsList.filter(
-            (question) => question.question_id !== currentQuestion.question_id
-        )
-        setQuestionsList(updatedQuestionsList)
+        if (success) {
+            const updatedQuestionsList = questionsList.filter(
+                (question) => question.question_id !== currentQuestion.question_id
+            )
+            setQuestionsList(updatedQuestionsList)
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.crate.questionCreateSuccess[language],
+            })
+        } else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.questionCreateFailed[language],
+            })
+        }
     }
 
-    const handleSaveQuestion = (currentExamQuestion: IExamQuestion) => {
+    const handleSaveQuestion = async (currentExamQuestion: IExamQuestion) => {
         // update question content
         if (!currentExam) { return }
 
@@ -276,43 +338,46 @@ export default function MockPage() {
             });
         }
 
-        const tempQuestion: IExamQuestion[] = [...questionsList].map((question) => {
-            if (question.question_id === currentExamQuestion.question_id) {
-                return {
-                    exam_id: currentExamQuestion.exam_id,
-                    question_id: question.question_id,
-                    question_text: questionTextFelid,
-                    question_images: base64ImageFelidList,
-                    question_options: optionsFelid,
-                }
-            } else {
-                return question
-            }
-        })
+        const savedOptions: IModifiedQuestionOptionsPrams[] = optionsFelid.map((option) => ({
+            option_id: option.option_id,
+            question_id: currentExamQuestion.question_id,
+            option_text: option.option_text,
+            is_correct: option.is_correct,
+        }));
 
-        setQuestionsList(tempQuestion)
+        const savedQuestion: IExamQuestion = {
+            exam_id: currentExam.exam_id,
+            question_id: currentExamQuestion.question_id,
+            question_text: questionTextFelid,
+            question_options: savedOptions,
+            question_images: base64ImageFelidList,
+        }
 
-        setExamLists((exam) => {
-            return exam.map((exam) => {
-                if (exam.exam_id === currentExamQuestion.exam_id) {
-                    return {
-                        exam_id: exam.exam_id,
-                        exam_name: exam.exam_name,
-                        exam_type: exam.exam_type,
-                        exam_date: exam.exam_date,
-                        exam_duration: exam.exam_duration,
-                        exam_questions: tempQuestion
-                    }
+        console.log(savedQuestion)
+        const success = await modifyQuestion(savedQuestion)
+
+        if (success) {
+            fetchExamLists().then((data) => {
+                if (data.length == 0) {
+                    setExamLists([])
                 } else {
-                    return exam
+                    setExamLists(data)
+                    const tempQuestionList = data.filter((exam: IExamsInfo) => exam.exam_id == savedQuestion.exam_id)
+                    console.log(tempQuestionList)
+                    setQuestionsList(tempQuestionList[0].exam_questions)
                 }
             })
-        })
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.crate.questionCreateSuccess[language],
+            })
+        } else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.crate.questionCreateFailed[language],
+            })
+        }
 
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.crate.questionCreateSuccess[language],
-        })
     }
 
     return (
@@ -331,7 +396,8 @@ export default function MockPage() {
                                             <Button
                                                 key={exam.exam_id}
                                                 onPress={() => {
-                                                    setQuestionsList(handleExamChange(exam.exam_id))
+                                                    const questions = handleExamChange(exam.exam_id)
+                                                    setQuestionsList(questions)
                                                     onClose()
                                                 }}
                                             >
@@ -403,7 +469,7 @@ export default function MockPage() {
                         {LanguageTable.mock.crate.examList[language]}
                     </Button>
                     <div className="flex items-center justify-center">
-                        {LanguageTable.mock.crate.currentExam[language]} {currentExam?.exam_name || LanguageTable.mock.crate.selected[language]}
+                        {LanguageTable.mock.crate.currentExam[language]} {currentExam ? (LanguageTable.mock.crate[currentExam?.exam_type][language]) : (<></>)} {currentExam?.exam_name || LanguageTable.mock.crate.selected[language]}
                     </div>
                 </div>
                 <div className="flex justify-normal">
@@ -585,7 +651,7 @@ export default function MockPage() {
                                     isDisabled={currentQuestion ? false : true}
                                     className="w-full px-4 py-2 rounded-md focus:outline-none"
                                     onPress={() => {
-                                        if (currentQuestion) {
+                                        if (currentQuestion && currentExam) {
                                             handleSaveQuestion(currentQuestion)
                                         }
                                     }}

@@ -25,3 +25,29 @@ interface IExamOption {
     option_text: string;
     is_correct: boolean;
 }
+
+interface ICreateNewExamPrams {
+    exam_name: string
+    exam_type: TExamType
+    exam_date: string
+    exam_duration: number
+}
+
+interface ICreateNewQuestionPrams {
+    exam_id: number
+    question_text: string;
+    // question_options: ICreateNewQuestionOptionsPrams[]
+}
+
+interface ICreateNewQuestionOptionsPrams {
+    question_id: number
+    option_text: string
+    is_correct: boolean
+}
+
+interface IModifiedQuestionOptionsPrams {
+    option_id: number
+    question_id: number
+    option_text: string
+    is_correct: boolean
+}

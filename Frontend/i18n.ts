@@ -407,6 +407,14 @@ export const LanguageTable = {
         zh: "題目儲存成功",
         en: "Question created successfully.",
       },
+      questionCreateFailed: {
+        zh: "題目儲存存失敗",
+        en: "Question creation failed.",
+      },
+      examCreateFailed: {
+        zh: "模擬考建立失失敗",
+        en: "Mock exam creation failed.",
+      },
     },
   },
 };

@@ -4,10 +4,13 @@ from Backend.utils.helper.model.database.database import (
     QueryDocumentationTypeListModel,
     UserInfoModel,
 )
+from Backend.utils.helper.model.api.v1.mock import *
 from Backend.utils.helper.logger import CustomLoggerHandler
-from typing import Literal
+from typing import Literal, Union, Optional
+from pydantic import TypeAdapter
 
 import mysql.connector as connector
+import json
 
 from pprint import pformat
 from os import getenv
@@ -47,12 +50,8 @@ class SetupMYSQL(object):
 
         assert self._HOST is not None, "Missing MYSQL_HOST environment variable"
         assert self._USER is not None, "Missing MYSQL_USER_NAME environment variable"
-        assert (
-            self._PASSWORD is not None
-        ), "Missing MYSQL_PASSWORD environment variable"
-        assert (
-            self._DATABASE is not None
-        ), "Missing MYSQL_DATABASE environment variable"
+        assert self._PASSWORD is not None, "Missing MYSQL_PASSWORD environment variable"
+        assert self._DATABASE is not None, "Missing MYSQL_DATABASE environment variable"
         assert self._PORT is not None, "Missing MYSQL_PORT environment variable"
 
         assert (
@@ -195,7 +194,7 @@ class SetupMYSQL(object):
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
-                `expired` TINYINT NOT NULL DEFAULT "0",
+                `expired` TINYINT(1) NOT NULL DEFAULT "0",
                 `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
                 PRIMARY KEY (`file_id`, `collection`),
                 UNIQUE INDEX `file_id` (`file_id` ASC)
@@ -213,7 +212,7 @@ class SetupMYSQL(object):
                 `images` VARCHAR(45) NULL,
                 `answer` LONGTEXT NOT NULL,
                 `token_size` INT NOT NULL DEFAULT 0,
-                `rating`TINYINT DEFAULT NULL,
+                `rating` TINYINT(1) DEFAULT NULL,
                 `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `sent_by` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`chat_id`, `qa_id`),
@@ -248,6 +247,60 @@ class SetupMYSQL(object):
                 PRIMARY KEY (`qa_id`, `images_file_id`),
                 FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
                 FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+            );
+            """
+        )
+
+        # exams table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE exams (
+                exam_id INT AUTO_INCREMENT PRIMARY KEY,
+                exam_name VARCHAR(255) NOT NULL,
+                exam_type VARCHAR(50) NOT NULL,
+                exam_date DATETIME NOT NULL,
+                exam_duration INT NOT NULL,
+                is_enabled TINYINT(1) NOT NULL DEFAULT True
+            );
+            """
+        )
+
+        # exam_questions table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE exam_questions (
+                question_id INT AUTO_INCREMENT PRIMARY KEY,
+                exam_id INT NOT NULL,
+                question_text TEXT NOT NULL,
+                is_enabled TINYINT(1) NOT NULL DEFAULT True,
+                -- question_images VARCHAR(36) DEFAULT NULL,
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+            );
+            """
+        )
+
+        # exam_images table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE exam_images (
+                question_id INT NOT NULL,
+                question_images CHAR(36) NOT NULL,
+                is_enabled TINYINT(1) NOT NULL DEFAULT True,
+                PRIMARY KEY (question_id, question_images),
+                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+            );
+            """
+        )
+
+        # exam_options table
+        self.cursor.execute(
+            """
+            CREATE TABLE exam_options (
+                option_id INT AUTO_INCREMENT PRIMARY KEY,
+                question_id INT NOT NULL,
+                option_text TEXT NOT NULL,
+                is_correct TINYINT(1) NOT NULL DEFAULT False,
+                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
             );
             """
         )
@@ -328,36 +381,6 @@ class MySQLHandler(SetupMYSQL):
         self.logger.info(pformat(role_id))
 
         return int(role_id) if role_id else None
-
-    # def create_role(self, role_name: str) -> str | None:
-    #     """create a new role
-
-    #     Args:
-    #         role_name (str): name of the role
-
-    #     Returns:
-    #         str: the role name
-    #     """
-    #     self.connection.ping(attempts=3)
-    #     self.logger.debug(
-    #         pformat(f"create_role {role_name}"))
-
-    #     # check is role exist
-    #     role_name = self.query_role(role_name)
-    #     if role_name is None:
-    #         return None
-
-    #     self.cursor.execute("""
-    #         INSERT INTO `role` (role_name)
-    #         VALUES (
-    #             %s,
-    #         );""", (role_name,))
-
-    #     self.commit()
-
-    #     role_name = self.query_role(role_name)
-
-    #     return role_name
 
     def create_user(
         self,
@@ -745,7 +768,7 @@ class MySQLHandler(SetupMYSQL):
         """
         self.connection.ping(attempts=3)
         self.cursor.execute(
-            f""" SELECT file_id, file_name, last_update
+            f"""SELECT file_id, file_name, last_update
                 FROM {self._DATABASE}.file
                 WHERE `expired` = 0 AND `tags` -> "$.documentation_type" = %s
             """,
@@ -765,6 +788,458 @@ class MySQLHandler(SetupMYSQL):
         self.logger.debug(pformat(f"select file list query: {query_result}"))
 
         return query_result
+
+    def query_mock_exam_list(self) -> dict | None:
+        """
+        This function queries the database for a list of mock exams, including nested details for exam questions and options.
+        It pings the database connection, executes a SQL query that aggregates exam data into a JSON structure, logs the query,
+        and then parses the JSON string into a dictionary. If no exam information is found, it returns None.
+
+        Args:
+            (None): This function does not require any arguments besides self.
+
+        Return:
+            dict or None: A dictionary containing exam information with nested exam questions and options, or None if no exam records are found.
+        """
+
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            SELECT JSON_ARRAYAGG(exam_data) AS exam_info
+            FROM (
+                SELECT JSON_OBJECT(
+                    'exam_id', e.exam_id,
+                    'exam_name', e.exam_name,
+                    'exam_type', e.exam_type,
+                    'exam_date', e.exam_date,
+                    'exam_duration', e.exam_duration,
+                    'exam_questions', (
+                        SELECT JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'question_id', eq.question_id,
+                                'question_text', eq.question_text,
+                                'question_images', (
+                                    SELECT JSON_ARRAYAGG(ei.question_images)
+                                    FROM exam_images ei
+                                    WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                ),
+                                'question_options', (
+                                    SELECT JSON_ARRAYAGG(
+                                        JSON_OBJECT(
+                                            'option_id', eo.option_id,
+                                            'option_text', eo.option_text,
+                                            'is_correct', eo.is_correct
+                                        )
+                                    )
+                                    FROM exam_options eo
+                                    WHERE eo.question_id = eq.question_id
+                                )
+                            )
+                        )
+                        FROM exam_questions eq
+                        WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1
+                        ORDER BY eq.question_id DESC
+                    )
+                ) AS exam_data
+                FROM exams e
+                WHERE e.is_enabled = 1
+            ) sub;
+            """
+        )
+        self.sql_query_logger()
+        exam_data = self.cursor.fetchall()
+
+        self.logger.info(exam_data)
+
+        if exam_data[0]["exam_info"] == None:
+            return None
+
+        # mock_exams = []
+
+        return json.loads(exam_data[0]["exam_info"])
+
+        # fix this shit later
+        # need to convert to pydantic object
+
+        # for question in exam["exam_questions"]:
+        #     ...
+        # self.logger.info(exam)
+        # mock_exams.append(
+        #     ExamsInfoModel(
+        #         exam_id=int(exam["exam_id"]),
+        #         exam_name=exam["exam_name"],
+        #         exam_type=exam["exam_type"],
+        #         exam_date=exam["exam_date"],
+        #         exam_duration=int(exam["exam_duration"]),
+        #         exam_questions=exam["exam_questions"],
+        #     )
+        # )
+        # TypeAdapter(ExamsInfoModel).validate_python(exam)
+        # mock_exams.append(TypeAdapter(ExamsInfoModel).validate_json(exam))
+
+        # return mock_exams
+
+    def insert_new_mock_exam(self, exam: CreateNewExamParamsModel) -> ExamsInfoModel:
+        """
+        This function inserts a new exam record into the exams table in the database.
+        It pings the database connection, executes the INSERT SQL query with exam details,
+        logs the executed query, commits the transaction, and retrieves the newly inserted exam information.
+
+        Args:
+            exam: CreateNewExamParamsModel - A model containing exam details such as exam_name, exam_type, exam_date, and exam_duration.
+
+        Return:
+            ExamsInfoModel - A model representing the inserted exam with its exam_id, exam_name, exam_type, exam_date, exam_duration,
+                             and an empty list for exam_questions.
+        """
+
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            INSERT INTO {self._DATABASE}.exams (
+                exam_name,
+                exam_type,
+                exam_date,
+                exam_duration
+            )
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                exam.exam_name,
+                exam.exam_type,
+                exam.exam_date,
+                exam.exam_duration,
+            ),
+        )
+        self.sql_query_logger()
+        self.commit()
+
+        # fetch back
+        self.cursor.execute(
+            f"""
+            SELECT *
+            FROM {self._DATABASE}.exams
+            WHERE exam_name = %s AND exam_type = %s AND exam_date = %s AND exam_duration = %s
+            """,
+            (
+                exam.exam_name,
+                exam.exam_type,
+                exam.exam_date,
+                exam.exam_duration,
+            ),
+        )
+        inserted_exam_info = self.cursor.fetchone()
+        self.logger.info(inserted_exam_info)
+
+        # exam table
+        # exam_id
+        # exam_name
+        # exam_type
+        # exam_date
+        # exam_duration
+        return ExamsInfoModel(
+            exam_id=inserted_exam_info["exam_id"],
+            exam_name=inserted_exam_info["exam_name"],
+            exam_type=inserted_exam_info["exam_type"],
+            exam_date=str(inserted_exam_info["exam_date"]),
+            exam_duration=inserted_exam_info["exam_duration"],
+            exam_questions=[],
+        )
+
+    def insert_new_mock_question(
+        self, question: CreateNewQuestionParamsModel
+    ) -> ExamQuestionModel:
+        """
+        This function inserts a new mock question into the exam_questions table.
+        It pings the database connection, executes an INSERT SQL query using the provided question data,
+        logs the SQL query, commits the transaction, and then retrieves the inserted question information.
+
+        Args:
+            question: CreateNewQuestionParamsModel - A model containing the exam_id and question_text for the new question.
+
+        Return:
+            ExamQuestionModel - A model representing the inserted question with its question_id, exam_id, question_text,
+                                and placeholders for question_options and question_images.
+        """
+
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            INSERT INTO {self._DATABASE}.exam_questions (
+                exam_id, 
+                question_text
+            )
+            VALUES (%s, %s)
+            """,
+            (
+                question.exam_id,
+                question.question_text,
+            ),
+        )
+
+        self.sql_query_logger()
+        self.commit()
+
+        # fetch back
+        self.cursor.execute(
+            f"""
+            SELECT 
+                question_id,
+                exam_id,
+                question_text
+            FROM {self._DATABASE}.exam_questions
+            WHERE exam_id = %s AND question_text = %s
+            """,
+            (
+                question.exam_id,
+                question.question_text,
+            ),
+        )
+        inserted_question_info = self.cursor.fetchone()
+
+        return ExamQuestionModel(
+            exam_id=inserted_question_info["exam_id"],
+            question_id=inserted_question_info["question_id"],
+            question_text=inserted_question_info["question_text"],
+            question_options=None,
+            question_images=None,
+        )
+
+    def insert_new_mock_options(
+        self, options: list[CreateNewOptionParamsModel]
+    ) -> list[ExamOptionModel]:
+        """
+        This function inserts new mock options for exam questions into the exam_options table.
+        It performs a bulk insert using the provided list of options, logs the executed query, commits the transaction,
+        and then retrieves the newly inserted options based on the first option's parameters. Finally, it returns the inserted options as a list of ExamOptionModel instances.
+
+        Args:
+            options: list[CreateNewOptionParamsModel] - A list of option parameter models containing question_id, option_text, and is_correct flag.
+
+        Return:
+            list[ExamOptionModel] - A list of exam option models representing the newly inserted options.
+        """
+
+        self.connection.ping(attempts=3)
+        new_options = [
+            (option.question_id, option.option_text, option.is_correct)
+            for option in options
+        ]
+        self.cursor.executemany(
+            f"""
+            INSERT INTO {self._DATABASE}.exam_options (
+                question_id,
+                option_text,
+                is_correct
+            )
+            VALUES (%s, %s, %s)
+            """,
+            new_options,
+        )
+        self.sql_query_logger()
+        self.commit()
+
+        self.cursor.execute(
+            f"""
+            SELECT *
+            FROM {self._DATABASE}.exam_options
+            WHERE question_id = %s AND option_text = %s AND is_correct = %s
+            ORDER BY option_id DESC;
+            """,
+            (
+                options[0].question_id,
+                options[0].option_text,
+                options[0].is_correct,
+            ),
+        )
+
+        inserted_option_info = self.cursor.fetchall()
+        self.logger.debug(inserted_option_info)
+
+        return [
+            ExamOptionModel(
+                option_id=option["option_id"],
+                question_id=option["question_id"],
+                option_text=option["option_text"],
+                is_correct=option["is_correct"],
+            )
+            for option in inserted_option_info
+        ]
+
+    def modify_question(
+        self, question: ExamQuestionModel, image_uuids: Optional[list[str]]
+    ) -> bool:
+        """
+        This function modifies a question record in the database by updating its text, options, and optionally its associated images.
+
+        Args:
+            question: ExamQuestionModel - The question object containing updated text, options, and identifier.
+            images_path: Optional[list[str]] - A list of new image paths to associate with the question. If provided, existing images will be deleted and replaced.
+
+        Return:
+            bool - True if the modification was successful; False otherwise.
+        """
+
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            UPDATE {self._DATABASE}.exam_questions
+            SET question_text = %s
+            WHERE question_id = %s
+            """,
+            (question.question_text, question.question_id),
+        )
+
+        self.sql_query_logger()
+
+        # update options
+        if question.question_options:
+            new_options_data = [
+                (
+                    option.option_text,
+                    option.is_correct,
+                    question.question_id,
+                    option.option_id,
+                )
+                for option in question.question_options
+            ]
+            self.cursor.executemany(
+                f"""
+                UPDATE {self._DATABASE}.exam_options
+                SET option_text = %s, is_correct = %s
+                WHERE question_id = %s AND option_id = %s
+                """,
+                new_options_data,
+            )
+            self.sql_query_logger()
+
+        if not image_uuids:
+            return self.commit()
+
+        # Update images
+        self.cursor.execute(
+            f"""
+            UPDATE {self._DATABASE}.exam_images
+            SET is_enabled = 0
+            WHERE question_id = %s;
+            """,
+            (question.question_id,),
+        )
+        self.sql_query_logger()
+        self.commit()
+
+        for image_uuid in image_uuids:
+            self.cursor.execute(
+                f"""
+                INSERT INTO {self._DATABASE}.exam_images (
+                    question_id,
+                    question_images
+                )
+                VALUES (%s, %s)
+                """,
+                (question.question_id, image_uuid),
+            )
+            self.sql_query_logger()
+        return self.commit()
+
+    def disable_exam(self, exam_id: int) -> bool:
+        """
+        This function deletes an exam record from the exam table in the database.
+        It pings the database connection, executes the deletion SQL query, logs the SQL query, and commits the transaction.
+
+        Args:
+            exam_id: int - The unique identifier of the exam to be deleted.
+
+        Return:
+            bool - True if the deletion was successful and the transaction was committed; False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            UPDATA {self._DATABASE}.exam 
+            SET enabled = %s
+            WHERE exam_id = %s
+            """,
+            (1, exam_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def delete_exam(self, exam_id: int) -> bool:
+        """
+        Deletes an exam record from the database.
+
+        This method pings the database connection to ensure it's active, executes a DELETE SQL statement to remove the exam with the specified exam_id from the exam table in the configured database, logs the SQL query, and then commits the transaction.
+
+        Parameters: exam_id (int): The unique identifier of the exam to be deleted.
+
+        Returns: bool: True if the deletion was successful and the transaction was committed; False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            DELETE FROM {self._DATABASE}.exam 
+            WHERE exam_id = %s
+            """,
+            (exam_id,),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def disable_question(self, question_id: int) -> bool:
+        """
+        Disables a question in the database by setting its 'enabled' status to 1.
+
+        Args:
+            question_id (int): The unique identifier of the question to be disabled.
+
+        Returns:
+            bool: Returns True if the question is successfully disabled, False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            UPDATA {self._DATABASE}.exam_questions 
+            SET enabled = %s
+            WHERE question_id = %s
+            """,
+            (1, question_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def delete_question(self, question_id: int) -> bool:
+        """
+        Deletes a question from the database based on the provided question ID.
+
+        Args:
+            question_id (int): The ID of the question to be deleted.
+
+        Returns:
+            bool: Returns True if the question is successfully deleted, False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            DELETE FROM {self._DATABASE}.exam_questions 
+            WHERE question_id = %s
+            """,
+            (question_id,),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
 
     def sql_query_logger(self) -> None:
         """log sql query"""

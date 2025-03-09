@@ -24,7 +24,7 @@ class CustomLoggerHandler:
         log_format = "%(asctime)s, %(levelname)s [%(filename)s:%(lineno)d] %(message)s"
         logging.basicConfig(
             filename="../Event.log",
-            filemode="w+",
+            filemode="w",
             format=log_format,
             level=logging.NOTSET,
             encoding="utf-8",
