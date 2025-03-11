@@ -7,7 +7,7 @@ interface IExamsInfo {
     exam_name: string;
     exam_type: TExamType
     exam_date: string;
-    exam_duration: number;  // in minutes 
+    exam_duration: number;  // in minutes
     exam_questions: IExamQuestion[];
 }
 
@@ -50,4 +50,14 @@ interface IModifiedQuestionOptionsPrams {
     question_id: number
     option_text: string
     is_correct: boolean
+}
+
+type IExamOptionForStudent = Omit<IExamOption, "is_correct">;
+
+interface IExamQuestionForStudent extends Omit<IExamQuestion, "question_options"> {
+    question_options: IExamOptionForStudent[];
+}
+
+interface IExamsInfoForStudent extends Omit<IExamsInfo, "exam_questions"> {
+    exam_questions: IExamQuestionForStudent[];
 }

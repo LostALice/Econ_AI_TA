@@ -114,15 +114,18 @@ class SetupMYSQL(object):
                 self.connection.commit()
                 self.create_database()
             else:
-                self.logger.info(f"Skipped recrate database, Debug: {self._DEBUG}")
+                self.logger.info(
+                    f"Skipped recrate database, Debug: {self._DEBUG}")
         except connector.Error as error:
             self.logger.error(error)
-            self.logger.debug(pformat(f"Creating MYSQL database {self._DATABASE}"))
+            self.logger.debug(
+                pformat(f"Creating MYSQL database {self._DATABASE}"))
             self.create_database()
         finally:
             self.logger.debug(f"Using MYSQL database {self._DATABASE}")
             self.connection.database = self._DATABASE
-            self.cursor = self.connection.cursor(dictionary=True, prepared=True)
+            self.cursor = self.connection.cursor(
+                dictionary=True, prepared=True)
 
     def create_database(self) -> None:
         self.cursor.execute(f"CREATE DATABASE {self._DATABASE};")
@@ -644,11 +647,13 @@ class MySQLHandler(SetupMYSQL):
         )
 
         self.cursor.execute(
-            """SELECT user_id FROM user WHERE username = %s""", (sent_by_username,)
+            """SELECT user_id FROM user WHERE username = %s""", (
+                sent_by_username,)
         )
         user_id = self.cursor.fetchone()["user_id"]
 
-        self.logger.debug(f"Fetched user: {sent_by_username}, user_id: {user_id}")
+        self.logger.debug(
+            f"Fetched user: {sent_by_username}, user_id: {user_id}")
 
         self.cursor.execute(
             f"""
@@ -938,7 +943,7 @@ class MySQLHandler(SetupMYSQL):
                 """
             )
             self.sql_query_logger()
-            
+
         exam_data = self.cursor.fetchall()
 
         self.logger.info(exam_data)
@@ -971,6 +976,17 @@ class MySQLHandler(SetupMYSQL):
 
         # return mock_exams
 
+    def query_mock_exam(self, mock_type: Optional[Literal["basic", "cse"]]) -> dict | None:
+        self.connection.ping(attempts=3)
+
+        self.cursor.execute(f"""
+            SELECT exam_id, exam_name, exam_type, exam_duration FROM exam
+            WHERE exam_type = %s AND is_enabled = True;
+        """, (mock_type,))
+
+        self.sql_query_logger()
+        return self.cursor.fetchall()
+
     def insert_new_mock_exam(self, exam: CreateNewExamParamsModel) -> ExamsInfoModel:
         """
         This function inserts a new exam record into the exams table in the database.
@@ -988,13 +1004,13 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            INSERT INTO {self._DATABASE}.exams (
+            INSERT INTO {self._DATABASE}.exams(
                 exam_name,
                 exam_type,
                 exam_date,
                 exam_duration
             )
-            VALUES (%s, %s, %s, %s)
+            VALUES ( % s, % s, % s, % s)
             """,
             (
                 exam.exam_name,
@@ -1011,7 +1027,7 @@ class MySQLHandler(SetupMYSQL):
             f"""
             SELECT *
             FROM {self._DATABASE}.exams
-            WHERE exam_name = %s AND exam_type = %s AND exam_date = %s AND exam_duration = %s
+            WHERE exam_name= % s AND exam_type = % s AND exam_date = % s AND exam_duration = % s
             """,
             (
                 exam.exam_name,
@@ -1057,11 +1073,11 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            INSERT INTO {self._DATABASE}.exam_questions (
-                exam_id, 
+            INSERT INTO {self._DATABASE}.exam_questions(
+                exam_id,
                 question_text
             )
-            VALUES (%s, %s)
+            VALUES ( % s, % s)
             """,
             (
                 question.exam_id,
@@ -1075,12 +1091,12 @@ class MySQLHandler(SetupMYSQL):
         # fetch back
         self.cursor.execute(
             f"""
-            SELECT 
+            SELECT
                 question_id,
                 exam_id,
                 question_text
             FROM {self._DATABASE}.exam_questions
-            WHERE exam_id = %s AND question_text = %s
+            WHERE exam_id= % s AND question_text = % s
             """,
             (
                 question.exam_id,
@@ -1119,12 +1135,12 @@ class MySQLHandler(SetupMYSQL):
         ]
         self.cursor.executemany(
             f"""
-            INSERT INTO {self._DATABASE}.exam_options (
+            INSERT INTO {self._DATABASE}.exam_options(
                 question_id,
                 option_text,
                 is_correct
             )
-            VALUES (%s, %s, %s)
+            VALUES (% s, % s, % s)
             """,
             new_options,
         )
@@ -1135,7 +1151,7 @@ class MySQLHandler(SetupMYSQL):
             f"""
             SELECT *
             FROM {self._DATABASE}.exam_options
-            WHERE question_id = %s AND option_text = %s AND is_correct = %s
+            WHERE question_id=% s AND option_text = % s AND is_correct = % s
             ORDER BY option_id DESC;
             """,
             (
@@ -1176,8 +1192,8 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
-            SET question_text = %s
-            WHERE question_id = %s
+            SET question_text=% s
+            WHERE question_id=% s
             """,
             (question.question_text, question.question_id),
         )
@@ -1198,8 +1214,8 @@ class MySQLHandler(SetupMYSQL):
             self.cursor.executemany(
                 f"""
                 UPDATE {self._DATABASE}.exam_options
-                SET option_text = %s, is_correct = %s
-                WHERE question_id = %s AND option_id = %s
+                SET option_text= % s, is_correct = % s
+                WHERE question_id= % s AND option_id = % s
                 """,
                 new_options_data,
             )
@@ -1212,8 +1228,8 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_images
-            SET is_enabled = 0
-            WHERE question_id = %s;
+            SET is_enabled=0
+            WHERE question_id=% s;
             """,
             (question.question_id,),
         )
@@ -1223,11 +1239,11 @@ class MySQLHandler(SetupMYSQL):
         for image_uuid in image_uuids:
             self.cursor.execute(
                 f"""
-                INSERT INTO {self._DATABASE}.exam_images (
+                INSERT INTO {self._DATABASE}.exam_images(
                     question_id,
                     question_images
                 )
-                VALUES (%s, %s)
+                VALUES ( % s, % s)
                 """,
                 (question.question_id, image_uuid),
             )
@@ -1248,9 +1264,9 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam 
-            SET enabled = %s
-            WHERE exam_id = %s
+            UPDATA {self._DATABASE}.exam
+            SET enabled=% s
+            WHERE exam_id=% s
             """,
             (1, exam_id),
         )
@@ -1266,15 +1282,15 @@ class MySQLHandler(SetupMYSQL):
 
         This method pings the database connection to ensure it"s active, executes a DELETE SQL statement to remove the exam with the specified exam_id from the exam table in the configured database, logs the SQL query, and then commits the transaction.
 
-        Parameters: exam_id (int): The unique identifier of the exam to be deleted.
+        Parameters: exam_id(int): The unique identifier of the exam to be deleted.
 
         Returns: bool: True if the deletion was successful and the transaction was committed; False otherwise.
         """
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            DELETE FROM {self._DATABASE}.exam 
-            WHERE exam_id = %s
+            DELETE FROM {self._DATABASE}.exam
+            WHERE exam_id=% s
             """,
             (exam_id,),
         )
@@ -1289,7 +1305,7 @@ class MySQLHandler(SetupMYSQL):
         Disables a question in the database by setting its "enabled" status to 1.
 
         Args:
-            question_id (int): The unique identifier of the question to be disabled.
+            question_id(int): The unique identifier of the question to be disabled.
 
         Returns:
             bool: Returns True if the question is successfully disabled, False otherwise.
@@ -1297,9 +1313,9 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam_questions 
-            SET enabled = %s
-            WHERE question_id = %s
+            UPDATA {self._DATABASE}.exam_questions
+            SET enabled=% s
+            WHERE question_id=% s
             """,
             (1, question_id),
         )
@@ -1314,7 +1330,7 @@ class MySQLHandler(SetupMYSQL):
         Deletes a question from the database based on the provided question ID.
 
         Args:
-            question_id (int): The ID of the question to be deleted.
+            question_id(int): The ID of the question to be deleted.
 
         Returns:
             bool: Returns True if the question is successfully deleted, False otherwise.
@@ -1322,8 +1338,8 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            DELETE FROM {self._DATABASE}.exam_questions 
-            WHERE question_id = %s
+            DELETE FROM {self._DATABASE}.exam_questions
+            WHERE question_id=% s
             """,
             (question_id,),
         )
@@ -1335,7 +1351,8 @@ class MySQLHandler(SetupMYSQL):
 
     def sql_query_logger(self) -> None:
         """log sql query"""
-        self.logger.debug(pformat(f"committed sql: {str(self.cursor.statement)}"))
+        self.logger.debug(
+            pformat(f"committed sql: {str(self.cursor.statement)}"))
 
     def commit(self, close_connection: bool = False) -> bool:
         """
@@ -1346,7 +1363,7 @@ class MySQLHandler(SetupMYSQL):
         an option to close the database connection after the commit operation.
 
         Args:
-            close_connection (bool, optional): If True, closes the database connection
+            close_connection(bool, optional): If True, closes the database connection
                 after committing. Defaults to False.
 
         Returns:

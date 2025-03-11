@@ -71,7 +71,7 @@ async def get_mock_info():
     return mock_exam_data
 
 
-@router.get("/mock/exam-lists/{mock_type}/", status_code=200)
+@router.get("/mock/exam/{mock_type}/", status_code=200)
 async def get_mock_exams(mock_type: ExamType):
     """
     Endpoint to get mock exam according to mock type
@@ -81,23 +81,10 @@ async def get_mock_exams(mock_type: ExamType):
     """
     logger.debug("Get mock exam lists")
 
-    mock_exam_data = mysql_client.query_mock_exam_list(mock_type)
+    mock_exam_data = mysql_client.query_mock_exam(mock_type)
 
     if mock_exam_data == None:
         return []
-
-    logger.debug(pformat(mock_exam_data))
-    for mock_exam in mock_exam_data:
-        for exam_question in mock_exam["exam_questions"]:
-            if not exam_question["question_images"]:
-                continue
-
-            question_image_uuids = []
-            for image_uuid in exam_question["question_images"]:
-                image_file_path = f"./images/mock/{mock_exam['exam_id']}/{exam_question['question_id']}/{image_uuid}.png"
-                question_image_uuids.append(encode_image_to_base64(image_file_path))
-
-            exam_question["question_images"] = question_image_uuids
 
     return mock_exam_data
 
