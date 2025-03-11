@@ -86,12 +86,12 @@ class SetupMYSQL(object):
         2. Creates a cursor for executing SQL queries.
         3. Attempts to use the specified database.
         4. If in debug mode, drops and recreates the database.
-        5. If the database doesn't exist, creates it.
+        5. If the database does not exist, creates it.
         6. Creates necessary tables (role, user, login, chat, file, qa, attachment).
         7. Inserts initial data, including an admin account and an anonymous user.
 
         Raises:
-            connector.Error: If there's an error connecting to the database or executing SQL queries.
+            connector.Error: If there"s an error connecting to the database or executing SQL queries.
 
         Note:
             This method is called internally during the initialization of the SetupMYSQL class.
@@ -445,8 +445,8 @@ class MySQLHandler(SetupMYSQL):
         """
         Insert or update a JWT token for a specific user in the login table.
 
-        This function updates the 'jwt' field in the 'login' table for the specified user.
-        It's typically used when a user logs in and receives a new JWT token.
+        This function updates the "jwt" field in the "login" table for the specified user.
+        It"s typically used when a user logs in and receives a new JWT token.
 
         Args:
             user_id (int): The unique identifier of the user.
@@ -474,7 +474,7 @@ class MySQLHandler(SetupMYSQL):
         Retrieve user information from the database based on username and hashed password.
 
         This function checks if the provided username and hashed password match a user
-        in the database. If a match is found, it returns the user's information.
+        in the database. If a match is found, it returns the user"s information.
 
         Args:
             username (str): The username of the user to retrieve information for.
@@ -725,7 +725,7 @@ class MySQLHandler(SetupMYSQL):
             str: The file name of the document if found, or an empty string if not found.
 
         Note:
-            This method pings the database connection before executing the query to ensure it's active.
+            This method pings the database connection before executing the query to ensure it"s active.
         """
         self.connection.ping(attempts=3)
 
@@ -764,7 +764,7 @@ class MySQLHandler(SetupMYSQL):
             each containing details (file_id, file_name, last_update_time) of a matching document.
 
         Note:
-            This method pings the database connection before executing the query to ensure it's active.
+            This method pings the database connection before executing the query to ensure it"s active.
         """
         self.connection.ping(attempts=3)
         self.cursor.execute(
@@ -789,7 +789,7 @@ class MySQLHandler(SetupMYSQL):
 
         return query_result
 
-    def query_mock_exam_list(self) -> dict | None:
+    def query_mock_exam_list(self, mock_type: Optional[Literal["basic", "cse"]]) -> dict | None:
         """
         This function queries the database for a list of mock exams, including nested details for exam questions and options.
         It pings the database connection, executes a SQL query that aggregates exam data into a JSON structure, logs the query,
@@ -803,50 +803,142 @@ class MySQLHandler(SetupMYSQL):
         """
 
         self.connection.ping(attempts=3)
-        self.cursor.execute(
-            f"""
-            SELECT JSON_ARRAYAGG(exam_data) AS exam_info
-            FROM (
-                SELECT JSON_OBJECT(
-                    'exam_id', e.exam_id,
-                    'exam_name', e.exam_name,
-                    'exam_type', e.exam_type,
-                    'exam_date', e.exam_date,
-                    'exam_duration', e.exam_duration,
-                    'exam_questions', (
-                        SELECT JSON_ARRAYAGG(
-                            JSON_OBJECT(
-                                'question_id', eq.question_id,
-                                'question_text', eq.question_text,
-                                'question_images', (
-                                    SELECT JSON_ARRAYAGG(ei.question_images)
-                                    FROM exam_images ei
-                                    WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
-                                ),
-                                'question_options', (
-                                    SELECT JSON_ARRAYAGG(
-                                        JSON_OBJECT(
-                                            'option_id', eo.option_id,
-                                            'option_text', eo.option_text,
-                                            'is_correct', eo.is_correct
+        if not mock_type:
+            self.cursor.execute(
+                f"""
+                SELECT JSON_ARRAYAGG(exam_data) AS exam_info
+                FROM (
+                    SELECT JSON_OBJECT(
+                        "exam_id", e.exam_id,
+                        "exam_name", e.exam_name,
+                        "exam_type", e.exam_type,
+                        "exam_date", e.exam_date,
+                        "exam_duration", e.exam_duration,
+                        "exam_questions", (
+                            SELECT JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    "question_id", eq.question_id,
+                                    "question_text", eq.question_text,
+                                    "question_images", (
+                                        SELECT JSON_ARRAYAGG(ei.question_images)
+                                        FROM exam_images ei
+                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                    ),
+                                    "question_options", (
+                                        SELECT JSON_ARRAYAGG(
+                                            JSON_OBJECT(
+                                                "option_id", eo.option_id,
+                                                "option_text", eo.option_text,
+                                                "is_correct", eo.is_correct
+                                            )
                                         )
+                                        FROM exam_options eo
+                                        WHERE eo.question_id = eq.question_id
                                     )
-                                    FROM exam_options eo
-                                    WHERE eo.question_id = eq.question_id
                                 )
                             )
+                            FROM exam_questions eq
+                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1
+                            ORDER BY eq.question_id DESC
                         )
-                        FROM exam_questions eq
-                        WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1
-                        ORDER BY eq.question_id DESC
-                    )
-                ) AS exam_data
-                FROM exams e
-                WHERE e.is_enabled = 1
-            ) sub;
-            """
-        )
-        self.sql_query_logger()
+                    ) AS exam_data
+                    FROM exams e
+                    WHERE e.is_enabled = 1
+                ) sub;
+                """
+            )
+            self.sql_query_logger()
+        elif mock_type == "basic":
+            self.cursor.execute(
+                f"""
+                SELECT JSON_ARRAYAGG(exam_data) AS exam_info
+                FROM (
+                    SELECT JSON_OBJECT(
+                        "exam_id", e.exam_id,
+                        "exam_name", e.exam_name,
+                        "exam_type", e.exam_type,
+                        "exam_date", e.exam_date,
+                        "exam_duration", e.exam_duration,
+                        "exam_questions", (
+                            SELECT JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    "question_id", eq.question_id,
+                                    "question_text", eq.question_text,
+                                    "question_images", (
+                                        SELECT JSON_ARRAYAGG(ei.question_images)
+                                        FROM exam_images ei
+                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                    ),
+                                    "question_options", (
+                                        SELECT JSON_ARRAYAGG(
+                                            JSON_OBJECT(
+                                                "option_id", eo.option_id,
+                                                "option_text", eo.option_text,
+                                                "is_correct", eo.is_correct
+                                            )
+                                        )
+                                        FROM exam_options eo
+                                        WHERE eo.question_id = eq.question_id
+                                    )
+                                )
+                            )
+                            FROM exam_questions eq
+                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "basic"
+                            ORDER BY eq.question_id DESC
+                        )
+                    ) AS exam_data
+                    FROM exams e
+                    WHERE e.is_enabled = 1
+                ) sub;
+                """
+            )
+            self.sql_query_logger()
+        elif mock_type == "cse":
+            self.cursor.execute(
+                f"""
+                SELECT JSON_ARRAYAGG(exam_data) AS exam_info
+                FROM (
+                    SELECT JSON_OBJECT(
+                        "exam_id", e.exam_id,
+                        "exam_name", e.exam_name,
+                        "exam_type", e.exam_type,
+                        "exam_date", e.exam_date,
+                        "exam_duration", e.exam_duration,
+                        "exam_questions", (
+                            SELECT JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    "question_id", eq.question_id,
+                                    "question_text", eq.question_text,
+                                    "question_images", (
+                                        SELECT JSON_ARRAYAGG(ei.question_images)
+                                        FROM exam_images ei
+                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                    ),
+                                    "question_options", (
+                                        SELECT JSON_ARRAYAGG(
+                                            JSON_OBJECT(
+                                                "option_id", eo.option_id,
+                                                "option_text", eo.option_text,
+                                                "is_correct", eo.is_correct
+                                            )
+                                        )
+                                        FROM exam_options eo
+                                        WHERE eo.question_id = eq.question_id
+                                    )
+                                )
+                            )
+                            FROM exam_questions eq
+                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "cse"
+                            ORDER BY eq.question_id DESC
+                        )
+                    ) AS exam_data
+                    FROM exams e
+                    WHERE e.is_enabled = 1
+                ) sub;
+                """
+            )
+            self.sql_query_logger()
+            
         exam_data = self.cursor.fetchall()
 
         self.logger.info(exam_data)
@@ -1011,7 +1103,7 @@ class MySQLHandler(SetupMYSQL):
         """
         This function inserts new mock options for exam questions into the exam_options table.
         It performs a bulk insert using the provided list of options, logs the executed query, commits the transaction,
-        and then retrieves the newly inserted options based on the first option's parameters. Finally, it returns the inserted options as a list of ExamOptionModel instances.
+        and then retrieves the newly inserted options based on the first option"s parameters. Finally, it returns the inserted options as a list of ExamOptionModel instances.
 
         Args:
             options: list[CreateNewOptionParamsModel] - A list of option parameter models containing question_id, option_text, and is_correct flag.
@@ -1172,7 +1264,7 @@ class MySQLHandler(SetupMYSQL):
         """
         Deletes an exam record from the database.
 
-        This method pings the database connection to ensure it's active, executes a DELETE SQL statement to remove the exam with the specified exam_id from the exam table in the configured database, logs the SQL query, and then commits the transaction.
+        This method pings the database connection to ensure it"s active, executes a DELETE SQL statement to remove the exam with the specified exam_id from the exam table in the configured database, logs the SQL query, and then commits the transaction.
 
         Parameters: exam_id (int): The unique identifier of the exam to be deleted.
 
@@ -1194,7 +1286,7 @@ class MySQLHandler(SetupMYSQL):
 
     def disable_question(self, question_id: int) -> bool:
         """
-        Disables a question in the database by setting its 'enabled' status to 1.
+        Disables a question in the database by setting its "enabled" status to 1.
 
         Args:
             question_id (int): The unique identifier of the question to be disabled.

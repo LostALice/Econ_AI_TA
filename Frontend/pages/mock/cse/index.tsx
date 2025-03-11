@@ -1,8 +1,8 @@
 // Code by AkinoAlice@TyrantRey
 
 import DefaultLayout from "@/layouts/default";
-import { useContext } from "react";
 import { LangContext } from "@/contexts/LangContext";
+import { useContext } from "react";
 
 export default function MockPage() {
     const { language, setLang } = useContext(LangContext);

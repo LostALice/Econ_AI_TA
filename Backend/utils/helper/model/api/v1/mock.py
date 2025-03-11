@@ -49,3 +49,15 @@ class CreateNewOptionParamsModel(BaseModel):
 class CreateNewQuestionParamsModel(BaseModel):
     exam_id: int
     question_text: str
+
+
+class SubmittedQuestionModel(BaseModel):
+    question_id: int
+    submitted_answer: str
+    correct_answer: str
+
+
+class SubmittedExamModel(BaseModel):
+    exam_id: int
+    submitted_questions: list[SubmittedQuestionModel]
+    

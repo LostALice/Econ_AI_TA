@@ -15,7 +15,7 @@ logger = CustomLoggerHandler(__name__).setup_logging()
 app = FastAPI()
 
 # development
-if os.getenv("DEBUG") == "True":
+if os.getenv("DEBUG") == None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")

@@ -6,7 +6,9 @@ from Backend.utils.helper.model.api.v1.authorization import (
     LoginFormSuccessModel,
     SingUpSuccessModel,
 )
-from Backend.utils.helper.model.database.database import UserInfoModel as DatabaseUserInfoModel
+from Backend.utils.helper.model.database.database import (
+    UserInfoModel as DatabaseUserInfoModel,
+)
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import MySQLHandler
 
@@ -20,10 +22,11 @@ import jwt
 import os
 
 # development
-if os.getenv("DEBUG") == "True":
+if os.getenv("DEBUG") == None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
+
 
 router = APIRouter()
 mysql_client = MySQLHandler()

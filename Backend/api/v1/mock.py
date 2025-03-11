@@ -15,7 +15,12 @@ from uuid import uuid4
 import base64
 import os
 
-load_dotenv("./.env")
+# development
+if os.getenv("DEBUG") == None:
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
+
 
 router = APIRouter()
 mysql_client = MySQLHandler()
@@ -66,8 +71,39 @@ async def get_mock_info():
     return mock_exam_data
 
 
+@router.get("/mock/exam-lists/{mock_type}/", status_code=200)
+async def get_mock_exams(mock_type: ExamType):
+    """
+    Endpoint to get mock exam according to mock type
+
+    Returns:
+        Union[list[ExamsInfoModel], ExamsInfoModel]: List of mock exam lists or single mock exam list.
+    """
+    logger.debug("Get mock exam lists")
+
+    mock_exam_data = mysql_client.query_mock_exam_list(mock_type)
+
+    if mock_exam_data == None:
+        return []
+
+    logger.debug(pformat(mock_exam_data))
+    for mock_exam in mock_exam_data:
+        for exam_question in mock_exam["exam_questions"]:
+            if not exam_question["question_images"]:
+                continue
+
+            question_image_uuids = []
+            for image_uuid in exam_question["question_images"]:
+                image_file_path = f"./images/mock/{mock_exam['exam_id']}/{exam_question['question_id']}/{image_uuid}.png"
+                question_image_uuids.append(encode_image_to_base64(image_file_path))
+
+            exam_question["question_images"] = question_image_uuids
+
+    return mock_exam_data
+
+
 @router.post("/mock/new/exam/")
-async def create_new_exam(exam_prams: CreateNewExamParamsModel):
+async def create_new_exam(exam_prams: CreateNewExamParamsModel) -> ExamsInfoModel:
     """
     Endpoint to create new exam
 
@@ -103,7 +139,9 @@ async def create_new_question(
 
 
 @router.post("/mock/new/options/")
-async def create_new_options(options: list[CreateNewOptionParamsModel]):
+async def create_new_options(
+    options: list[CreateNewOptionParamsModel],
+) -> list[ExamOptionModel]:
     """
     Endpoint to add new question options to an exam.
 
@@ -209,3 +247,7 @@ async def delete_question(question_id: int) -> bool:
 
     logger.debug(question_id)
     return mysql_client.disable_question(question_id=question_id)
+
+@router.post("/mock/submit/")
+async def submit(self, exam: ExamsInfoModel) -> dict[str, int]:
+    return 

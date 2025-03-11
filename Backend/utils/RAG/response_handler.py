@@ -25,10 +25,11 @@ import requests  # type: ignore
 import json
 
 # development
-if getenv("DEBUG") == "True":
+if getenv("DEBUG") == None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
+
 
 class ResponseHandler(object):
     """https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/conversation-api"""
@@ -519,7 +520,7 @@ class OpenAIResponser(object):
         response_dump = response.model_dump(mode="python")
 
         self.logger.debug(pformat(response_dump))
-        
+
         if not response:
             self.logger.error("Failed to generate OpenAI response")
             return "", 0
