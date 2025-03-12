@@ -4,8 +4,15 @@ from fastapi import APIRouter
 
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import MySQLHandler
-from Backend.utils.helper.model.api.v1.mock import *
-from typing import Union
+from Backend.utils.helper.model.api.v1.mock import (
+    ExamType,
+    ExamOptionModel,
+    ExamQuestionModel,
+    ExamsInfoModel,
+    CreateNewExamParamsModel,
+    CreateNewOptionParamsModel,
+    CreateNewQuestionParamsModel,
+)
 
 # development
 from dotenv import load_dotenv
@@ -16,7 +23,7 @@ import base64
 import os
 
 # development
-if os.getenv("DEBUG") == None:
+if os.getenv("DEBUG") is None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
@@ -52,7 +59,7 @@ async def get_mock_info():
 
     mock_exam_data = mysql_client.query_mock_exam_list()
 
-    if mock_exam_data == None:
+    if mock_exam_data is None:
         return []
 
     logger.debug(pformat(mock_exam_data))
@@ -83,7 +90,7 @@ async def get_mock_exams(mock_type: ExamType):
 
     mock_exam_data = mysql_client.query_mock_exam(mock_type)
 
-    if mock_exam_data == None:
+    if mock_exam_data is None:
         return []
 
     return mock_exam_data

@@ -25,7 +25,7 @@ import requests  # type: ignore
 import json
 
 # development
-if getenv("DEBUG") == None:
+if getenv("DEBUG") is None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
@@ -398,9 +398,9 @@ class OllamaResponser(object):
         _ollama_port = getenv("OLLAMA_PORT")
         _ollama_model_name = getenv("OLLAMA_MODEL_NAME")
 
-        assert not _ollama_host is None, "Environment variable OLLAMA_HOST not set"
-        assert not _ollama_port is None, "Environment variable OLLAMA_PORT not set"
-        assert not _ollama_model_name is None, (
+        assert _ollama_host is not None, "Environment variable OLLAMA_HOST not set"
+        assert _ollama_port is not None, "Environment variable OLLAMA_PORT not set"
+        assert _ollama_model_name is not None, (
             "Environment variable OLLAMA_MODEL_NAME not set"
         )
 
@@ -464,10 +464,10 @@ class OpenAIResponser(object):
         _openai_api_key = getenv("OPENAI_API_KEY")
         _openai_model_name = getenv("OPENAI_MODEL_NAME")
 
-        assert not _openai_api_key is None, (
+        assert _openai_api_key is not None, (
             "Environment variable OPENAI_API_KEY not set"
         )
-        assert not _openai_model_name is None, (
+        assert _openai_model_name is not None, (
             "Environment variable OPENAI_MODEL_NAME not set"
         )
 
