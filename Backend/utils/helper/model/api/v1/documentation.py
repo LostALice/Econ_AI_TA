@@ -36,6 +36,6 @@ class QueryDocumentListModel(BaseModel):
     docs_list: list[QueryDocumentationTypeListModel]
 
 
-class FileUploadSuccessModel(BaseModel):    
+class FileUploadSuccessModel(BaseModel):
     status_code: int
     file_id: str

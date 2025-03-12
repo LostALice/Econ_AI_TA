@@ -60,4 +60,3 @@ class SubmittedQuestionModel(BaseModel):
 class SubmittedExamModel(BaseModel):
     exam_id: int
     submitted_questions: list[SubmittedQuestionModel]
-    

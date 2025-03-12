@@ -164,7 +164,7 @@ async def questioning(
     seen = set()
     files = []
     for docs in docs_result:
-        if not docs.source in seen:
+        if docs.source not in seen:
             files.append(
                 {
                     "file_name": docs.source,

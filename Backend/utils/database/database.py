@@ -4,9 +4,16 @@ from Backend.utils.helper.model.database.database import (
     QueryDocumentationTypeListModel,
     UserInfoModel,
 )
-from Backend.utils.helper.model.api.v1.mock import *
+from Backend.utils.helper.model.api.v1.mock import (
+    ExamOptionModel,
+    ExamQuestionModel,
+    ExamsInfoModel,
+    CreateNewExamParamsModel,
+    CreateNewOptionParamsModel,
+    CreateNewQuestionParamsModel,
+)
 from Backend.utils.helper.logger import CustomLoggerHandler
-from typing import Literal, Union, Optional
+from typing import Literal, Optional
 
 import mysql.connector as connector
 import json
@@ -54,15 +61,15 @@ class SetupMYSQL(object):
         assert self._DATABASE is not None, "Missing MYSQL_DATABASE environment variable"
         assert self._PORT is not None, "Missing MYSQL_PORT environment variable"
 
-        assert (
-            self._ATTENDANCE is not None
-        ), "Missing MYSQL_CONNECTION_RETRY environment variable"
-        assert (
-            self._ROOT_USERNAME is not None
-        ), "Missing MYSQL_ROOT_USERNAME environment variable"
-        assert (
-            self._ROOT_PASSWORD is not None
-        ), "Missing MYSQL_ROOT_PASSWORD environment variable"
+        assert self._ATTENDANCE is not None, (
+            "Missing MYSQL_CONNECTION_RETRY environment variable"
+        )
+        assert self._ROOT_USERNAME is not None, (
+            "Missing MYSQL_ROOT_USERNAME environment variable"
+        )
+        assert self._ROOT_PASSWORD is not None, (
+            "Missing MYSQL_ROOT_PASSWORD environment variable"
+        )
 
         # logger
         self.logger = CustomLoggerHandler(__name__).setup_logging()
@@ -114,18 +121,15 @@ class SetupMYSQL(object):
                 self.connection.commit()
                 self.create_database()
             else:
-                self.logger.info(
-                    f"Skipped recrate database, Debug: {self._DEBUG}")
+                self.logger.info(f"Skipped recrate database, Debug: {self._DEBUG}")
         except connector.Error as error:
             self.logger.error(error)
-            self.logger.debug(
-                pformat(f"Creating MYSQL database {self._DATABASE}"))
+            self.logger.debug(pformat(f"Creating MYSQL database {self._DATABASE}"))
             self.create_database()
         finally:
             self.logger.debug(f"Using MYSQL database {self._DATABASE}")
             self.connection.database = self._DATABASE
-            self.cursor = self.connection.cursor(
-                dictionary=True, prepared=True)
+            self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
     def create_database(self) -> None:
         self.cursor.execute(f"CREATE DATABASE {self._DATABASE};")
@@ -256,7 +260,7 @@ class SetupMYSQL(object):
 
         # exams table
         self.cursor.execute(
-            f"""
+            """
             CREATE TABLE exams (
                 exam_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_name VARCHAR(255) NOT NULL,
@@ -270,7 +274,7 @@ class SetupMYSQL(object):
 
         # exam_questions table
         self.cursor.execute(
-            f"""
+            """
             CREATE TABLE exam_questions (
                 question_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
@@ -284,7 +288,7 @@ class SetupMYSQL(object):
 
         # exam_images table
         self.cursor.execute(
-            f"""
+            """
             CREATE TABLE exam_images (
                 question_id INT NOT NULL,
                 question_images CHAR(36) NOT NULL,
@@ -647,13 +651,11 @@ class MySQLHandler(SetupMYSQL):
         )
 
         self.cursor.execute(
-            """SELECT user_id FROM user WHERE username = %s""", (
-                sent_by_username,)
+            """SELECT user_id FROM user WHERE username = %s""", (sent_by_username,)
         )
         user_id = self.cursor.fetchone()["user_id"]
 
-        self.logger.debug(
-            f"Fetched user: {sent_by_username}, user_id: {user_id}")
+        self.logger.debug(f"Fetched user: {sent_by_username}, user_id: {user_id}")
 
         self.cursor.execute(
             f"""
@@ -680,7 +682,7 @@ class MySQLHandler(SetupMYSQL):
         success = self.commit()
         assert success
 
-        if not file_ids is None:
+        if file_ids is not None:
             for file_id in set(file_ids):
                 self.cursor.execute(
                     f"""
@@ -794,7 +796,9 @@ class MySQLHandler(SetupMYSQL):
 
         return query_result
 
-    def query_mock_exam_list(self, mock_type: Optional[Literal["basic", "cse"]]) -> dict | None:
+    def query_mock_exam_list(
+        self, mock_type: Optional[Literal["basic", "cse"]]
+    ) -> dict | None:
         """
         This function queries the database for a list of mock exams, including nested details for exam questions and options.
         It pings the database connection, executes a SQL query that aggregates exam data into a JSON structure, logs the query,
@@ -810,7 +814,7 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         if not mock_type:
             self.cursor.execute(
-                f"""
+                """
                 SELECT JSON_ARRAYAGG(exam_data) AS exam_info
                 FROM (
                     SELECT JSON_OBJECT(
@@ -855,7 +859,7 @@ class MySQLHandler(SetupMYSQL):
             self.sql_query_logger()
         elif mock_type == "basic":
             self.cursor.execute(
-                f"""
+                """
                 SELECT JSON_ARRAYAGG(exam_data) AS exam_info
                 FROM (
                     SELECT JSON_OBJECT(
@@ -900,7 +904,7 @@ class MySQLHandler(SetupMYSQL):
             self.sql_query_logger()
         elif mock_type == "cse":
             self.cursor.execute(
-                f"""
+                """
                 SELECT JSON_ARRAYAGG(exam_data) AS exam_info
                 FROM (
                     SELECT JSON_OBJECT(
@@ -948,7 +952,7 @@ class MySQLHandler(SetupMYSQL):
 
         self.logger.info(exam_data)
 
-        if exam_data[0]["exam_info"] == None:
+        if exam_data[0]["exam_info"] is None:
             return None
 
         # mock_exams = []
@@ -976,13 +980,18 @@ class MySQLHandler(SetupMYSQL):
 
         # return mock_exams
 
-    def query_mock_exam(self, mock_type: Optional[Literal["basic", "cse"]]) -> dict | None:
+    def query_mock_exam(
+        self, mock_type: Optional[Literal["basic", "cse"]]
+    ) -> dict | None:
         self.connection.ping(attempts=3)
 
-        self.cursor.execute(f"""
+        self.cursor.execute(
+            """
             SELECT exam_id, exam_name, exam_type, exam_duration FROM exam
             WHERE exam_type = %s AND is_enabled = True;
-        """, (mock_type,))
+        """,
+            (mock_type,),
+        )
 
         self.sql_query_logger()
         return self.cursor.fetchall()
@@ -1351,8 +1360,7 @@ class MySQLHandler(SetupMYSQL):
 
     def sql_query_logger(self) -> None:
         """log sql query"""
-        self.logger.debug(
-            pformat(f"committed sql: {str(self.cursor.statement)}"))
+        self.logger.debug(pformat(f"committed sql: {str(self.cursor.statement)}"))
 
     def commit(self, close_connection: bool = False) -> bool:
         """

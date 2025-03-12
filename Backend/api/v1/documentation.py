@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi import UploadFile, Form
 
 from starlette.responses import FileResponse
-from typing import Literal, Annotated
+from typing import Annotated
 from pprint import pformat
 from os import path
 

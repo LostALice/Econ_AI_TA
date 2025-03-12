@@ -235,6 +235,7 @@ async def delete_question(question_id: int) -> bool:
     logger.debug(question_id)
     return mysql_client.disable_question(question_id=question_id)
 
+
 @router.post("/mock/submit/")
 async def submit(self, exam: ExamsInfoModel) -> dict[str, int]:
-    return 
+    return

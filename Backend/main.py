@@ -15,7 +15,7 @@ logger = CustomLoggerHandler(__name__).setup_logging()
 app = FastAPI()
 
 # development
-if os.getenv("DEBUG") == None:
+if os.getenv("DEBUG") is None:
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
@@ -35,10 +35,12 @@ def CORS_environmental_handler(cors_allowed_origin: str) -> list[str]:
 
 CORS_env_value = os.getenv("CORS_ALLOWED_ORIGIN")
 
-assert CORS_env_value != None, "Environment variable CORS_ALLOWED_ORIGIN is not set."
-assert isinstance(
-    CORS_env_value, str
-), "Invalid environment variable CORS_ALLOWED_ORIGIN"
+assert CORS_env_value is not None, (
+    "Environment variable CORS_ALLOWED_ORIGIN is not set."
+)
+assert isinstance(CORS_env_value, str), (
+    "Invalid environment variable CORS_ALLOWED_ORIGIN"
+)
 
 CORS_allow_origins = CORS_environmental_handler(CORS_env_value)
 

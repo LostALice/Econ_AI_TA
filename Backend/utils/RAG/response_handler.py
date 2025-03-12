@@ -137,7 +137,6 @@ class ResponseHandler(object):
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-
         conversation = self._format_conversation_messages(
             chat_history=question,
             language=language,
@@ -401,9 +400,9 @@ class OllamaResponser(object):
 
         assert not _ollama_host is None, "Environment variable OLLAMA_HOST not set"
         assert not _ollama_port is None, "Environment variable OLLAMA_PORT not set"
-        assert (
-            not _ollama_model_name is None
-        ), "Environment variable OLLAMA_MODEL_NAME not set"
+        assert not _ollama_model_name is None, (
+            "Environment variable OLLAMA_MODEL_NAME not set"
+        )
 
         self.ollama_config = OLLAMAConfig(
             ollama_host=_ollama_host,
@@ -465,12 +464,12 @@ class OpenAIResponser(object):
         _openai_api_key = getenv("OPENAI_API_KEY")
         _openai_model_name = getenv("OPENAI_MODEL_NAME")
 
-        assert (
-            not _openai_api_key is None
-        ), "Environment variable OPENAI_API_KEY not set"
-        assert (
-            not _openai_model_name is None
-        ), "Environment variable OPENAI_MODEL_NAME not set"
+        assert not _openai_api_key is None, (
+            "Environment variable OPENAI_API_KEY not set"
+        )
+        assert not _openai_model_name is None, (
+            "Environment variable OPENAI_MODEL_NAME not set"
+        )
 
         self.openai_config = OpenaiConfig(
             openai_api_key=_openai_api_key,
@@ -497,7 +496,6 @@ class OpenAIResponser(object):
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-
         if images:
             for base64_image in images:
                 conversation.message[-1].content.append(
