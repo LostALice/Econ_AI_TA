@@ -6,6 +6,17 @@ import DefaultLayout from "@/layouts/default";
 import { LanguageTable } from "@/i18n";
 
 import {
+    IExamsInfo,
+    IExamQuestion,
+    IExamOption,
+    TExamType,
+    ICreateNewExamPrams,
+    ICreateNewQuestionOptionsPrams,
+    ICreateNewQuestionPrams,
+    IModifiedQuestionOptionsPrams
+} from "@/types/mock/create";
+
+import {
     Button,
     Drawer,
     DrawerContent,
@@ -217,9 +228,6 @@ export default function MockPage() {
         ]
 
         const newOptionsData = await createNewOptions(optionsPrams)
-
-        console.log(newQuestionData)
-        console.log(newOptionsData)
 
         if (newQuestionData && newOptionsData) {
             const newEmptyQuestion: IExamQuestion = {

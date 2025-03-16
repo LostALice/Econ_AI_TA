@@ -1,6 +1,14 @@
 // Code by AkinoAlice@TyrantRey
 
 import { siteConfig } from "@/config/site";
+import {
+  IExamsInfo,
+  IExamOption,
+  IExamQuestion,
+  ICreateNewExamPrams,
+  ICreateNewQuestionOptionsPrams,
+  ICreateNewQuestionPrams,
+} from "@/types/mock/create";
 
 export async function fetchExamLists(): Promise<IExamsInfo[]> {
   return await fetch(siteConfig.api_url + "/mock/exam-lists/").then(
@@ -14,7 +22,9 @@ export async function fetchExamLists(): Promise<IExamsInfo[]> {
   );
 }
 
-export async function createNewExam(exam: ICreateNewExamPrams): Promise<IExamsInfo> {
+export async function createNewExam(
+  exam: ICreateNewExamPrams
+): Promise<IExamsInfo> {
   const resp = await fetch(siteConfig.api_url + "/mock/new/exam/", {
     method: "POST",
     headers: {
@@ -65,7 +75,7 @@ export async function createNewQuestion(question: ICreateNewQuestionPrams) {
 export async function createNewOptions(
   options: ICreateNewQuestionOptionsPrams[]
 ): Promise<IExamOption[]> {
-  console.log(options)
+  console.log(options);
   const resp = await fetch(siteConfig.api_url + "/mock/new/options/", {
     method: "POST",
     headers: {
@@ -77,7 +87,9 @@ export async function createNewOptions(
   return resp.json();
 }
 
-export async function modifyQuestion(question: IExamQuestion): Promise<boolean> {
+export async function modifyQuestion(
+  question: IExamQuestion
+): Promise<boolean> {
   const resp = await fetch(siteConfig.api_url + "/mock/modify/question/", {
     method: "PUT",
     headers: {
@@ -90,12 +102,15 @@ export async function modifyQuestion(question: IExamQuestion): Promise<boolean> 
 }
 
 export async function deleteQuestion(questionId: number) {
-  const resp = await fetch(siteConfig.api_url + "/mock/delete/question/" + questionId, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const resp = await fetch(
+    siteConfig.api_url + "/mock/delete/question/" + questionId,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   return resp.json();
 }

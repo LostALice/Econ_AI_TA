@@ -255,7 +255,7 @@ export const LanguageTable = {
       },
     },
     crate: {
-      confirm:{
+      confirm: {
         zh: "確認",
         en: "Confirm",
       },
@@ -414,6 +414,40 @@ export const LanguageTable = {
       examCreateFailed: {
         zh: "模擬考建立失失敗",
         en: "Mock exam creation failed.",
+      },
+    },
+    mock: {
+      quiz: {
+        zh: "模擬考",
+        en: "Mock Examination",
+      },
+      submit: {
+        zh: "提交",
+        en: "Submit",
+      },
+      timeLeft: {
+        zh: "剩餘時間:",
+        en: "Time left:",
+      },
+      duration: {
+        zh: "考試時長:",
+        en: "Exam duration:",
+      },
+      minutes: {
+        zh: "分鐘",
+        en: "Minutes",
+      },
+      noQuestions: {
+        zh: "目前考試沒有任何題目",
+        en: "There are currently no questions in the exam.",
+      },
+      back: {
+        zh: "返回",
+        en: "Back",
+      },
+      answerNotComplete: {
+        zh: "尚有問題未完成",
+        en: "Questions are not completed yet.",
       },
     },
   },

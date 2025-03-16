@@ -11,6 +11,9 @@ from Backend.utils.helper.model.api.v1.mock import (
     CreateNewExamParamsModel,
     CreateNewOptionParamsModel,
     CreateNewQuestionParamsModel,
+    MockExamQuestionsListModel,
+    MockExamQuestionsOptionListModel,
+    MockExamInformationModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 from typing import Literal, Optional
@@ -797,8 +800,8 @@ class MySQLHandler(SetupMYSQL):
         return query_result
 
     def query_mock_exam_list(
-        self, mock_type: Optional[Literal["basic", "cse"]]
-    ) -> dict | None:
+        self, mock_type: Optional[Literal["basic", "cse", "all"]]
+    ) -> list[ExamsInfoModel]:
         """
         This function queries the database for a list of mock exams, including nested details for exam questions and options.
         It pings the database connection, executes a SQL query that aggregates exam data into a JSON structure, logs the query,
@@ -812,7 +815,7 @@ class MySQLHandler(SetupMYSQL):
         """
 
         self.connection.ping(attempts=3)
-        if not mock_type:
+        if not mock_type or mock_type == "all":
             self.cursor.execute(
                 """
                 SELECT JSON_ARRAYAGG(exam_data) AS exam_info
@@ -948,37 +951,120 @@ class MySQLHandler(SetupMYSQL):
             )
             self.sql_query_logger()
 
-        exam_data = self.cursor.fetchall()
+        fetch_data = self.cursor.fetchall()
+        self.logger.info(fetch_data)
 
+        if fetch_data[0]["exam_info"] is None:
+            return []
+
+        exam_data = json.loads(fetch_data[0]["exam_info"])
         self.logger.info(exam_data)
 
-        if exam_data[0]["exam_info"] is None:
-            return None
+        # Example return 
+        # [
+        #     {
+        #         "exam_id": 1,
+        #         "exam_date": "2025-03-14 00:00:00.000000",
+        #         "exam_name": "test",
+        #         "exam_type": "basic",
+        #         "exam_duration": 10,
+        #         "exam_questions": [
+        #             {
+        #                 "question_id": 1,
+        #                 "question_text": "1 + 1 = ?",
+        #                 "question_images": ["4d865974-84c0-4688-a7b6-0d8c9429236d"],
+        #                 "question_options": [
+        #                     {"option_id": 1, "is_correct": 0, "option_text": "4"},
+        #                     {"option_id": 2, "is_correct": 0, "option_text": "3"},
+        #                     {"option_id": 3, "is_correct": 1, "option_text": "2"},
+        #                     {"option_id": 4, "is_correct": 0, "option_text": "1"},
+        #                 ],
+        #             },
+        #             {
+        #                 "question_id": 2,
+        #                 "question_text": "Which shape is round?",
+        #                 "question_images": null,
+        #                 "question_options": [
+        #                     {
+        #                         "option_id": 5,
+        #                         "is_correct": 0,
+        #                         "option_text": "Rectangle",
+        #                     },
+        #                     {
+        #                         "option_id": 6,
+        #                         "is_correct": 0,
+        #                         "option_text": "Triangle",
+        #                     },
+        #                     {"option_id": 7, "is_correct": 1, "option_text": "Circle"},
+        #                     {"option_id": 8, "is_correct": 0, "option_text": "Square"},
+        #                 ],
+        #             },
+        #             {
+        #                 "question_id": 3,
+        #                 "question_text": "Which color is the sky on a clear day?",
+        #                 "question_images": null,
+        #                 "question_options": [
+        #                     {"option_id": 9, "is_correct": 0, "option_text": "Red"},
+        #                     {"option_id": 10, "is_correct": 0, "option_text": "Purple"},
+        #                     {"option_id": 11, "is_correct": 1, "option_text": "Blue"},
+        #                     {"option_id": 12, "is_correct": 0, "option_text": "Green"},
+        #                 ],
+        #             },
+        #             {
+        #                 "question_id": 4,
+        #                 "question_text": "Which shape has three sides?",
+        #                 "question_images": null,
+        #                 "question_options": [
+        #                     {"option_id": 13, "is_correct": 0, "option_text": "Square"},
+        #                     {"option_id": 14, "is_correct": 0, "option_text": "Circle"},
+        #                     {
+        #                         "option_id": 15,
+        #                         "is_correct": 1,
+        #                         "option_text": "Rectangle",
+        #                     },
+        #                     {
+        #                         "option_id": 16,
+        #                         "is_correct": 0,
+        #                         "option_text": "Triangle",
+        #                     },
+        #                 ],
+        #             },
+        #         ],
+        #     }
+        # ]
 
-        # mock_exams = []
+        exam_info_data = [
+            ExamsInfoModel(
+                exam_id=exam["exam_id"],
+                exam_name=exam["exam_name"],
+                exam_type=exam["exam_type"],
+                exam_date=str(exam["exam_date"]),
+                exam_duration=exam["exam_duration"],
+                exam_questions=[
+                    ExamQuestionModel(
+                        exam_id=exam["exam_id"],
+                        question_id=question["question_id"],
+                        question_text=question["question_text"],
+                        question_options=[
+                            ExamOptionModel(
+                                option_id=option["option_id"],
+                                question_id=question["question_id"],
+                                option_text=option["option_text"],
+                                is_correct=option["is_correct"],
+                            )
+                            for option in (question.get("question_options") or [])
+                        ],
+                        question_images=question["question_images"],
+                    )
+                    for question in (exam.get("exam_questions") or [])
+                    if question.get("question_options")
+                ],
+            )
+            for exam in exam_data
+        ]
+        self.logger.info(pformat(exam_info_data))
 
-        return json.loads(exam_data[0]["exam_info"])
-
-        # fix this shit later
-        # need to convert to pydantic object
-
-        # for question in exam["exam_questions"]:
-        #     ...
-        # self.logger.info(exam)
-        # mock_exams.append(
-        #     ExamsInfoModel(
-        #         exam_id=int(exam["exam_id"]),
-        #         exam_name=exam["exam_name"],
-        #         exam_type=exam["exam_type"],
-        #         exam_date=exam["exam_date"],
-        #         exam_duration=int(exam["exam_duration"]),
-        #         exam_questions=exam["exam_questions"],
-        #     )
-        # )
-        # TypeAdapter(ExamsInfoModel).validate_python(exam)
-        # mock_exams.append(TypeAdapter(ExamsInfoModel).validate_json(exam))
-
-        # return mock_exams
+        return exam_info_data
 
     def query_mock_exam(
         self, mock_type: Optional[Literal["basic", "cse"]]
@@ -987,7 +1073,7 @@ class MySQLHandler(SetupMYSQL):
 
         self.cursor.execute(
             """
-            SELECT exam_id, exam_name, exam_type, exam_duration FROM exam
+            SELECT exam_id, exam_name, exam_type, exam_duration FROM exams
             WHERE exam_type = %s AND is_enabled = True;
         """,
             (mock_type,),
@@ -1019,7 +1105,7 @@ class MySQLHandler(SetupMYSQL):
                 exam_date,
                 exam_duration
             )
-            VALUES ( % s, % s, % s, % s)
+            VALUES ( %s, %s, %s, %s)
             """,
             (
                 exam.exam_name,
@@ -1036,7 +1122,7 @@ class MySQLHandler(SetupMYSQL):
             f"""
             SELECT *
             FROM {self._DATABASE}.exams
-            WHERE exam_name= % s AND exam_type = % s AND exam_date = % s AND exam_duration = % s
+            WHERE exam_name= %s AND exam_type = %s AND exam_date = %s AND exam_duration = %s
             """,
             (
                 exam.exam_name,
@@ -1086,7 +1172,7 @@ class MySQLHandler(SetupMYSQL):
                 exam_id,
                 question_text
             )
-            VALUES ( % s, % s)
+            VALUES ( %s, %s)
             """,
             (
                 question.exam_id,
@@ -1105,7 +1191,7 @@ class MySQLHandler(SetupMYSQL):
                 exam_id,
                 question_text
             FROM {self._DATABASE}.exam_questions
-            WHERE exam_id= % s AND question_text = % s
+            WHERE exam_id= %s AND question_text = %s
             """,
             (
                 question.exam_id,
@@ -1149,7 +1235,7 @@ class MySQLHandler(SetupMYSQL):
                 option_text,
                 is_correct
             )
-            VALUES (% s, % s, % s)
+            VALUES (%s, %s, %s)
             """,
             new_options,
         )
@@ -1160,7 +1246,7 @@ class MySQLHandler(SetupMYSQL):
             f"""
             SELECT *
             FROM {self._DATABASE}.exam_options
-            WHERE question_id=% s AND option_text = % s AND is_correct = % s
+            WHERE question_id=%s AND option_text = %s AND is_correct = %s
             ORDER BY option_id DESC;
             """,
             (
@@ -1201,8 +1287,8 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
-            SET question_text=% s
-            WHERE question_id=% s
+            SET question_text=%s
+            WHERE question_id=%s
             """,
             (question.question_text, question.question_id),
         )
@@ -1223,8 +1309,8 @@ class MySQLHandler(SetupMYSQL):
             self.cursor.executemany(
                 f"""
                 UPDATE {self._DATABASE}.exam_options
-                SET option_text= % s, is_correct = % s
-                WHERE question_id= % s AND option_id = % s
+                SET option_text= %s, is_correct = %s
+                WHERE question_id= %s AND option_id = %s
                 """,
                 new_options_data,
             )
@@ -1238,7 +1324,7 @@ class MySQLHandler(SetupMYSQL):
             f"""
             UPDATE {self._DATABASE}.exam_images
             SET is_enabled=0
-            WHERE question_id=% s;
+            WHERE question_id=%s;
             """,
             (question.question_id,),
         )
@@ -1252,7 +1338,7 @@ class MySQLHandler(SetupMYSQL):
                     question_id,
                     question_images
                 )
-                VALUES ( % s, % s)
+                VALUES ( %s, %s)
                 """,
                 (question.question_id, image_uuid),
             )
@@ -1274,8 +1360,8 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATA {self._DATABASE}.exam
-            SET enabled=% s
-            WHERE exam_id=% s
+            SET enabled=%s
+            WHERE exam_id=%s
             """,
             (1, exam_id),
         )
@@ -1299,7 +1385,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             DELETE FROM {self._DATABASE}.exam
-            WHERE exam_id=% s
+            WHERE exam_id=%s
             """,
             (exam_id,),
         )
@@ -1323,8 +1409,8 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATA {self._DATABASE}.exam_questions
-            SET enabled=% s
-            WHERE question_id=% s
+            SET enabled=%s
+            WHERE question_id=%s
             """,
             (1, question_id),
         )
@@ -1348,7 +1434,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             DELETE FROM {self._DATABASE}.exam_questions
-            WHERE question_id=% s
+            WHERE question_id=%s
             """,
             (question_id,),
         )
@@ -1358,9 +1444,143 @@ class MySQLHandler(SetupMYSQL):
 
         return success
 
+    def get_mock_exam_question_list(
+        self, mock_id: int
+    ) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
+        """
+        This function retrieves a list of mock exam questions based on the provided mock_id.
+        """
+
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            """
+            SELECT 
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                    "exam_id",      s.exam_id,
+                    "question_id",  s.question_id,
+                    "question_text",s.question_text,
+                    "question_options", s.question_options,
+                    "question_images",  s.question_images
+                    )
+                ) AS exam_data
+                FROM
+                (
+                SELECT
+                    q.exam_id,
+                    q.question_id,
+                    q.question_text,
+                    
+                    JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        "option_id", o.option_id,
+                        "question_id", o.question_id,
+                        "option_text", o.option_text
+                    )
+                    ) AS question_options,
+                    
+                    (
+                    SELECT JSON_ARRAYAGG(i.question_images)
+                    FROM exam_images AS i
+                    WHERE i.question_id = q.question_id
+                    ) AS question_images
+                    
+                FROM exam_questions AS q
+                LEFT JOIN exam_options AS o
+                        ON q.question_id = o.question_id
+                WHERE q.exam_id = %s
+                GROUP BY q.exam_id, q.question_id, q.question_text
+                ) AS s;
+            """,
+            (mock_id,),
+        )
+
+        mock_exam_question_list = self.cursor.fetchall()[0]["exam_data"]
+
+        self.logger.debug(pformat(mock_exam_question_list))
+
+        if not mock_exam_question_list:
+            return [], None
+
+        mock_exam_question_list = json.loads(mock_exam_question_list)
+
+        mock_exam_question_list_data: list[MockExamQuestionsListModel] = []
+        for question in mock_exam_question_list:
+            mock_exam_question_options_list_data: list[
+                MockExamQuestionsOptionListModel
+            ] = []
+            for option in question["question_options"]:
+                mock_exam_question_options_list_data.append(
+                    MockExamQuestionsOptionListModel(
+                        option_id=option["option_id"],
+                        question_id=option["question_id"],
+                        option_text=option["option_text"],
+                    )
+                )
+            image_list = (
+                question["question_images"] if question["question_images"] else []
+            )
+            mock_exam_question_list_data.append(
+                MockExamQuestionsListModel(
+                    exam_id=question["exam_id"],
+                    question_id=question["question_id"],
+                    question_text=question["question_text"],
+                    question_options=mock_exam_question_options_list_data,
+                    question_images=image_list,
+                )
+            )
+
+        self.logger.debug(mock_exam_question_list_data)
+        # [
+        #     {
+        #         "exam_id": 1,
+        #         "question_id": 1,
+        #         "question_text": "1 + 1 = ?",
+        #         "question_images": None,
+        #         "question_options": [
+        #             {"option_id": 4, "option_text": "1", "question_id": 1},
+        #             {"option_id": 3, "option_text": "2", "question_id": 1},
+        #             {"option_id": 2, "option_text": "3", "question_id": 1},
+        #             {"option_id": 1, "option_text": "4", "question_id": 1},
+        #         ],
+        #     }
+        # ]
+
+        self.cursor.execute(
+            """
+            SELECT 
+                exam_id,
+                exam_name,
+                exam_type,
+                exam_date,
+                exam_duration
+            FROM exams as e 
+            WHERE exam_id = %s
+            """,
+            (mock_id,),
+        )
+
+        mock_exam_information = self.cursor.fetchall()
+
+        self.logger.debug(pformat(mock_exam_information))
+
+        if mock_exam_information[0] is None:
+            return [], None
+        mock_exam_information = mock_exam_information[0]
+
+        mock_exam_information_data: MockExamInformationModel = MockExamInformationModel(
+            exam_id=mock_exam_information["exam_id"],
+            exam_name=mock_exam_information["exam_name"],
+            exam_type=mock_exam_information["exam_type"],
+            exam_date=str(mock_exam_information["exam_date"]),
+            exam_duration=mock_exam_information["exam_duration"],
+        )
+
+        return mock_exam_question_list_data, mock_exam_information_data
+
     def sql_query_logger(self) -> None:
-        """log sql query"""
-        self.logger.debug(pformat(f"committed sql: {str(self.cursor.statement)}"))
+        """Log sql query"""
+        self.logger.debug(pformat(f"Committed SQL query: {str(self.cursor.statement)}"))
 
     def commit(self, close_connection: bool = False) -> bool:
         """

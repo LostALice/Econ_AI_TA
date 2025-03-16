@@ -27,7 +27,6 @@ export default function DefaultLayout({
 					</Transition>
 				</ToastMessageProvider>
 			</main>
-
 		</div>
 	);
 }

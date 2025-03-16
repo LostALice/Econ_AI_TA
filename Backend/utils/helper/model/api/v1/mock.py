@@ -54,9 +54,29 @@ class CreateNewQuestionParamsModel(BaseModel):
 class SubmittedQuestionModel(BaseModel):
     question_id: int
     submitted_answer: str
-    correct_answer: str
 
 
 class SubmittedExamModel(BaseModel):
     exam_id: int
     submitted_questions: list[SubmittedQuestionModel]
+
+
+class MockExamQuestionsOptionListModel(BaseModel):
+    option_id: int
+    question_id: int
+    option_text: str
+
+
+class MockExamQuestionsListModel(BaseModel):
+    exam_id: int
+    question_id: int
+    question_text: str
+    question_options: list[MockExamQuestionsOptionListModel]
+    question_images: list[str]
+
+class MockExamInformationModel(BaseModel):
+    exam_id: int
+    exam_name: str
+    exam_type: ExamType
+    exam_date: str
+    exam_duration: int

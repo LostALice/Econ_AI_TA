@@ -12,12 +12,15 @@ from Backend.utils.helper.model.api.v1.mock import (
     CreateNewExamParamsModel,
     CreateNewOptionParamsModel,
     CreateNewQuestionParamsModel,
+    MockExamQuestionsListModel,
+    MockExamInformationModel,
 )
 
 # development
 from dotenv import load_dotenv
 from pprint import pformat
 from uuid import uuid4
+from typing import Optional, Union
 
 import base64
 import os
@@ -47,8 +50,33 @@ def encode_image_to_base64(file_path: str) -> str:
         return ""
 
 
+def question_images_uuid_to_base64(
+    question: Union[MockExamQuestionsListModel, ExamQuestionModel],
+) -> list[str]:
+    """
+    Convert question_images uuids to base64 encoded strings.
+    Args:
+        question_images: List of question_images
+    Returns:
+        list[str]: List of base64 encoded question images.
+    """
+
+    question_image_uuids = []
+    if question.question_images == [] or question.question_images is None:
+        logger.info("Invalid question_images")
+        return []
+    
+    for image_uuid in question.question_images:
+        image_file_path = (
+            f"./images/mock/{question.exam_id}/{question.question_id}/{image_uuid}.png"
+        )
+        question_image_uuids.append(encode_image_to_base64(image_file_path))
+
+    return question_image_uuids
+
+
 @router.get("/mock/exam-lists/", status_code=200)
-async def get_mock_info():
+async def get_mock_info() -> list[ExamsInfoModel]:
     """
     Endpoint to get mock exam lists
 
@@ -57,23 +85,25 @@ async def get_mock_info():
     """
     logger.debug("Get mock exam lists")
 
-    mock_exam_data = mysql_client.query_mock_exam_list()
-
-    if mock_exam_data is None:
-        return []
+    mock_exam_data = mysql_client.query_mock_exam_list("all")
 
     logger.debug(pformat(mock_exam_data))
+    if mock_exam_data == []:
+        return []
+
     for mock_exam in mock_exam_data:
-        for exam_question in mock_exam["exam_questions"]:
-            if not exam_question["question_images"]:
+        if not mock_exam.exam_questions:
+            continue
+        for exam_question in mock_exam.exam_questions:
+            if not exam_question.question_images:
                 continue
 
             question_image_uuids = []
-            for image_uuid in exam_question["question_images"]:
-                image_file_path = f"./images/mock/{mock_exam['exam_id']}/{exam_question['question_id']}/{image_uuid}.png"
+            for image_uuid in exam_question.question_images:
+                image_file_path = f"./images/mock/{mock_exam.exam_id}/{exam_question.question_id}/{image_uuid}.png"
                 question_image_uuids.append(encode_image_to_base64(image_file_path))
 
-            exam_question["question_images"] = question_image_uuids
+            exam_question.question_images = question_image_uuids
 
     return mock_exam_data
 
@@ -246,3 +276,21 @@ async def delete_question(question_id: int) -> bool:
 @router.post("/mock/submit/")
 async def submit(self, exam: ExamsInfoModel) -> dict[str, int]:
     return
+
+
+@router.get("/mock/{mock_id}/")
+async def fetch_mock_exam_questions_list(
+    mock_id: int,
+) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
+    mock_exam_question_list, mock_exam_information = (
+        mysql_client.get_mock_exam_question_list(mock_id)
+    )
+
+    for question in mock_exam_question_list:
+        if not question.question_images:
+            continue
+
+        question_image_uuids = question_images_uuid_to_base64(question)
+        question.question_images = question_image_uuids
+
+    return mock_exam_question_list, mock_exam_information
