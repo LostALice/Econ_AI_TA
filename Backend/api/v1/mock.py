@@ -14,6 +14,8 @@ from Backend.utils.helper.model.api.v1.mock import (
     CreateNewQuestionParamsModel,
     MockExamQuestionsListModel,
     MockExamInformationModel,
+    ExamResultModel,
+    SubmittedExamModel,
 )
 
 # development
@@ -65,7 +67,7 @@ def question_images_uuid_to_base64(
     if question.question_images == [] or question.question_images is None:
         logger.info("Invalid question_images")
         return []
-    
+
     for image_uuid in question.question_images:
         image_file_path = (
             f"./images/mock/{question.exam_id}/{question.question_id}/{image_uuid}.png"
@@ -214,7 +216,7 @@ async def modify_question(question: ExamQuestionModel) -> bool:
                                       list of base64-encoded image strings.
 
     Returns:
-        None
+        bool
     """
     logger.debug(pformat(question))
 
@@ -251,7 +253,7 @@ async def delete_exam(exam_id: int) -> bool:
     Args:
         question: question information
     Return:
-        None
+        bool
     """
 
     logger.debug(exam_id)
@@ -266,7 +268,7 @@ async def delete_question(question_id: int) -> bool:
     Args:
         question: question information
     Return:
-        None
+        bool
     """
 
     logger.debug(question_id)
@@ -274,14 +276,95 @@ async def delete_question(question_id: int) -> bool:
 
 
 @router.post("/mock/submit/")
-async def submit(self, exam: ExamsInfoModel) -> dict[str, int]:
-    return
+async def submit(submitted_exam: SubmittedExamModel) -> Optional[int]:
+    """
+    Endpoint to submit exam.
+    Args:
+        class SubmittedExamModel(BaseModel):
+            exam_id: int
+            user_id: Optional[int]
+            submit_time: str
+            submitted_questions: list[SubmittedQuestionModel]
+
+        class SubmittedQuestionModel(BaseModel):
+            question_id: int
+            submitted_answer: str
+
+    Returns:
+        class ExamResultModel(BaseModel):
+            exam_id: int
+            user_id: Optional[int] = 0
+            exam_name: str
+            exam_type: ExamType
+            exam_date: str
+            questions_result: list[ExamQuestionResultModel]
+
+        class ExamQuestionResultModel(BaseModel):
+            question_id: int
+            submitted_answer: str
+            correct_answer: str
+            is_correct: bool
+    """
+    logger.debug(submitted_exam)
+    submission_id = mysql_client.insert_mock_exam_submitted_question(submitted_exam)
+    logger.debug(submission_id)
+    
+    if submission_id:
+        return submission_id
+    else:
+        return None
+
+
+@router.get("/mock/results/{submission_id}")
+async def query_mock_exam_results(submission_id: int) -> Optional[ExamResultModel]:
+    """
+    Query mock exam results based on submission ID.
+    Args:
+        submission_id: int
+    Returns:
+        ExamResultModel
+    """
+    logger.debug(submission_id)
+    exam_results = mysql_client.query_mock_exam_results(submission_id)
+    logger.debug(exam_results)
+    
+    if exam_results:
+        return exam_results
+    else:
+        return None
 
 
 @router.get("/mock/{mock_id}/")
 async def fetch_mock_exam_questions_list(
     mock_id: int,
 ) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
+    """
+    Fetch mock exam questions and their images.
+    Args:
+        mock_id: int
+    Returns:
+        tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]
+
+        class MockExamQuestionsOptionListModel(BaseModel):
+            option_id: int
+            question_id: int
+            option_text: str
+
+        class MockExamQuestionsListModel(BaseModel):
+            exam_id: int
+            question_id: int
+            question_text: str
+            question_options: list[MockExamQuestionsOptionListModel]
+            question_images: list[str]
+
+        class MockExamInformationModel(BaseModel):
+            exam_id: int
+            exam_name: str
+            exam_type: ExamType
+            exam_date: str
+            exam_duration: int
+    """
+
     mock_exam_question_list, mock_exam_information = (
         mysql_client.get_mock_exam_question_list(mock_id)
     )

@@ -192,7 +192,7 @@ export default function MockPage() {
         const examPrams: ICreateNewExamPrams = {
             exam_name: createExamName,
             exam_type: createExamType,
-            exam_date: new Date().toISOString().split('T')[0],
+            exam_date: new Date().toLocaleString(),
             exam_duration: createExamDuration,
         }
         const newMockData = await createNewExam(examPrams)

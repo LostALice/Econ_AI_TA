@@ -6,12 +6,18 @@ import { LangContext } from "@/contexts/LangContext"
 import { GetServerSideProps } from "next"
 import { useRouter } from "next/router"
 
-import { MockExamQuestionList, MockExamInformation } from "@/types/mock/mock"
+import {
+    IMockExamQuestionList,
+    IMockExamInformation,
+    ISubmittedQuestion,
+    ISubmittedExam,
+} from "@/types/mock/mock"
 import { IStudentAnswer } from "@/types/mock/mock"
-import { fetchMockExamQuestionList } from "@/api/mock/mock"
+import { fetchMockExamQuestionList, submitExam } from "@/api/mock/mock"
 
 import { LanguageTable } from "@/i18n"
 import { ImageBox } from "@/components/chat/imageBox"
+import { Timer } from "@/components/mock/timer"
 import {
     Link,
     Button,
@@ -23,6 +29,7 @@ import {
     ModalBody,
     ModalFooter,
     addToast,
+    useDisclosure,
 } from "@heroui/react"
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -31,7 +38,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (!regex.test(resolvedUrl)) {
         return { notFound: true }
     }
-
     return {
         props: {},
     }
@@ -40,11 +46,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 export default function MockPage() {
     const router = useRouter()
     const { language, setLang } = useContext(LangContext)
+    const { isOpen: isModelOpen, onOpen: onModelOpen, onClose: onModelClose } = useDisclosure();
 
     const mockID = Number(router.query.mockID) as number
     const [studentAnswers, setStudentAnswers] = useState<IStudentAnswer[]>([])
-    const [questionsList, SetQuestionList] = useState<MockExamQuestionList[]>([])
-    const [mockInfo, SetMockInfo] = useState<MockExamInformation | undefined>()
+    const [questionsList, SetQuestionList] = useState<IMockExamQuestionList[]>([])
+    const [mockInfo, SetMockInfo] = useState<IMockExamInformation | undefined>()
 
     useEffect(() => {
         // Fetch exam question from the server
@@ -75,7 +82,7 @@ export default function MockPage() {
         let inArray: boolean = false
         const newStudentAnswer: IStudentAnswer = {
             question_id: newQuestionID,
-            answer: newOptionID,
+            answer_option_id: newOptionID,
         }
 
         for (const prevStudentAnswer of studentAnswers) {
@@ -106,19 +113,97 @@ export default function MockPage() {
                 color: "warning",
                 title: LanguageTable.mock.mock.answerNotComplete[language],
             })
+        } else {
+            onModelOpen()
         }
+    }
+
+    // const handelOnForcedSubmitAnswer = () => {
+    //     console.log(studentAnswers)
+    // }
+
+    const handelOnForcedSubmitAnswer = () => {
+        // TODO: Send answer to the server
+        if (!mockInfo) {
+            console.error("No mock information found")
+            return
+        }
+
+        const tempExamQuestionToBeSubmitted: ISubmittedQuestion[] = []
+        for (const ans of studentAnswers) {
+            tempExamQuestionToBeSubmitted.push({
+                question_id: ans.question_id,
+                submitted_answer_option_id: ans.answer_option_id,
+            })
+        }
+
+        const tempExamToBeSubmitted: ISubmittedExam = {
+            exam_id: mockInfo.exam_id,
+            // user_id need to be updated
+            user_id: 0,
+            submitted_questions: tempExamQuestionToBeSubmitted,
+        }
+
+        console.log(tempExamToBeSubmitted)
+        submitExam(tempExamToBeSubmitted).then(
+            (response) => {
+                console.log(response)
+                if (response) {
+                    return true
+                } else {
+                    console.error("Failed to submit answer")
+                    return false
+                }
+            },
+            (error) => {
+                console.error("Error submitting answer:", error)
+                return false
+            }
+        )
+
+        addToast({
+            color: "success",
+            title: LanguageTable.mock.mock.answerSubmitSuccess[language],
+        })
+        router.push("/mock/results/")
     }
 
     return (
         <DefaultLayout>
-            <div >
+            <div>
+                <Modal isOpen={isModelOpen} onClose={onModelClose}>
+                    <ModalContent>
+                        {(onClose) => (
+                            <>
+                                <ModalHeader className="flex flex-col gap-1">{LanguageTable.mock.mock.onSubmit[language]}</ModalHeader>
+                                <ModalBody>
+                                    <div>
+                                        {LanguageTable.mock.mock.cantModify[language]}
+                                    </div>
+                                </ModalBody>
+                                <ModalFooter>
+                                    <Button onPress={onClose}>
+                                        {LanguageTable.mock.mock.back[language]}
+                                    </Button>
+                                    <Button color="danger" onPress={() => {
+                                        handelOnForcedSubmitAnswer()
+                                        onClose()
+                                    }}>
+                                        {LanguageTable.mock.mock.submit[language]}
+                                    </Button>
+                                </ModalFooter>
+                            </>
+                        )}
+                    </ModalContent>
+                </Modal>
                 <div className="max-w-5xl mx-auto shadow-md rounded-lg p-6">
-                    <div className="p-3 flex justify-between">
+                    <div className="py-3 flex justify-between">
                         {
                             mockInfo ? (
                                 <>
-                                    <span className="text-2xl font-bold mb-4">{LanguageTable.mock.mock.quiz[language]}:{mockInfo.exam_name}</span>
-                                    <span className="text-2xl font-bold mb-4">{LanguageTable.mock.mock.duration[language]}{mockInfo.exam_duration}{LanguageTable.mock.mock.minutes[language]}</span>
+                                    <span className="text-2xl font-bold">{LanguageTable.mock.mock.quiz[language]}:{mockInfo.exam_name}</span>
+                                    <Timer duration={mockInfo.exam_duration} onTimeUp={handelOnForcedSubmitAnswer} />
+                                    <span className="text-2xl font-bold">{LanguageTable.mock.mock.duration[language]}{mockInfo.exam_duration}{LanguageTable.mock.mock.minutes[language]}</span>
                                 </>
                             )
                                 : (<></>)
@@ -155,7 +240,7 @@ export default function MockPage() {
                                             </RadioGroup>
                                         </div>
                                     ))}
-                                    <div className="flex justify-end">
+                                    <div className="flex justify-center">
                                         <Button
                                             className="px-6 py-2 rounded hover:bg-slate-700 transition"
                                             onPress={handelOnSubmitAnswer}
@@ -164,7 +249,6 @@ export default function MockPage() {
                                         </Button>
                                     </div>
                                 </>
-
                             )
                             : (
                                 <div className="flex flex-col items-center justify-center text-center">

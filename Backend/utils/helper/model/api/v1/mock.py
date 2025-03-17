@@ -51,16 +51,6 @@ class CreateNewQuestionParamsModel(BaseModel):
     question_text: str
 
 
-class SubmittedQuestionModel(BaseModel):
-    question_id: int
-    submitted_answer: str
-
-
-class SubmittedExamModel(BaseModel):
-    exam_id: int
-    submitted_questions: list[SubmittedQuestionModel]
-
-
 class MockExamQuestionsOptionListModel(BaseModel):
     option_id: int
     question_id: int
@@ -74,9 +64,39 @@ class MockExamQuestionsListModel(BaseModel):
     question_options: list[MockExamQuestionsOptionListModel]
     question_images: list[str]
 
+
 class MockExamInformationModel(BaseModel):
     exam_id: int
     exam_name: str
     exam_type: ExamType
     exam_date: str
     exam_duration: int
+
+
+class SubmittedQuestionModel(BaseModel):
+    question_id: int
+    submitted_answer_option_id: int
+
+
+class SubmittedExamModel(BaseModel):
+    exam_id: int
+    user_id: Optional[int]
+    submitted_questions: list[SubmittedQuestionModel]
+
+
+class ExamQuestionResultModel(BaseModel):
+    question_id: int
+    submitted_answer: str
+    correct_answer: str
+    is_correct: bool
+
+
+class ExamResultModel(BaseModel):
+    exam_id: int
+    submission_id: int
+    user_id: Optional[int] = 0
+    exam_name: str
+    exam_type: ExamType
+    exam_date: str
+    total_correct_answers: int
+    score_percentage: float

@@ -14,6 +14,8 @@ from Backend.utils.helper.model.api.v1.mock import (
     MockExamQuestionsListModel,
     MockExamQuestionsOptionListModel,
     MockExamInformationModel,
+    SubmittedExamModel,
+    ExamResultModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 from typing import Literal, Optional
@@ -148,7 +150,6 @@ class SetupMYSQL(object):
                 PRIMARY KEY (`role_id`),
                 UNIQUE INDEX `role_id` (`role_id` ASC)
             );
-
             """
         )
         self.connection.commit()
@@ -311,6 +312,34 @@ class SetupMYSQL(object):
                 option_text TEXT NOT NULL,
                 is_correct TINYINT(1) NOT NULL DEFAULT False,
                 FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+            );
+            """
+        )
+
+        # exam_submission table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE exam_submission (
+                submission_id INT AUTO_INCREMENT PRIMARY KEY,
+                exam_id INT NOT NULL,
+                user_id INT NOT NULL,
+                start_time DATETIME NOT NULL,
+                submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+            );
+            """
+        )
+        # exam_submission_answer table
+        self.cursor.execute(
+            f"""
+            CREATE TABLE exam_submission_answers (
+                submitted_answer_id INT AUTO_INCREMENT PRIMARY KEY,
+                submission_id INT NOT NULL,
+                question_id INT NOT NULL,
+                selected_option_id INT DEFAULT NULL,
+                FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
+                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id),
+                FOREIGN KEY (selected_option_id) REFERENCES exam_options(option_id)
             );
             """
         )
@@ -960,7 +989,7 @@ class MySQLHandler(SetupMYSQL):
         exam_data = json.loads(fetch_data[0]["exam_info"])
         self.logger.info(exam_data)
 
-        # Example return 
+        # Example return
         # [
         #     {
         #         "exam_id": 1,
@@ -1577,6 +1606,137 @@ class MySQLHandler(SetupMYSQL):
         )
 
         return mock_exam_question_list_data, mock_exam_information_data
+
+    def insert_mock_exam_submitted_question(
+        self, exam: SubmittedExamModel
+    ) -> Optional[int]:
+        """
+        Inserts a submitted exam question into the database.
+        Args:
+            class SubmittedExamModel(BaseModel):
+                exam_id: int
+                user_id: Optional[int]
+                submit_time: str
+                submitted_questions: list[SubmittedQuestionModel]
+
+            class SubmittedQuestionModel(BaseModel):
+                question_id: int
+                submitted_answer: str
+        Returns:
+            submission_id: int or None
+
+        """
+
+        self.cursor.execute(
+            """
+            INSERT INTO exam_submission (exam_id, user_id, start_time)
+            VALUES (%s, %s, NOW())
+            """,
+            (exam.exam_id, exam.user_id),
+        )
+        self.sql_query_logger()
+        _submission_id = self.cursor.lastrowid
+
+        if _submission_id is None:
+            return None
+
+        for question in exam.submitted_questions:
+            self.cursor.execute(
+                """
+                INSERT INTO exam_submission_answers (submission_id, question_id, selected_option_id)
+                VALUES (%s, %s, %s)
+                """,
+                (
+                    _submission_id,
+                    question.question_id,
+                    question.submitted_answer_option_id,
+                ),
+            )
+
+        self.sql_query_logger()
+        self.commit()
+
+        return _submission_id
+
+    def query_mock_exam_results(self, submission_id: int) -> Optional[ExamResultModel]:
+        """
+        Retrieve the results of a submitted mock exam.
+        Args:
+            submission_id: int
+        Returns:
+            class ExamResultModel(BaseModel):
+                exam_id: int
+                submission_id: int
+                user_id: Optional[int] = 0
+                exam_name: str
+                exam_type: ExamType
+                exam_date: str
+                total_correct_answers: int
+                score_percentage: float
+        """
+
+        self.cursor.execute(
+            """
+            SELECT 
+                e.exam_id,
+                s.submission_id,
+                COALESCE(s.user_id, 0) AS user_id,
+                e.exam_name,
+                e.exam_type,
+                DATE_FORMAT(e.exam_date, '%Y-%m-%d %H:%i:%s') AS exam_date,
+                SUM(
+                    CASE
+                        WHEN o.is_correct = 1 THEN 1
+                        ELSE 0
+                    END
+                ) AS total_correct_answers,
+                (
+                    SUM(
+                        CASE
+                            WHEN o.is_correct = 1 THEN 1
+                            ELSE 0
+                        END
+                    ) / COUNT(q.question_id)
+                ) * 100 AS score_percentage
+            FROM exam_submission s
+                JOIN exams e ON s.exam_id = e.exam_id
+                JOIN exam_questions q ON e.exam_id = q.exam_id
+                LEFT JOIN exam_submission_answers a ON s.submission_id = a.submission_id
+                AND q.question_id = a.question_id
+                LEFT JOIN exam_options o ON a.selected_option_id = o.option_id
+            WHERE s.submission_id = %s
+            GROUP BY 
+                e.exam_id,
+                s.submission_id,
+                s.user_id,
+                e.exam_name,
+                e.exam_type,
+                e.exam_date;
+            """,
+            (submission_id,),
+        )
+
+        self.sql_query_logger()
+        fetch_data = self.cursor.fetchall()
+
+        self.logger.debug(pformat(fetch_data))
+        if not fetch_data:
+            return None
+        fetch_data = fetch_data[0]
+        self.logger.debug(pformat(fetch_data))
+
+        results = ExamResultModel(
+            exam_id=fetch_data["exam_id"],
+            submission_id=fetch_data["submission_id"],
+            user_id=fetch_data["user_id"],
+            exam_name=fetch_data["exam_name"],
+            exam_type=fetch_data["exam_type"],
+            exam_date=fetch_data["exam_date"],
+            total_correct_answers=fetch_data["total_correct_answers"],
+            score_percentage=fetch_data["score_percentage"],
+        )
+
+        return results
 
     def sql_query_logger(self) -> None:
         """Log sql query"""

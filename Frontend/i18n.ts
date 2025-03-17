@@ -426,7 +426,7 @@ export const LanguageTable = {
         en: "Submit",
       },
       timeLeft: {
-        zh: "剩餘時間:",
+        zh: "剩餘時間",
         en: "Time left:",
       },
       duration: {
@@ -448,6 +448,18 @@ export const LanguageTable = {
       answerNotComplete: {
         zh: "尚有問題未完成",
         en: "Questions are not completed yet.",
+      },
+      onSubmit: {
+        zh: "提交模擬考?",
+        en: "Submit mock exam?",
+      },
+      cantModify: {
+        zh: "提交模擬考後無法修改答案",
+        en: "You cannot modify the answer after submitting the mock exam.",
+      },
+      answerSubmitSuccess: {
+        zh: "模擬考提交成功",
+        en: "Your answer was successfully submitted",
       },
     },
   },
