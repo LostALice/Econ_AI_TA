@@ -35,7 +35,9 @@ export async function submitExam(
   return resp.json();
 }
 
-export async function examResult(submission_id: number): Promise<IExamResult> {
+export async function fetchExamResult(
+  submission_id: number
+): Promise<IExamResult> {
   const resp = await fetch(
     siteConfig.api_url + "/mock/result/" + submission_id + "/",
     {
@@ -44,7 +46,9 @@ export async function examResult(submission_id: number): Promise<IExamResult> {
         "Content-Type": "application/json",
       },
     }
-  );
+  ).catch((error) => {
+    console.error("Error:", error);
+  });
 
   return resp.json();
 }

@@ -118,11 +118,7 @@ export default function MockPage() {
         }
     }
 
-    // const handelOnForcedSubmitAnswer = () => {
-    //     console.log(studentAnswers)
-    // }
-
-    const handelOnForcedSubmitAnswer = () => {
+    const handelOnForcedSubmitAnswer = async () => {
         // TODO: Send answer to the server
         if (!mockInfo) {
             console.error("No mock information found")
@@ -139,33 +135,28 @@ export default function MockPage() {
 
         const tempExamToBeSubmitted: ISubmittedExam = {
             exam_id: mockInfo.exam_id,
-            // user_id need to be updated
             user_id: 0,
             submitted_questions: tempExamQuestionToBeSubmitted,
         }
 
         console.log(tempExamToBeSubmitted)
-        submitExam(tempExamToBeSubmitted).then(
-            (response) => {
-                console.log(response)
-                if (response) {
-                    return true
-                } else {
-                    console.error("Failed to submit answer")
-                    return false
-                }
-            },
-            (error) => {
-                console.error("Error submitting answer:", error)
-                return false
-            }
-        )
+        const submissionID = await submitExam(tempExamToBeSubmitted)
 
-        addToast({
-            color: "success",
-            title: LanguageTable.mock.mock.answerSubmitSuccess[language],
-        })
-        router.push("/mock/results/")
+        if (submissionID) {
+            addToast({
+                color: "success",
+                title: LanguageTable.mock.mock.answerSubmitSuccess[language],
+            })
+
+            router.push("/mock/results/" + submissionID)
+        } else {
+            addToast({
+                color: "warning",
+                title: LanguageTable.mock.mock.answerSubmitFailed[language],
+            })
+            router.push("/mock")
+        }
+
     }
 
     return (

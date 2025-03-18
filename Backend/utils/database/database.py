@@ -318,7 +318,7 @@ class SetupMYSQL(object):
 
         # exam_submission table
         self.cursor.execute(
-            f"""
+            """
             CREATE TABLE exam_submission (
                 submission_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
@@ -331,7 +331,7 @@ class SetupMYSQL(object):
         )
         # exam_submission_answer table
         self.cursor.execute(
-            f"""
+            """
             CREATE TABLE exam_submission_answers (
                 submitted_answer_id INT AUTO_INCREMENT PRIMARY KEY,
                 submission_id INT NOT NULL,

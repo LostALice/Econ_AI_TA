@@ -461,6 +461,52 @@ export const LanguageTable = {
         zh: "模擬考提交成功",
         en: "Your answer was successfully submitted",
       },
+      answerSubmitFailed: {
+        zh: "模擬考提交失敗",
+        en: "Failed to submit mock exam.",
+      },
+    },
+    result: {
+      examResults: {
+        zh: "模擬考成績",
+        en: "Mock exam result",
+      },
+      examId: {
+        zh: "模擬考 ID:",
+        en: "Mock Exam ID:",
+      },
+      userId: {
+        zh: "使用者 ID:",
+        en: "User ID:",
+      },
+      examName: {
+        zh: "模擬考名稱:",
+        en: "Exam Name:",
+      },
+      examType: {
+        zh: "模擬考類型:",
+        en: "Exam type:",
+      },
+      examDate: {
+        zh: "模擬考日期:",
+        en: "Exam date:",
+      },
+      totalCorrectAnswer: {
+        zh: "正確答案:",
+        en: "Total correct answer:",
+      },
+      scorePercentage: {
+        zh: "分數百分比:",
+        en: "Score percentage:",
+      },
+      back: {
+        zh: "返回",
+        en: "Back",
+      },
+      loading: {
+        zh: "加載中...",
+        en: "Loading..."
+      }
     },
   },
 };
