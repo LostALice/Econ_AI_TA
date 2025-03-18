@@ -323,7 +323,6 @@ class SetupMYSQL(object):
                 submission_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
                 user_id INT NOT NULL,
-                start_time DATETIME NOT NULL,
                 submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
             );
@@ -1134,7 +1133,7 @@ class MySQLHandler(SetupMYSQL):
                 exam_date,
                 exam_duration
             )
-            VALUES ( %s, %s, %s, %s)
+            VALUES ( %s, %s, (STR_TO_DATE(%s, '%m/%d/%Y, %l:%i:%s %p')), %s)
             """,
             (
                 exam.exam_name,
@@ -1148,16 +1147,15 @@ class MySQLHandler(SetupMYSQL):
 
         # fetch back
         self.cursor.execute(
-            f"""
-            SELECT *
-            FROM {self._DATABASE}.exams
-            WHERE exam_name= %s AND exam_type = %s AND exam_date = %s AND exam_duration = %s
+            """
+            SELECT exam_id, exam_name, exam_type, exam_date, exam_duration
+            FROM exams
+            WHERE exam_name= %s AND exam_type = %s AND exam_date = %s;
             """,
             (
                 exam.exam_name,
                 exam.exam_type,
                 exam.exam_date,
-                exam.exam_duration,
             ),
         )
         inserted_exam_info = self.cursor.fetchone()

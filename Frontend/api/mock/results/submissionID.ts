@@ -5,7 +5,7 @@ import { IExamResult } from "@/types/mock/mock";
 
 export async function fetchExamResults(
   submissionID: number
-): Promise<IExamResult> {
+): Promise<IExamResult | null> {
   const resp = await fetch(
     siteConfig.api_url + "/mock/results/" + submissionID,
     {
@@ -16,16 +16,13 @@ export async function fetchExamResults(
     }
   );
 
-  console.log(resp.json());
+  
+  const data = await resp.json();
+  console.log(data);
 
-  return {
-    exam_id: 1,
-    submission_id: 1,
-    user_id: 1,
-    exam_name: "Mock Exam",
-    exam_type: "Mock Exam Type",
-    exam_date: "2022-01-01",
-    total_correct_answers: 10,
-    score_percentage: 90,
-  };
+  if (data == null) {
+    return null
+  }
+
+  return data
 }

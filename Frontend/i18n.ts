@@ -506,6 +506,10 @@ export const LanguageTable = {
       loading: {
         zh: "加載中...",
         en: "Loading..."
+      },
+      noData: {
+        zh: "沒有資料",
+        en: "No Data.",
       }
     },
   },
