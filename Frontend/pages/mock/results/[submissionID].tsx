@@ -41,13 +41,15 @@ export default function MockPage() {
     useEffect(() => {
         // Fetch exam result from the server
         setIsPageLoading(true)
-        fetchExamResults(submissionID).then(
-            (response) => {
+        fetchExamResults(submissionID)
+            .then((response) => {
                 if (response) {
                     setExamResult(response)
                 }
-            }
-        )
+            })
+            .finally(() => {
+                setIsPageLoading(false)
+            })
         setIsPageLoading(false)
 
     }, [submissionID])

@@ -10,7 +10,9 @@ export const Timer = ({ duration, onTimeUp }: { duration: number, onTimeUp: () =
 
     useEffect(() => {
         if (timeLeft <= 0) {
-            if (onTimeUp) onTimeUp();
+            if (onTimeUp) {
+                onTimeUp()
+            };
             return;
         }
         const timerId = setTimeout(() => {

@@ -1386,7 +1386,7 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam
+            UPDATE {self._DATABASE}.exam
             SET enabled=%s
             WHERE exam_id=%s
             """,
@@ -1435,7 +1435,7 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam_questions
+            UPDATE {self._DATABASE}.exam_questions
             SET enabled=%s
             WHERE question_id=%s
             """,
@@ -1544,9 +1544,7 @@ class MySQLHandler(SetupMYSQL):
                         option_text=option["option_text"],
                     )
                 )
-            image_list = (
-                question["question_images"] if question["question_images"] else []
-            )
+            image_list = question["question_images"] or []
             mock_exam_question_list_data.append(
                 MockExamQuestionsListModel(
                     exam_id=question["exam_id"],
@@ -1723,7 +1721,7 @@ class MySQLHandler(SetupMYSQL):
         fetch_data = fetch_data[0]
         self.logger.debug(pformat(fetch_data))
 
-        results = ExamResultModel(
+        return ExamResultModel(
             exam_id=fetch_data["exam_id"],
             submission_id=fetch_data["submission_id"],
             user_id=fetch_data["user_id"],
@@ -1733,8 +1731,6 @@ class MySQLHandler(SetupMYSQL):
             total_correct_answers=fetch_data["total_correct_answers"],
             score_percentage=fetch_data["score_percentage"],
         )
-
-        return results
 
     def sql_query_logger(self) -> None:
         """Log sql query"""
