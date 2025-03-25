@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 
 import AuthProvider from "@/contexts/AuthContext";
 import LangProvider from "@/contexts/LangContext";
+import { ToastProvider } from "@heroui/toast";
 
 import "@/styles/globals.css";
 

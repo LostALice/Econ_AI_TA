@@ -31,10 +31,10 @@ export async function askQuestion(
 }
 
 export async function fetchDocsList(
-  department: string
+  documentationType: string
 ): Promise<IDocsFormat[]> {
   const resp = await fetch(
-    siteConfig.api_url + "/department/" + department + "/",
+    siteConfig.api_url + "/department/" + documentationType + "/",
     {
       method: "GET",
       headers: {
@@ -43,6 +43,11 @@ export async function fetchDocsList(
     }
   );
   const data = await resp.json();
+
+  if (!data.docs_list) {
+    console.error("No documentation found.");
+    return [];
+  }
 
   let docsList = [];
   for (let file of data.docs_list) {
@@ -53,6 +58,7 @@ export async function fetchDocsList(
     };
     docsList.push(docsInfo);
   }
+  console.debug(docsList);
   return docsList;
 }
 

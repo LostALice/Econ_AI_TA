@@ -4,7 +4,6 @@ from logging.handlers import RotatingFileHandler
 
 from sys import stdout
 import logging
-import os
 
 
 class CustomLoggerHandler:
@@ -24,8 +23,8 @@ class CustomLoggerHandler:
 
         log_format = "%(asctime)s, %(levelname)s [%(filename)s:%(lineno)d] %(message)s"
         logging.basicConfig(
-            filename="./Event.log",
-            filemode="w+",
+            filename="../Event.log",
+            filemode="w",
             format=log_format,
             level=logging.NOTSET,
             encoding="utf-8",

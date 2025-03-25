@@ -24,6 +24,12 @@ from os import getenv
 import requests  # type: ignore
 import json
 
+# development
+if getenv("DEBUG") is None:
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
+
 
 class ResponseHandler(object):
     """https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/conversation-api"""
@@ -131,7 +137,6 @@ class ResponseHandler(object):
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-
         conversation = self._format_conversation_messages(
             chat_history=question,
             language=language,
@@ -393,11 +398,11 @@ class OllamaResponser(object):
         _ollama_port = getenv("OLLAMA_PORT")
         _ollama_model_name = getenv("OLLAMA_MODEL_NAME")
 
-        assert not _ollama_host is None, "Environment variable OLLAMA_HOST not set"
-        assert not _ollama_port is None, "Environment variable OLLAMA_PORT not set"
-        assert (
-            not _ollama_model_name is None
-        ), "Environment variable OLLAMA_MODEL_NAME not set"
+        assert _ollama_host is not None, "Environment variable OLLAMA_HOST not set"
+        assert _ollama_port is not None, "Environment variable OLLAMA_PORT not set"
+        assert _ollama_model_name is not None, (
+            "Environment variable OLLAMA_MODEL_NAME not set"
+        )
 
         self.ollama_config = OLLAMAConfig(
             ollama_host=_ollama_host,
@@ -459,12 +464,12 @@ class OpenAIResponser(object):
         _openai_api_key = getenv("OPENAI_API_KEY")
         _openai_model_name = getenv("OPENAI_MODEL_NAME")
 
-        assert (
-            not _openai_api_key is None
-        ), "Environment variable OPENAI_API_KEY not set"
-        assert (
-            not _openai_model_name is None
-        ), "Environment variable OPENAI_MODEL_NAME not set"
+        assert _openai_api_key is not None, (
+            "Environment variable OPENAI_API_KEY not set"
+        )
+        assert _openai_model_name is not None, (
+            "Environment variable OPENAI_MODEL_NAME not set"
+        )
 
         self.openai_config = OpenaiConfig(
             openai_api_key=_openai_api_key,
@@ -491,7 +496,6 @@ class OpenAIResponser(object):
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-
         if images:
             for base64_image in images:
                 conversation.message[-1].content.append(
@@ -514,7 +518,7 @@ class OpenAIResponser(object):
         response_dump = response.model_dump(mode="python")
 
         self.logger.debug(pformat(response_dump))
-        
+
         if not response:
             self.logger.error("Failed to generate OpenAI response")
             return "", 0

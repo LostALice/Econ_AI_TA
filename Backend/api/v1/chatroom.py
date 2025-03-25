@@ -135,11 +135,11 @@ async def questioning(
         for base64_image in images:
             image_file_data = base64.b64decode(base64_image)
             image_uuid = str(uuid4())
-            image_path = f"./images/{chat_id}/{question_uuid}/{image_uuid}.png"
+            image_path = f"./images/chat/{chat_id}/{question_uuid}/{image_uuid}.png"
 
             while os.path.exists(image_path):
                 image_uuid = str(uuid4())
-                image_path = f"./images/{chat_id}/{question_uuid}/{image_uuid}.png"
+                image_path = f"./images/chat/{chat_id}/{question_uuid}/{image_uuid}.png"
                 logger.warning(f"Image file already exists: {image_path}")
             else:
                 logger.info(f"Saving image: {image_path}")
@@ -164,7 +164,7 @@ async def questioning(
     seen = set()
     files = []
     for docs in docs_result:
-        if not docs.source in seen:
+        if docs.source not in seen:
             files.append(
                 {
                     "file_name": docs.source,

@@ -20,13 +20,6 @@ export interface IMessageInfo {
   time: string;
 }
 
-// to modify
-type TDepartmentName = "pptx" | "docx";
-
-export interface IDepartment {
-  departmentName: TDepartmentName;
-}
-
 type TPermission = true | false;
 
 export interface ILoginPermission {

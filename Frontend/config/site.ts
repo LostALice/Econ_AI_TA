@@ -14,6 +14,10 @@ export const siteConfig = {
       label: "chat",
       href: "/chat",
     },
+    {
+      label: "mock",
+      href: "/mock",
+    },
   ],
   links: {
     github: "https://github.com/LostALice",

@@ -1,24 +1,24 @@
 # Code by AkinoAlice@TyrantRey
 
-from Backend.api.v1 import authorization, chatroom, documentation
+from Backend.api.v1 import authorization, chatroom, documentation, mock
 from Backend.utils.helper.logger import CustomLoggerHandler
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
 import os
-import json
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
 
 # logging setup
 logger = CustomLoggerHandler(__name__).setup_logging()
 
 # fastapi app setup
 app = FastAPI()
+
+# development
+if os.getenv("DEBUG") is None:
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
 
 
 def CORS_environmental_handler(cors_allowed_origin: str) -> list[str]:
@@ -35,10 +35,12 @@ def CORS_environmental_handler(cors_allowed_origin: str) -> list[str]:
 
 CORS_env_value = os.getenv("CORS_ALLOWED_ORIGIN")
 
-assert CORS_env_value != None, "Environment variable CORS_ALLOWED_ORIGIN is not set."
-assert isinstance(
-    CORS_env_value, str
-), "Invalid environment variable CORS_ALLOWED_ORIGIN"
+assert CORS_env_value is not None, (
+    "Environment variable CORS_ALLOWED_ORIGIN is not set."
+)
+assert isinstance(CORS_env_value, str), (
+    "Invalid environment variable CORS_ALLOWED_ORIGIN"
+)
 
 CORS_allow_origins = CORS_environmental_handler(CORS_env_value)
 
@@ -64,6 +66,11 @@ app.include_router(
     documentation.router,
     prefix="/api/v1",
     tags=["Documentation", "v1"],
+)
+app.include_router(
+    mock.router,
+    prefix="/api/v1",
+    tags=["Mock", "v1"],
 )
 
 logger.debug("============================")

@@ -17,6 +17,12 @@ import numpy as np
 import requests  # type: ignore
 import json
 
+# development
+if getenv("DEBUG") is None:
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
+
 
 class VectorHandler(object):
     """API: https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api"""
@@ -86,11 +92,11 @@ class OllamaEmbeddingEncoder(object):
         _ollama_port = getenv("OLLAMA_PORT")
         _ollama_embedding_model_name = getenv("OLLAMA_EMBEDDING_MODEL_NAME")
 
-        assert not _ollama_host is None, "Environment variable OLLAMA_HOST not set"
-        assert not _ollama_port is None, "Environment variable OLLAMA_PORT not set"
-        assert (
-            not _ollama_embedding_model_name is None
-        ), "Environment variable OLLAMA_MODEL_NAME not set"
+        assert _ollama_host is not None, "Environment variable OLLAMA_HOST not set"
+        assert _ollama_port is not None, "Environment variable OLLAMA_PORT not set"
+        assert _ollama_embedding_model_name is not None, (
+            "Environment variable OLLAMA_MODEL_NAME not set"
+        )
 
         self.ollama_config = OLLAMAEmbeddingConfig(
             ollama_host=_ollama_host,
@@ -139,15 +145,15 @@ class AfsEmbeddingEncoder(object):
         _url = str(getenv("AFS_API_KEY"))
         _embedding_model = str(getenv("AFS_EMBEDDING_MODEL_NAME"))
 
-        assert (
-            _api_key is not None and _api_key != ""
-        ), "API_KEY environment variable is not set"
-        assert (
-            _url is not None and _url != ""
-        ), "API_URL environment variable is not set"
-        assert (
-            _embedding_model is not None and _embedding_model != ""
-        ), "AFS_EMBEDDING_MODEL_NAME environment variable is not set"
+        assert _api_key is not None and _api_key != "", (
+            "API_KEY environment variable is not set"
+        )
+        assert _url is not None and _url != "", (
+            "API_URL environment variable is not set"
+        )
+        assert _embedding_model is not None and _embedding_model != "", (
+            "AFS_EMBEDDING_MODEL_NAME environment variable is not set"
+        )
 
         self.config = AFSEmbeddingConfig(
             url=_url + "/models/conversation",
@@ -241,12 +247,12 @@ class OpenaiEmbeddingEncoder(object):
         _openai_api_key = getenv("OPENAI_API_KEY")
         _openai_embedding_model_name = getenv("OPENAI_EMBEDDING_MODEL_NAME")
 
-        assert (
-            not _openai_api_key is None
-        ), "Environment variable OPENAI_API_KEY not set"
-        assert (
-            not _openai_embedding_model_name is None
-        ), "Environment variable OPENAI_EMBEDDING_MODEL_NAME not set"
+        assert _openai_api_key is not None, (
+            "Environment variable OPENAI_API_KEY not set"
+        )
+        assert _openai_embedding_model_name is not None, (
+            "Environment variable OPENAI_EMBEDDING_MODEL_NAME not set"
+        )
 
         self.openai_config = OPENAIEmbeddingConfig(
             openai_api_key=_openai_api_key,

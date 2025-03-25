@@ -55,7 +55,7 @@ export const LoginButton = () => {
   function submitLogin() {
     const hashed_password = sha3_256(password);
 
-    fetch(siteConfig.api_url + "/login/", {
+    fetch(siteConfig.api_url + "/authorization/login/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export const LoginButton = () => {
           return true;
         }
         else {
-          console.log("login failed");
+          console.debug("login failed", data);
           return false;
         }
       } else {
@@ -91,11 +91,12 @@ export const LoginButton = () => {
     <>
       {isLoggedIn ? (
         <>
+          {/* Logged in */}
           <Button
             className="bg-transparent text-medium"
             onPressEnd={logoutModal.onOpen}
           >
-            {LanguageTable.nav.loginForm.login[language]}
+            {LanguageTable.nav.loginForm.logout[language]}
           </Button>
           <Modal
             isOpen={logoutModal.isOpen}
@@ -130,8 +131,9 @@ export const LoginButton = () => {
         </>
       ) : (
         <>
+          {/* Not login */}
           <Button
-            className="bg-transparent text-medium mr-3"
+            className="bg-transparent text-medium"
             onPressEnd={() => {
               setUsername("");
               setPassword("");

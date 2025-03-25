@@ -13,9 +13,10 @@ from os import getenv
 import numpy as np
 
 # development
-from dotenv import load_dotenv
+if getenv("DEBUG") == "True":
+    from dotenv import load_dotenv
 
-load_dotenv("./.env")
+    load_dotenv("./.env")
 
 
 class SetupMilvus(object):
@@ -37,12 +38,12 @@ class SetupMilvus(object):
         assert self.DEBUG is not None, "Missing MILVUS_DEBUG environment variable"
         assert self.HOST is not None, "Missing MILVUS_HOST environment variable"
         assert self.PORT is not None, "Missing MILVUS_PORT environment variable"
-        assert (
-            self.MILVUS_VECTOR_DIM > 0 and self.MILVUS_VECTOR_DIM is not None
-        ), "MILVUS_VECTOR_DIM must be a positive integer"
-        assert (
-            self.DEFAULT_COLLECTION_NAME is not None
-        ), "Missing MILVUS_DEFAULT_COLLECTION_NAME environment variable"
+        assert self.MILVUS_VECTOR_DIM > 0 and self.MILVUS_VECTOR_DIM is not None, (
+            "MILVUS_VECTOR_DIM must be a positive integer"
+        )
+        assert self.DEFAULT_COLLECTION_NAME is not None, (
+            "Missing MILVUS_DEFAULT_COLLECTION_NAME environment variable"
+        )
 
         self.logger = CustomLoggerHandler(__name__).setup_logging()
 
@@ -72,8 +73,9 @@ class SetupMilvus(object):
 
         self.logger.debug(
             pformat(
-                f"""Milvus loading collection `{
-                      self.DEFAULT_COLLECTION_NAME}`: {loading_status["state"]}"""
+                f"""Milvus loading collection `{self.DEFAULT_COLLECTION_NAME}`: {
+                    loading_status["state"]
+                }"""
             )
         )
 
@@ -101,7 +103,6 @@ class SetupMilvus(object):
         ] = "IVF_FLAT",
         metric_type: Literal["L2", "IP"] = "L2",
     ) -> Dict:
-
         schema = MilvusClient.create_schema(
             auto_id=True,
             enable_dynamic_field=False,
@@ -210,11 +211,11 @@ class MilvusHandler(SetupMilvus):
         return success
 
     def search_similarity(
-            self,
-            question_vector: np.ndarray,
-            collection_name: str = "default",
-            limit: int = 3,
-        ) -> list[SearchSimilarityModel]:
+        self,
+        question_vector: np.ndarray,
+        collection_name: str = "default",
+        limit: int = 3,
+    ) -> list[SearchSimilarityModel]:
         """
         Perform a similarity search on a vector database.
 

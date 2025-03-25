@@ -57,6 +57,10 @@ export const LanguageTable = {
         zh: "問答",
         en: "Chat",
       },
+      mock: {
+        zh: "模擬考",
+        en: "Mock",
+      },
     },
     role: {
       unsigned: {
@@ -114,17 +118,23 @@ export const LanguageTable = {
         en: "Cancel",
       },
     },
+    modal: {
+      menu: {
+        zh: "選單",
+        en: "Menu",
+      },
+    },
   },
   chat: {
     page: {
       target: {
         THEOREM: {
           zh: "大一經濟學原理",
-          en: "Economics Theory",
+          en: "Basic of Economics",
         },
         TESTING: {
           zh: "公務員高普考",
-          en: "Economics Exam",
+          en: "Civil Service Examination",
         },
         CHATTING: {
           zh: "智能助教",
@@ -175,10 +185,6 @@ export const LanguageTable = {
         zh: "課程名稱",
         en: "Lesson Name",
       },
-      // lessonDescription: {
-      //   zh: "課程簡介",
-      //   en: "Lesson Description",
-      // },
       lastUpdate: {
         zh: "最後更新時間",
         en: "Last Update Time",
@@ -186,6 +192,14 @@ export const LanguageTable = {
       loading: {
         zh: "載入中...",
         en: "Loading...",
+      },
+      testing: {
+        zh: "公務員高普考",
+        en: "Civil Service Examination",
+      },
+      theorem: {
+        zh: "大一經濟學原理",
+        en: "Basic of Economics",
       },
     },
     component: {
@@ -223,6 +237,280 @@ export const LanguageTable = {
           en: "Upload",
         },
       },
+    },
+  },
+  mock: {
+    index: {
+      basic: {
+        zh: "模擬大一經濟學原理考試",
+        en: "Basic of Economics",
+      },
+      cse: {
+        zh: "模擬公務員高普考試",
+        en: "Civil Service Examination",
+      },
+      create: {
+        zh: "新增模擬考試",
+        en: "New Examination",
+      },
+    },
+    crate: {
+      confirm: {
+        zh: "確認",
+        en: "Confirm",
+      },
+      close: {
+        zh: "關閉",
+        en: "Close",
+      },
+      examList: {
+        zh: "模擬考列表",
+        en: "Examination List",
+      },
+      selected: {
+        zh: "左側選取模擬考",
+        en: "Select mock exam from exam list",
+      },
+      currentExam: {
+        zh: "目前模擬考:",
+        en: "Current mock exam:",
+      },
+      newExam: {
+        zh: "新增模擬考",
+        en: "New mock exam",
+      },
+      question: {
+        zh: "題目列表:",
+        en: "Question list:",
+      },
+      newMockExam: {
+        zh: "新增模擬考",
+        en: "New question",
+      },
+      deleteExam: {
+        zh: "刪除模擬考",
+        en: "Delete question",
+      },
+      examTitle: {
+        zh: "模擬考標題:",
+        en: "Exam Title:",
+      },
+      examDuration: {
+        zh: "模擬考時長:",
+        en: "Exam duration:",
+      },
+      typeOfExam: {
+        zh: "模擬考類型:",
+        en: "Exam type:",
+      },
+      basic: {
+        zh: "模擬大一經濟學原理考試",
+        en: "Basic of Economics",
+      },
+      cse: {
+        zh: "模擬公務員高普考試",
+        en: "Civil Service Examination",
+      },
+      newQuestion: {
+        zh: "新增題目",
+        en: "New question",
+      },
+      deleteQuestion: {
+        zh: "刪除題目",
+        en: "Delete question",
+      },
+      newOrDeleteQuestion: {
+        zh: "新增或刪除題目",
+        en: "Create New or delete question",
+      },
+      newOrDeleteExam: {
+        zh: "新增或刪除模擬考",
+        en: "Create New or delete mock exam",
+      },
+      noItem: {
+        zh: "目前沒有任何題目 點擊新增題目",
+        en: "No questions yet, click to add new question",
+      },
+      questionContent: {
+        zh: "題目",
+        en: "Question Content",
+      },
+      enterQuestionText: {
+        zh: "輸入題目文字...",
+        en: "Enter question text...",
+      },
+      questionImages: {
+        zh: "題目圖片",
+        en: "Question Images",
+      },
+      options: {
+        zh: "選項",
+        en: "Options",
+      },
+      optionText: {
+        zh: "選項文字",
+        en: "Option Text",
+      },
+      correct: {
+        zh: "正確答案",
+        en: "Correct Answer",
+      },
+      saveQuestion: {
+        zh: "儲存題目",
+        en: "Save Question",
+      },
+      missingEnterQuestionText: {
+        zh: "未輸入題目文字...",
+        en: "No question text input yet.",
+      },
+      missingQuestionImages: {
+        zh: "題目圖片",
+        en: "Question Images",
+      },
+      missingOptionText: {
+        zh: "未輸入選項文字",
+        en: "No option text input yet.",
+      },
+      missingCorrect: {
+        zh: "未輸入正確答案",
+        en: "No correct answer input yet.",
+      },
+      tooManyCorrectAnswer: {
+        zh: "只能有一個正確答案",
+        en: "There can only be one correct answer.",
+      },
+      titleNoNullError: {
+        zh: "模擬考標題不可為空",
+        en: "Exam title cannot be null.",
+      },
+      durationSubZeroError: {
+        zh: "模擬考時長不可小於等於 0",
+        en: "Exam duration cannot be less than or equal to 0.",
+      },
+      noExamSelectedError: {
+        zh: "未選取任何模擬考",
+        en: "No mock exam selected yet.",
+      },
+      noQuestionSelectedError: {
+        zh: "未選取任何題目",
+        en: "No mock question selected yet.",
+      },
+      newTempQuestion: {
+        zh: "新題目",
+        en: "New Question",
+      },
+      examCreateSuccess: {
+        zh: "模擬考建立成功",
+        en: "Mock exam created successfully.",
+      },
+      questionCreateSuccess: {
+        zh: "題目儲存成功",
+        en: "Question created successfully.",
+      },
+      questionCreateFailed: {
+        zh: "題目儲存存失敗",
+        en: "Question creation failed.",
+      },
+      examCreateFailed: {
+        zh: "模擬考建立失失敗",
+        en: "Mock exam creation failed.",
+      },
+    },
+    mock: {
+      quiz: {
+        zh: "模擬考",
+        en: "Mock Examination",
+      },
+      submit: {
+        zh: "提交",
+        en: "Submit",
+      },
+      timeLeft: {
+        zh: "剩餘時間",
+        en: "Time left:",
+      },
+      duration: {
+        zh: "考試時長:",
+        en: "Exam duration:",
+      },
+      minutes: {
+        zh: "分鐘",
+        en: "Minutes",
+      },
+      noQuestions: {
+        zh: "目前考試沒有任何題目",
+        en: "There are currently no questions in the exam.",
+      },
+      back: {
+        zh: "返回",
+        en: "Back",
+      },
+      answerNotComplete: {
+        zh: "尚有問題未完成",
+        en: "Questions are not completed yet.",
+      },
+      onSubmit: {
+        zh: "提交模擬考?",
+        en: "Submit mock exam?",
+      },
+      cantModify: {
+        zh: "提交模擬考後無法修改答案",
+        en: "You cannot modify the answer after submitting the mock exam.",
+      },
+      answerSubmitSuccess: {
+        zh: "模擬考提交成功",
+        en: "Your answer was successfully submitted",
+      },
+      answerSubmitFailed: {
+        zh: "模擬考提交失敗",
+        en: "Failed to submit mock exam.",
+      },
+    },
+    result: {
+      examResults: {
+        zh: "模擬考成績",
+        en: "Mock exam result",
+      },
+      examId: {
+        zh: "模擬考 ID:",
+        en: "Mock Exam ID:",
+      },
+      userId: {
+        zh: "使用者 ID:",
+        en: "User ID:",
+      },
+      examName: {
+        zh: "模擬考名稱:",
+        en: "Exam Name:",
+      },
+      examType: {
+        zh: "模擬考類型:",
+        en: "Exam type:",
+      },
+      examDate: {
+        zh: "模擬考日期:",
+        en: "Exam date:",
+      },
+      totalCorrectAnswer: {
+        zh: "正確答案:",
+        en: "Total correct answer:",
+      },
+      scorePercentage: {
+        zh: "分數百分比:",
+        en: "Score percentage:",
+      },
+      back: {
+        zh: "返回",
+        en: "Back",
+      },
+      loading: {
+        zh: "加載中...",
+        en: "Loading..."
+      },
+      noData: {
+        zh: "沒有資料",
+        en: "No Data.",
+      }
     },
   },
 };

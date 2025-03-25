@@ -8,7 +8,7 @@ from unstructured.partition.ppt import partition_ppt
 from unstructured.partition.doc import partition_doc
 from unstructured.partition.pdf import partition_pdf
 
-from typing import Optional, Literal
+from typing import Literal
 
 
 class DocumentSplitter(object):
