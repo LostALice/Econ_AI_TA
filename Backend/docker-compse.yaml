@@ -1,0 +1,67 @@
+# Code by AkinoAlice@TyrantRey
+
+version: "3.9"
+services:
+  Backend:
+    ports:
+      - 5000:5000
+    environment:
+      - DEBUG=True
+
+      # main.py
+      # Fastapi CORS
+      - CORS_ALLOWED_ORIGIN=*
+
+      # MYSQL
+      # database.py
+      - MYSQL_DEBUG=False
+      - MYSQL_HOST=localhost
+      - MYSQL_USER_NAME=root
+      - MYSQL_PASSWORD=example_password
+      - MYSQL_DATABASE=FCU
+      - MYSQL_PORT=3306
+      - MYSQL_CONNECTION_RETRY=3
+      - MYSQL_ROOT_USERNAME=root
+      - MYSQL_ROOT_PASSWORD=example_password
+
+      # Json web token
+      # authentication.py
+      - JWT_SECRET=example_secret
+      - JWT_ALGORITHM=HS256
+
+      # LLM
+      - LLM_DEPLOY_MODE=openai
+
+      # Embedding
+      - EMBEDDING_DEPLOY_MODE=ollama
+
+      ## AFS
+      # - AFS_API_URL=
+      # - AFS_API_KEY=
+      # - AFS_MODEL_NAME=
+      # - AFS_EMBEDDING_MODEL_NAME=ffm-embedding
+
+      ## Ollama
+      # - OLLAMA_HOST=http://localhost
+      # - OLLAMA_PORT=11434
+      # - OLLAMA_MODEL_NAME=llama3.2
+      # - OLLAMA_EMBEDDING_MODEL_NAME=mxbai-embed-large
+
+      ## Openai
+      # OPENAI_API_KEY=
+      # OPENAI_MODEL_NAME=gpt-4o-mini
+
+      # 1536 for text-embedding-3-small
+      # 3072 for text-embedding-3-large
+      # OPENAI_EMBEDDING_MODEL_NAME=text-embedding-3-small
+
+      # Milvus
+      # Vector Database
+      - MILVUS_DEBUG=True
+      - MILVUS_HOST=localhost
+      - MILVUS_PORT=19530
+      - MILVUS_DEFAULT_COLLECTION_NAME=default
+
+      # 1536 for text-embedding-3-small
+      # 3072 for text-embedding-3-large
+      - MILVUS_VECTOR_DIM=1536

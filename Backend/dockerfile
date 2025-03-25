@@ -1,0 +1,15 @@
+# Code by AkinoAlice@TyrantRey
+
+FROM python:3.11
+
+EXPOSE 5000
+
+RUN mkdir /Backend
+WORKDIR /Backend
+COPY . .
+
+RUN pip install uv
+
+RUN uv --version
+
+CMD ["fastapi", "run", "./main.py", "--port", "5000 "]
