@@ -2,14 +2,14 @@
 
 FROM python:3.11
 
-EXPOSE 5000
+EXPOSE 8000
 
 RUN mkdir /Backend
 WORKDIR /Backend
 COPY . .
 
 RUN pip install uv
+RUN uv sync
+RUN uv add opencv-python-headless
 
-RUN uv --version
-
-CMD ["fastapi", "run", "./main.py", "--port", "5000 "]
+CMD [ "uv", "run", "fastapi", "run", "main.py", "--port", "8000", "--host", "0.0.0.0" ]

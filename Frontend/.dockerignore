@@ -1,5 +1,36 @@
-node_modules
-npm-debug.log
-README.md
-.next
-.git
+# Setting file
+# ===================
+/Scripts
+/Lib
+/Include
+/share
+/Library
+/.vscode/**
+**/setting.*
+/.vscode/setting.json
+**/.venv/**
+**/__pycache__/**
+**/node_modules/**
+**/.next/**
+
+# Backend
+# ===================
+/Backend/images/**
+**/*.png
+
+# LLM
+# ===================
+*.gguf
+
+# Files
+# ===================
+pyvenv.cfg
+*.pyc
+*.pdf
+
+# Testing file
+# ===================
+test.*
+*.log
+*.docx
+.env
