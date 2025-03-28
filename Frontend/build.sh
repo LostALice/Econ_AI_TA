@@ -21,9 +21,3 @@ else
     echo "Docker image build failed."
     exit 1
 fi
-d."
-    exit 1
-fi
-d."
-    exit 1
-fi
