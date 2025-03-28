@@ -5,7 +5,7 @@ REMOTE_URL=$(git config --get remote.origin.url)
 
 REPO_NAME=$(basename -s .git "$REMOTE_URL")
 
-IMAGE_NAME=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
+IMAGE_NAME=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | echo "_frontend")
 
 IMAGE_TAG=$(date +"%Y%m%d-%H%M%S")
 
