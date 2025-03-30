@@ -10,108 +10,57 @@ import { Card, CardBody } from "@nextui-org/card";
 import { Image } from "@nextui-org/image";
 import { Button } from "@nextui-org/react";
 
-// 更新教師身份的內容，將功能整合為三個直接入口
-type RoleContent = {
-  title: string;
-  description: string;
-  courses: any[];
-  features?: {
-    href: string;
-    title: string;
-    description: string;
-    icon: string;
-    color: string;
-  }[];
-}
-
-const roleSpecificContent: Record<string, RoleContent> = {
+// 更新學生身份的內容，將基於課程的布局改為功能導向的布局
+const roleSpecificContent = {
   "未登入": {
     title: "經濟學課程智能TA",
     description: "登入後體驗完整功能，獲取專業的經濟學學習資源和指導。",
+    features: [],
     courses: []
   },
   "學生": {
-    // 學生部分保持不變
     title: "學生學習中心",
     description: "歡迎來到經濟學課程智能TA的專屬頁面，在這裡，無論你有關於經濟學理論、數據分析、作業輔導，還是任何其他相關問題，我都樂意提供幫助。",
-    courses: [
+    // 移除課程卡片，改為功能入口
+    features: [
       {
-        href: "",
-        title: "大一經濟學原理",
-        descriptions: "基礎經濟學概念與理論",
-        image: "",
-        alt: "經濟學原理課程",
-        subFeatures: [
-          // 學生的子功能保持不變
-          {
-            href: "/courses/principles/question-bank",
-            title: "題庫",
-            description: "練習各章節習題",
-            icon: "📚"
-          },
-          {
-            href: "/courses/principles/exams",
-            title: "線上測驗",
-            description: "參與模擬考試",
-            icon: "📝"
-          },
-          {
-            href: "/courses/principles/chat",
-            title: "智能TA對話",
-            description: "獲得即時解答",
-            icon: "💬"
-          },
-          {
-            href: "/courses/principles/records",
-            title: "學習紀錄",
-            description: "查看學習進度",
-            icon: "📊"
-          }
-        ]
+        href: "/courses/question-download",
+        title: "題庫",
+        description: "練習大一經濟學原理與公務員高普考題目",
+        icon: "📚",
+        color: "bg-blue-500 dark:bg-blue-600"
       },
       {
-        href: "",
-        title: "公務員高普考課程",
-        descriptions: "考試準備資源與練習題",
-        image: "",
-        alt: "高普考課程",
-        subFeatures: [
-          // 學生的子功能保持不變
-          {
-            href: "/courses/civil-service/question-bank",
-            title: "題庫",
-            description: "高普考專屬練習題",
-            icon: "📚"
-          },
-          {
-            href: "/courses/principles/exams",
-            title: "線上測驗",
-            description: "參與模擬考試",
-            icon: "📝"
-          },
-          {
-            href: "/courses/principles/chat",
-            title: "智能TA對話",
-            description: "獲得即時解答",
-            icon: "💬"
-          },
-          {
-            href: "/courses/principles/records",
-            title: "學習紀錄",
-            description: "查看學習進度",
-            icon: "📊"
-          }
-        ]
+        href: "/courses/exams",
+        title: "線上測驗",
+        description: "參與模擬考試，檢測學習成效",
+        icon: "📝",
+        color: "bg-purple-500 dark:bg-purple-600"
+      },
+      {
+        href: "/courses/chat",
+        title: "智能TA對話",
+        description: "獲得即時解答與學習指導",
+        icon: "💬",
+        color: "bg-green-500 dark:bg-green-600"
+      },
+      {
+        href: "/courses/records",
+        title: "學習紀錄",
+        description: "查看個人學習進度與成績",
+        icon: "📊",
+        color: "bg-amber-500 dark:bg-amber-600"
       }
-    ]
+    ],
+    courses: [] // 不再使用課程卡片
   },
   "教師": {
     title: "教師管理平台",
     description: "管理課程內容、查看學生進度與題庫上傳",
-    // 移除課程分類，直接提供三個功能入口
+    // 教師功能保持不變
     features: [
       {
-        href: "/courses/principles/question-bank",
+        href: "/courses/question-bank",
         title: "題庫上傳",
         description: "上傳與管理所有課程的題庫資源",
         icon: "📤",
@@ -132,15 +81,15 @@ const roleSpecificContent: Record<string, RoleContent> = {
         color: "bg-blue-500 dark:bg-blue-600"
       }
     ],
-    courses: [] // 教師不再顯示課程卡片
+    courses: [] // 教師不顯示課程卡片
   },
   "助教": {
     title: "助教支援系統",
     description: "協助管理課程、回答學生問題並提供學習支援",
-    // 為助教添加功能卡片，類似於教師的布局
+    // 助教功能保持不變
     features: [
       {
-        href: "/ta/question-bank",
+        href: "/courses/question-bank",
         title: "題庫上傳",
         description: "協助上傳與管理課程題庫資源",
         icon: "📤",
@@ -154,7 +103,7 @@ const roleSpecificContent: Record<string, RoleContent> = {
         color: "bg-teal-500 dark:bg-teal-600"
       }
     ],
-    courses: [] // 助教不再顯示課程卡片
+    courses: [] // 助教不顯示課程卡片
   }
 };
 
@@ -201,11 +150,19 @@ export default function MainPage() {
         </div>
       </section>
       
-      {/* 教師/助教專用功能卡片 */}
-      {isLoggedIn && (role === "教師" || role === "助教") && currentRoleContent.features && (
+      {/* 功能卡片 - 適用於所有已登入角色 */}
+      {isLoggedIn && currentRoleContent.features && currentRoleContent.features.length > 0 && (
         <section className="items-center justify-center p-8">
-          <h2 className="text-xl font-bold mb-6 text-center">管理功能</h2>
-          <div className={`grid gap-4 grid-cols-1 ${role === "助教" ? "md:grid-cols-2" : "md:grid-cols-3"} max-w-5xl mx-auto`}>
+          <h2 className="text-xl font-bold mb-6 text-center">
+            {role === "學生" ? "學習資源" : "管理功能"}
+          </h2>
+          <div className={`grid gap-4 grid-cols-1 ${
+            role === "學生" 
+              ? "md:grid-cols-2 lg:grid-cols-4" 
+              : role === "助教" 
+                ? "md:grid-cols-2" 
+                : "md:grid-cols-3"
+          } max-w-6xl mx-auto`}>
             {currentRoleContent.features.map((feature) => (
               <Card
                 key={feature.href}
@@ -224,78 +181,6 @@ export default function MainPage() {
                   <p className="text-gray-600 dark:text-gray-300 text-center">{feature.description}</p>
                 </CardBody>
               </Card>
-            ))}
-          </div>
-        </section>
-      )}
-      
-      {/* 課程資源卡片 - 只為學生顯示 */}
-      {isLoggedIn && role === "學生" && currentRoleContent.courses && currentRoleContent.courses.length > 0 && (
-        <section className="items-center justify-center p-8">
-          <h2 className="text-xl font-bold mb-6 text-center">課程資源</h2>
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-            {currentRoleContent.courses.map((course) => (
-              <div 
-                key={course.title}
-                className="relative"
-              >
-                {/* 主課程卡片 - 學生視角 */}
-                <Card className="flex-1 w-full rounded-xl shadow-md">
-                  <div className={`bg-gradient-to-r ${
-                    course.title === "大一經濟學原理" 
-                      ? "from-blue-500 to-blue-700" 
-                      : "from-purple-500 to-purple-700"
-                  } p-6 rounded-t-xl`}>
-                    <div className="text-center">
-                      <h3 className="font-bold text-2xl md:text-3xl text-white mb-2">
-                        {course.title}
-                      </h3>
-                      <p className="text-white text-lg">{course.descriptions}</p>
-                    </div>
-                  </div>
-                </Card>
-                
-                {/* 子功能卡片 - 學生視角 */}
-                {course.subFeatures && course.subFeatures.length > 0 && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {course.subFeatures.map((feature: {
-                      href: string;
-                      title: string;
-                      description: string;
-                      icon: string;
-                    }) => (
-                      <Card
-                        key={feature.href}
-                        isPressable
-                        onClick={() => router.push(feature.href)}
-                        className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 shadow-md hover:shadow-lg transition-shadow"
-                      >
-                        <CardBody className="p-4">
-                          <div className="flex items-center mb-2">
-                            <div className={`text-2xl ${
-                              course.title === "大一經濟學原理"
-                                ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                                : "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"
-                            } p-2 rounded-full mr-3`}>
-                              {feature.icon}
-                            </div>
-                            <h3 className={`font-bold text-lg ${
-                              course.title === "大一經濟學原理"
-                                ? "text-blue-700 dark:text-blue-300"
-                                : "text-purple-700 dark:text-purple-300"
-                            }`}>
-                              {feature.title}
-                            </h3>
-                          </div>
-                          <p className="text-sm text-gray-800 dark:text-gray-200 pl-12">
-                            {feature.description}
-                          </p>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
             ))}
           </div>
         </section>
