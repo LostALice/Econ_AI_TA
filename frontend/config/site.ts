@@ -5,20 +5,8 @@ export const siteConfig = {
     api_url: process.env.NEXT_PUBLIC_API_URL,
     description:
         "歡迎來到經濟學課程智能TA的專屬頁面，在這裡，無論你有關於經濟學理論、數據分析、作業輔導，還是任何其他相關問題，我都樂意提供幫助。",
-    navItems: [
-        {
-            label: "文檔",
-            href: "/docs",
-        },
-        {
-            label: "問答",
-            href: "/chat",
-        },
-        {
-            label: "題庫",
-            href: "/question-bank",
-        },
-    ],
+    // 清空 navItems 數組
+    navItems: [],
     links: {
         github: "https://github.com/LostALice",
     },
