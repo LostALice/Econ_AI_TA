@@ -41,15 +41,16 @@ export default function MockPage() {
     useEffect(() => {
         // Fetch exam result from the server
         setIsPageLoading(true)
-        fetchExamResults(submissionID).then(
-            (response) => {
+        fetchExamResults(submissionID)
+            .then((response) => {
                 if (response) {
                     setExamResult(response)
                 }
-            }
-        )
+            })
+            .finally(() => {
+                setIsPageLoading(false)
+            })
         setIsPageLoading(false)
-
     }, [submissionID])
 
     return (
@@ -82,7 +83,7 @@ export default function MockPage() {
                                     <div>
                                         <span className="font-semibold">
                                             {LanguageTable.mock.result.examType[language]}
-                                            {examResult ? examResult.exam_type : LanguageTable.mock.result.noData[language]}
+                                            {examResult ? LanguageTable.mock.result[examResult.exam_type as keyof typeof LanguageTable.mock.result][language] : LanguageTable.mock.result.noData[language]}
                                         </span>
                                     </div>
                                     <div>

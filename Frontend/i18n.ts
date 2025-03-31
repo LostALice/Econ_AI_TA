@@ -285,11 +285,11 @@ export const LanguageTable = {
       },
       newMockExam: {
         zh: "新增模擬考",
-        en: "New question",
+        en: "New Exam",
       },
       deleteExam: {
         zh: "刪除模擬考",
-        en: "Delete question",
+        en: "Delete Exam",
       },
       examTitle: {
         zh: "模擬考標題:",
@@ -505,12 +505,20 @@ export const LanguageTable = {
       },
       loading: {
         zh: "加載中...",
-        en: "Loading..."
+        en: "Loading...",
       },
       noData: {
         zh: "沒有資料",
         en: "No Data.",
-      }
+      },
+      basic: {
+        zh: "模擬大一經濟學原理考試",
+        en: "Basic of Economics",
+      },
+      cse: {
+        zh: "模擬公務員高普考試",
+        en: "Civil Service Examination",
+      },
     },
   },
 };

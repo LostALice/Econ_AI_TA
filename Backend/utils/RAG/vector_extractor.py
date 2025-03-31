@@ -28,8 +28,9 @@ class VectorHandler(object):
     """API: https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api"""
 
     def __init__(self) -> None:
-        _mode = getenv("EMBEDDING_DEPLOY_MODE")
+        self.logger = CustomLoggerHandler(__name__).setup_logging()
 
+        _mode = getenv("EMBEDDING_DEPLOY_MODE")
         _vector_dim = getenv("MILVUS_VECTOR_DIM")
 
         assert (
@@ -44,7 +45,7 @@ class VectorHandler(object):
         self.EMBEDDING_DEPLOY_MODE = EmbeddingDeployModel(mode=_mode).mode
         self.vector_dim = int(_vector_dim)
 
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger.debug(f"Embedding DEPLOY MODE: {self.EMBEDDING_DEPLOY_MODE}")
         self.vector_encoder: Union[
             AfsEmbeddingEncoder,
             OpenaiEmbeddingEncoder,

@@ -22,7 +22,8 @@ import jwt
 import os
 
 # development
-if os.getenv("DEBUG") == None:
+if os.getenv("DEBUG") is None:
+
     from dotenv import load_dotenv
 
     load_dotenv("./.env")

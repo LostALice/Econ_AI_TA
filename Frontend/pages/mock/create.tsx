@@ -344,6 +344,7 @@ export default function MockPage() {
                 color: "danger",
                 title: LanguageTable.mock.crate.tooManyCorrectAnswer[language],
             });
+            return;
         }
 
         const savedOptions: IModifiedQuestionOptionsPrams[] = optionsFelid.map((option) => ({

@@ -78,7 +78,7 @@ export default function MockPage() {
         };
     }, [mockID])
 
-    const handelOnAnswerChange = (newQuestionID: number, newOptionID: number) => {
+    const onHandleAnswerChange = (newQuestionID: number, newOptionID: number) => {
         let inArray: boolean = false
         const newStudentAnswer: IStudentAnswer = {
             question_id: newQuestionID,
@@ -106,7 +106,7 @@ export default function MockPage() {
         }
     }
 
-    const handelOnSubmitAnswer = () => {
+    const onHandleSubmitAnswer = () => {
         console.log(studentAnswers)
         if (studentAnswers.length != questionsList.length) {
             addToast({
@@ -118,7 +118,7 @@ export default function MockPage() {
         }
     }
 
-    const handelOnForcedSubmitAnswer = async () => {
+    const onHandleForcedSubmitAnswer = async () => {
         // TODO: Send answer to the server
         if (!mockInfo) {
             console.error("No mock information found")
@@ -177,7 +177,7 @@ export default function MockPage() {
                                         {LanguageTable.mock.mock.back[language]}
                                     </Button>
                                     <Button color="danger" onPress={() => {
-                                        handelOnForcedSubmitAnswer()
+                                        onHandleForcedSubmitAnswer()
                                         onClose()
                                     }}>
                                         {LanguageTable.mock.mock.submit[language]}
@@ -193,7 +193,7 @@ export default function MockPage() {
                             mockInfo ? (
                                 <>
                                     <span className="text-2xl font-bold">{LanguageTable.mock.mock.quiz[language]}:{mockInfo.exam_name}</span>
-                                    <Timer duration={mockInfo.exam_duration} onTimeUp={handelOnForcedSubmitAnswer} />
+                                    <Timer duration={mockInfo.exam_duration} onTimeUp={onHandleForcedSubmitAnswer} />
                                     <span className="text-2xl font-bold">{LanguageTable.mock.mock.duration[language]}{mockInfo.exam_duration}{LanguageTable.mock.mock.minutes[language]}</span>
                                 </>
                             )
@@ -216,7 +216,7 @@ export default function MockPage() {
                                             </div>
                                             <RadioGroup
                                                 className="p-4 border rounded cursor-pointer grid grid-cols-1 md:grid-cols-2 gap-4"
-                                                onValueChange={(option_id) => handelOnAnswerChange(question.question_id, Number(option_id))}
+                                                onValueChange={(option_id) => onHandleAnswerChange(question.question_id, Number(option_id))}
                                             >
                                                 {question.question_options.map((option, oIdx) => (
                                                     <Radio
@@ -234,7 +234,7 @@ export default function MockPage() {
                                     <div className="flex justify-center">
                                         <Button
                                             className="px-6 py-2 rounded hover:bg-slate-700 transition"
-                                            onPress={handelOnSubmitAnswer}
+                                            onPress={onHandleSubmitAnswer}
                                         >
                                             {LanguageTable.mock.mock.submit[language]}
                                         </Button>

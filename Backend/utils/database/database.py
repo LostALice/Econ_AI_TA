@@ -1146,17 +1146,18 @@ class MySQLHandler(SetupMYSQL):
         self.commit()
 
         # fetch back
+        self.cursor.execute("SELECT LAST_INSERT_ID() AS last_id;")
+        last_id = self.cursor.fetchone()["last_id"]
+        self.logger.info(last_id)
+
+        # Finally, use last_id to select the row
         self.cursor.execute(
             """
             SELECT exam_id, exam_name, exam_type, exam_date, exam_duration
             FROM exams
-            WHERE exam_name= %s AND exam_type = %s AND exam_date = %s;
+            WHERE exam_id = %s
             """,
-            (
-                exam.exam_name,
-                exam.exam_type,
-                exam.exam_date,
-            ),
+            (last_id,)
         )
         inserted_exam_info = self.cursor.fetchone()
         self.logger.info(inserted_exam_info)
@@ -1386,12 +1387,13 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam
+            UPDATE {self._DATABASE}.exam
             SET enabled=%s
             WHERE exam_id=%s
             """,
             (1, exam_id),
         )
+
 
         self.sql_query_logger()
         success = self.commit()
@@ -1435,7 +1437,7 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
         self.cursor.execute(
             f"""
-            UPDATA {self._DATABASE}.exam_questions
+            UPDATE {self._DATABASE}.exam_questions
             SET enabled=%s
             WHERE question_id=%s
             """,
@@ -1544,9 +1546,7 @@ class MySQLHandler(SetupMYSQL):
                         option_text=option["option_text"],
                     )
                 )
-            image_list = (
-                question["question_images"] if question["question_images"] else []
-            )
+            image_list = question["question_images"] or []
             mock_exam_question_list_data.append(
                 MockExamQuestionsListModel(
                     exam_id=question["exam_id"],
@@ -1627,7 +1627,7 @@ class MySQLHandler(SetupMYSQL):
 
         self.cursor.execute(
             """
-            INSERT INTO exam_submission (exam_id, user_id, start_time)
+            INSERT INTO exam_submission (exam_id, user_id, submission_time)
             VALUES (%s, %s, NOW())
             """,
             (exam.exam_id, exam.user_id),
@@ -1723,7 +1723,7 @@ class MySQLHandler(SetupMYSQL):
         fetch_data = fetch_data[0]
         self.logger.debug(pformat(fetch_data))
 
-        results = ExamResultModel(
+        return ExamResultModel(
             exam_id=fetch_data["exam_id"],
             submission_id=fetch_data["submission_id"],
             user_id=fetch_data["user_id"],
@@ -1733,8 +1733,6 @@ class MySQLHandler(SetupMYSQL):
             total_correct_answers=fetch_data["total_correct_answers"],
             score_percentage=fetch_data["score_percentage"],
         )
-
-        return results
 
     def sql_query_logger(self) -> None:
         """Log sql query"""

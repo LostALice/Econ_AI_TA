@@ -122,10 +122,7 @@ async def get_mock_exams(mock_type: ExamType):
 
     mock_exam_data = mysql_client.query_mock_exam(mock_type)
 
-    if mock_exam_data is None:
-        return []
-
-    return mock_exam_data
+    return [] if mock_exam_data is None else mock_exam_data
 
 
 @router.post("/mock/new/exam/")
@@ -308,11 +305,8 @@ async def submit(submitted_exam: SubmittedExamModel) -> Optional[int]:
     logger.debug(submitted_exam)
     submission_id = mysql_client.insert_mock_exam_submitted_question(submitted_exam)
     logger.debug(submission_id)
-    
-    if submission_id:
-        return submission_id
-    else:
-        return None
+
+    return submission_id if submission_id else None
 
 
 @router.get("/mock/results/{submission_id}")
@@ -327,11 +321,8 @@ async def query_mock_exam_results(submission_id: int) -> Optional[ExamResultMode
     logger.debug(submission_id)
     exam_results = mysql_client.query_mock_exam_results(submission_id)
     logger.debug(exam_results)
-    
-    if exam_results:
-        return exam_results
-    else:
-        return None
+
+    return exam_results if exam_results else None
 
 
 @router.get("/mock/{mock_id}/")

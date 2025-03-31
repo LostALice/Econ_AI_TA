@@ -27,6 +27,7 @@
 pyvenv.cfg
 *.pyc
 *.pdf
+.dockerfile
 
 # Testing file
 # ===================
