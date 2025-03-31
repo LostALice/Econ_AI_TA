@@ -15,7 +15,11 @@ export const LoginButton = () => {
   };
 
   const navigateToChangePassword = () => {
-    router.push("/change-password");  // 不需要修改，因為路由還是 /change-password
+    router.push("/login/change-password");
+  };
+  
+  const navigateToProfile = () => {
+    router.push("/login/profile");
   };
 
   // 未登入時顯示普通登入按鈕
@@ -45,6 +49,9 @@ export const LoginButton = () => {
         </Button>
       </DropdownTrigger>
       <DropdownMenu aria-label="用戶選項">
+        <DropdownItem key="profile" textValue="個人資料" onPress={navigateToProfile}>
+          個人資料
+        </DropdownItem>
         <DropdownItem key="settings" textValue="變更密碼" onPress={navigateToChangePassword}>
           變更密碼
         </DropdownItem>
