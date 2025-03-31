@@ -6,32 +6,6 @@
 
 ### Feature
 - [x] 智能TA對話
-- [x] 模擬考試
-  - [x] 公務員高普考
-  - [x] 大一經濟學原理
-- [x] 教師上傳檔案
-- [ ] 學習目標選擇
-  - [ ] 大一經濟學原理
-  - [ ] 公務員高普考
-- [x] 語言切換(i18n)
-
-## Upload log
-
-# FCU LLM
-
-## 逢甲大學課程問答機械人
-
-### Backend .env file
-## .env File Documentation
-
-# FCU LLM
-
----
-
-## 逢甲大學課程問答機械人
-
-### Feature
-- [x] 智能TA對話
 - [ ] 模擬考試
 - [x] 教師上傳檔案
 - [ ] 學習目標選擇
@@ -41,13 +15,12 @@
 
 ## Upload log
 
-# FCU LLM
+- 31/1/2025 
+  - finished Mock Exam
 
-## 逢甲大學課程問答機械人
+---
 
-### Backend .env file
-## .env File Documentation
-
+## Backend .env File Documentation
 ### Development
 | Parameter | Value |
 | --------- | ----- |
@@ -113,18 +86,6 @@
 | Host             | localhost |
 | Port             | 19530     |
 | Vector Dimension | 1536      |
-
-
-
-
-### Frontend .env file
-| **Section** | **Variable**           | **Value**                    |
-| ----------- | ---------------------- | ---------------------------- |
-| **API URL** | NEXT_PUBLIC_API_URL    | http://localhost:8000/api/v1 |
-|             | NEXT_PUBLIC_DEBUG_MODE | true                         |
-
-
-
 
 
 ### Frontend .env file
