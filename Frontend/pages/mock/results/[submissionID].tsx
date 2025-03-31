@@ -51,7 +51,6 @@ export default function MockPage() {
                 setIsPageLoading(false)
             })
         setIsPageLoading(false)
-
     }, [submissionID])
 
     return (
@@ -87,7 +86,6 @@ export default function MockPage() {
                                             {examResult ? LanguageTable.mock.result[examResult.exam_type as keyof typeof LanguageTable.mock.result][language] : LanguageTable.mock.result.noData[language]}
                                         </span>
                                     </div>
-
                                     <div>
                                         <span className="font-semibold">
                                             {LanguageTable.mock.result.examDate[language]}

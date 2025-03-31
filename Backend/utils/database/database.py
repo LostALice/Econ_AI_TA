@@ -1394,6 +1394,7 @@ class MySQLHandler(SetupMYSQL):
             (1, exam_id),
         )
 
+
         self.sql_query_logger()
         success = self.commit()
 
