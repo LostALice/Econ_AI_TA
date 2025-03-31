@@ -1,52 +1,63 @@
 import { useContext } from "react";
-import {
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
-  Button,
-  Avatar,
-} from "@nextui-org/react";
 import { AuthContext } from "@/contexts/AuthContext";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
 
-export const LoginButton: React.FC = () => {
-  const { role, isLoggedIn, logout, userInfo } = useContext(AuthContext);
+export const LoginButton = () => {
+  const { role, userInfo, logout } = useContext(AuthContext);
   const router = useRouter();
+  const isLoggedIn = role !== "未登入";
 
   const handleLogout = () => {
     logout();
-    console.log("Logout triggered");
-    // 強制重新加載頁面，確保所有組件都重新讀取登入狀態
-    router.push("/").then(() => {
-      window.location.reload();
-    });
+    router.push("/");
   };
 
+  const navigateToChangePassword = () => {
+    router.push("/change-password");  // 不需要修改，因為路由還是 /change-password
+  };
+
+  // 未登入時顯示普通登入按鈕
+  if (!isLoggedIn) {
+    return (
+      <Button
+        as={NextLink}
+        color="primary"
+        href="/login"
+        variant="flat"
+      >
+        登入
+      </Button>
+    );
+  }
+
+  // 已登入時顯示下拉菜單
   return (
-    <>
-      {isLoggedIn ? (
-        <Dropdown>
-          <DropdownTrigger>
-            <Button variant="flat" color="primary">
-              {role}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu aria-label="User Actions">
-            <DropdownItem key="profile">
-              {userInfo?.email || "使用者"}
-            </DropdownItem>
-            <DropdownItem key="logout" color="danger" onClick={handleLogout}>
-              登出
-            </DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      ) : (
-        <Button as={NextLink} color="primary" href="/login" variant="flat">
-          登入
+    <Dropdown placement="bottom-end">
+      <DropdownTrigger>
+        <Button 
+          color="primary"
+          variant="flat"
+          className="capitalize"
+        >
+          {role} {userInfo?.studentId ? `(${userInfo.studentId})` : ''}
         </Button>
-      )}
-    </>
+      </DropdownTrigger>
+      <DropdownMenu aria-label="用戶選項">
+        <DropdownItem key="settings" textValue="變更密碼" onPress={navigateToChangePassword}>
+          變更密碼
+        </DropdownItem>
+        <DropdownItem 
+          key="logout" 
+          color="danger" 
+          textValue="登出" 
+          className="text-danger" 
+          onPress={handleLogout}
+        >
+          登出
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
   );
 };
