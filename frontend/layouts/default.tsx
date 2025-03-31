@@ -1,33 +1,33 @@
 import { Navbar } from "@/components/navbar";
 import { Link } from "@nextui-org/link";
 import { Head } from "./head";
-
-import Transition from "@/components/transition";
+import FloatingChatBot from "@/components/FloatingChatBot";
 
 export default function DefaultLayout({
-	children,
+  children,
 }: {
-	children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-	return (
-		<div className="relative flex flex-col h-screen">
-			<Head />
-			<Navbar />
-			<main className="h-screen md:h-[90svh] container mx-auto max-w-7xl px-3 flex-grow">
-				<Transition>
-					{children}
-				</Transition>
-			</main>
-			<footer className="h-[5svh] w-full flex items-center justify-center overflow-hidden">
-				<Link
-					isExternal
-					className="flex items-center gap-1 text-current px-3"
-					href="https://github.com/LostALice"
-					title="Do you know the magic?"
-				>
-					<span className="italic text-small">Copyright © Aki.no.Alice@TyrantRey 張紹謙 2022-2026</span>
-				</Link>
-			</footer>
-		</div>
-	);
+  return (
+    <div className="relative flex flex-col min-h-screen">
+      <Head />
+      <Navbar />
+      <main className="container mx-auto max-w-7xl pt-16 flex-grow px-6">
+        {children}
+      </main>
+      <footer className="w-full flex items-center justify-center py-3 bg-white/50 backdrop-blur-md dark:bg-black/50">
+        <Link
+          isExternal
+          className="flex items-center gap-1 text-current"
+          href="https://www.fcu.edu.tw/"
+          title="逢甲大學"
+        >
+          <span className="text-default-600">© 2025 逢甲大學經濟學課程智能TA</span>
+        </Link>
+      </footer>
+      
+      {/* 添加浮動聊天機器人 */}
+      <FloatingChatBot />
+    </div>
+  );
 }
