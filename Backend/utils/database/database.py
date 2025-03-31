@@ -1146,17 +1146,18 @@ class MySQLHandler(SetupMYSQL):
         self.commit()
 
         # fetch back
+        self.cursor.execute("SELECT LAST_INSERT_ID() AS last_id;")
+        last_id = self.cursor.fetchone()["last_id"]
+        self.logger.info(last_id)
+
+        # Finally, use last_id to select the row
         self.cursor.execute(
             """
             SELECT exam_id, exam_name, exam_type, exam_date, exam_duration
             FROM exams
-            WHERE exam_name= %s AND exam_type = %s AND exam_date = %s;
+            WHERE exam_id = %s
             """,
-            (
-                exam.exam_name,
-                exam.exam_type,
-                exam.exam_date,
-            ),
+            (last_id,)
         )
         inserted_exam_info = self.cursor.fetchone()
         self.logger.info(inserted_exam_info)
@@ -1625,7 +1626,7 @@ class MySQLHandler(SetupMYSQL):
 
         self.cursor.execute(
             """
-            INSERT INTO exam_submission (exam_id, user_id, start_time)
+            INSERT INTO exam_submission (exam_id, user_id, submission_time)
             VALUES (%s, %s, NOW())
             """,
             (exam.exam_id, exam.user_id),

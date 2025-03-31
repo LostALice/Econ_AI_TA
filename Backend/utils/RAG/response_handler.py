@@ -432,10 +432,17 @@ class OllamaResponser(object):
         top_p: int = 1,
         frequence_penalty: int = 1,
     ) -> tuple[str, int]:
-        self.logger.info(conversation)
+        ollama_conversation = conversation.model_dump(mode="python")["message"]
+        self.logger.info(pformat(conversation))
+
+        # Convert ConversationMessagesModel to ollama format
+        for i, x in enumerate(ollama_conversation):
+            self.logger.info(x)
+            ollama_conversation[i]["content"] = x["content"][0]["text"]
+
         response = self.ollama_client.chat(
             model=self.ollama_model_name,
-            messages=conversation.model_dump(mode="python")["message"],
+            messages=ollama_conversation,
             options={
                 "max_tokens": max_tokens,
                 "temperature": temperature,
