@@ -1,196 +1,70 @@
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-  useDisclosure,
-  Input,
-} from "@nextui-org/react";
-
-import { useState, useEffect, useContext } from "react";
-import { sha3_256 } from "js-sha3";
-import {
-  setCookie,
-  getCookie,
-  hasCookie,
-  deleteCookie,
-} from "cookies-next";
-
-import { siteConfig } from "@/config/site";
-
+import { useContext } from "react";
 import { AuthContext } from "@/contexts/AuthContext";
+import NextLink from "next/link";
+import { useRouter } from "next/router";
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
 
 export const LoginButton = () => {
-  const { role, setRole } = useContext(AuthContext);
+  const { role, userInfo, logout } = useContext(AuthContext);
+  const router = useRouter();
+  const isLoggedIn = role !== "未登入";
 
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const logoutModal = useDisclosure();
-  const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
 
-  useEffect(() => {
-    if (hasCookie("role") && hasCookie("jwt")) {
-      const userRole = getCookie("role") || "未登入";
-      setRole(userRole);
-      setIsLoggedIn(true);
-    }
-  }, []);
+  const navigateToChangePassword = () => {
+    router.push("/login/change-password");
+  };
+  
+  const navigateToProfile = () => {
+    router.push("/login/profile");
+  };
 
-  function logout() {
-    deleteCookie("role");
-    deleteCookie("jwt");
-    setIsLoggedIn(false);
-    setUsername("");
-    setPassword("");
-    const userRole = getCookie("role") || "未登入";
-    setRole(userRole);
+  // 未登入時顯示普通登入按鈕
+  if (!isLoggedIn) {
+    return (
+      <Button
+        as={NextLink}
+        color="primary"
+        href="/login"
+        variant="flat"
+      >
+        登入
+      </Button>
+    );
   }
 
-  function submitLogin() {
-    const hashed_password = sha3_256(password);
-
-    fetch(siteConfig.api_url + "/login/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: username,
-        hashed_password: hashed_password,
-      }),
-    }).then(async (response) => {
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setCookie("jwt", data.jwt_token);
-          setCookie("role", data.role);
-          const userRole = getCookie("role") || "未登入";
-          setRole(userRole);
-          setIsLoggedIn(true);
-          return true;
-        }
-        else {
-          console.log("login failed");
-          return false;
-        }
-      } else {
-        console.log("login failed");
-        return false;
-      }
-    });
-    return false;
-  }
-
+  // 已登入時顯示下拉菜單
   return (
-    <>
-      {isLoggedIn ? (
-        <>
-          <Button
-            className="bg-transparent text-medium"
-            onClick={logoutModal.onOpen}
-          >
-            {role}
-          </Button>
-          <Modal
-            isOpen={logoutModal.isOpen}
-            onOpenChange={logoutModal.onOpenChange}
-          >
-            <ModalContent>
-              {(onClose) => (
-                <>
-                  <ModalHeader className="flex flex-col gap-1">
-                    登出: {role}
-                  </ModalHeader>
-                  <ModalFooter>
-                    <Button
-                      className="border border-danger-500"
-                      color="danger"
-                      variant="light"
-                      onPress={() => {
-                        logout();
-                        onClose();
-                      }}
-                    >
-                      確認
-                    </Button>
-                    <Button color="primary" onPress={onClose}>
-                      取消
-                    </Button>
-                  </ModalFooter>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-        </>
-      ) : (
-        <>
-          <Button
-            className="bg-transparent text-medium"
-            onClick={() => {
-              setUsername("");
-              setPassword("");
-              onOpen();
-            }}
-          >
-            {role}
-          </Button>
-          <Modal
-            isOpen={isOpen}
-            onOpenChange={onOpenChange}
-            isDismissable={false}
-            isKeyboardDismissDisabled={true}
-          >
-            <ModalContent>
-              {(onClose) => (
-                <>
-                  <ModalHeader className="flex flex-col gap-1">
-                    登入
-                  </ModalHeader>
-                  <ModalBody>
-                    <Input
-                      value={username}
-                      onValueChange={setUsername}
-                      autoFocus
-                      label="使用者名稱"
-                      placeholder="輸入您的使用者名稱"
-                      variant="bordered"
-                    />
-                    <Input
-                      value={password}
-                      onValueChange={setPassword}
-                      label="密碼"
-                      placeholder="輸入您的密碼"
-                      type="password"
-                      variant="bordered"
-                    />
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button
-                      className="border border-danger-500"
-                      color="danger"
-                      variant="flat"
-                      onPress={onClose}
-                    >
-                      關閉
-                    </Button>
-                    <Button
-                      color="primary"
-                      onPress={() => {
-                        submitLogin() ? onClose() : {};
-                      }}
-                    >
-                      登入
-                    </Button>
-                  </ModalFooter>
-                </>
-              )}
-            </ModalContent>
-          </Modal>
-        </>
-      )}
-    </>
+    <Dropdown placement="bottom-end">
+      <DropdownTrigger>
+        <Button 
+          color="primary"
+          variant="flat"
+          className="capitalize"
+        >
+          {role} {userInfo?.studentId ? `(${userInfo.studentId})` : ''}
+        </Button>
+      </DropdownTrigger>
+      <DropdownMenu aria-label="用戶選項">
+        <DropdownItem key="profile" textValue="個人資料" onPress={navigateToProfile}>
+          個人資料
+        </DropdownItem>
+        <DropdownItem key="settings" textValue="變更密碼" onPress={navigateToChangePassword}>
+          變更密碼
+        </DropdownItem>
+        <DropdownItem 
+          key="logout" 
+          color="danger" 
+          textValue="登出" 
+          className="text-danger" 
+          onPress={handleLogout}
+        >
+          登出
+        </DropdownItem>
+      </DropdownMenu>
+    </Dropdown>
   );
 };

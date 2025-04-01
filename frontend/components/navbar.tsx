@@ -3,20 +3,23 @@ import {
   NavbarContent,
   NavbarBrand,
   NavbarItem,
+  Button,
 } from "@nextui-org/react";
-
-import { link as linkStyles } from "@nextui-org/theme";
 
 import { siteConfig } from "@/config/site";
 import NextLink from "next/link";
-import clsx from "clsx";
 
 import { ThemeSwitch } from "@/components/theme-switch";
 import { LoginButton } from "@/components/loginButton";
 
 import { Logo } from "@/components/icons";
+import { useContext } from "react";
+import { AuthContext } from "@/contexts/AuthContext";
 
 export const Navbar = () => {
+  const { role } = useContext(AuthContext);
+  const isLoggedIn = role !== "未登入";
+
   return (
     <NextUINavbar
       maxWidth="xl"
@@ -29,27 +32,12 @@ export const Navbar = () => {
           <NextLink className="flex justify-start items-center gap-1" href="/">
             <Logo />
             <p className="font-bold text-inherit px-1">
-              逢甲大學課程問答機械人
+               逢甲大學課程問答機械人
             </p>
           </NextLink>
         </NavbarBrand>
-
-        <div className="hidden lg:flex gap-4 justify-start ml-2">
-          {siteConfig.navItems.map((item) => (
-            <NavbarItem key={item.href}>
-              <NextLink
-                className={clsx(
-                  linkStyles({ color: "foreground" }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium"
-                )}
-                color="foreground"
-                href={item.href}
-              >
-                {item.label}
-              </NextLink>
-            </NavbarItem>
-          ))}
-        </div>
+        
+        {/* 移除 navItems 相關代碼 */}
       </NavbarContent>
 
       <NavbarContent className="flex sm:basis-full" justify="end">
