@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useContext } from "react";
-import { Button, Card, CardBody, CardFooter, CardHeader, Input, Avatar, Tooltip, Popover, PopoverTrigger, PopoverContent } from "@nextui-org/react";
+import { Button, Card, CardBody, CardFooter, CardHeader, Input, Avatar, Tooltip, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { AuthContext } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 

@@ -2,7 +2,7 @@
 // filepath: c:\Users\asus\Desktop\經濟腦TA\Econ_AFS\frontend\pages\courses\exams.tsx
 
 import { useState } from "react";
-import { Card, CardBody, Checkbox, Button, Divider } from "@nextui-org/react";
+import { Card, CardBody, Checkbox, Button, Divider } from "@heroui/react";
 import DefaultLayout from "@/layouts/default";
 
 export default function Exams() {

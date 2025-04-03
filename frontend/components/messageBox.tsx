@@ -1,10 +1,10 @@
 import { FC } from "react";
 import { siteConfig } from "@/config/site";
 
-import { Divider } from "@nextui-org/divider";
-import { Tooltip } from "@nextui-org/tooltip";
-import { Link } from "@nextui-org/link";
-import { Button, ButtonGroup } from "@nextui-org/button";
+import { Divider } from "@heroui/divider";
+import { Tooltip } from "@heroui/tooltip";
+import { Link } from "@heroui/link";
+import { Button, ButtonGroup } from "@heroui/button";
 
 import { IMessageInfo } from "@/types";
 import { useState } from "react";

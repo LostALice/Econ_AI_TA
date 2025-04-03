@@ -2,9 +2,9 @@ import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
 import { useState } from "react";
 
-import { Listbox, ListboxItem } from "@nextui-org/listbox";
-import { Spinner } from "@nextui-org/spinner";
-import { Link } from "@nextui-org/link";
+import { Listbox, ListboxItem } from "@heroui/listbox";
+import { Spinner } from "@heroui/spinner";
+import { Link } from "@heroui/link";
 import {
   Table,
   TableHeader,
@@ -12,7 +12,7 @@ import {
   TableColumn,
   TableRow,
   TableCell,
-} from "@nextui-org/table";
+} from "@heroui/table";
 
 import { FileUploadButton } from "@/components/fileUpload-btn";
 

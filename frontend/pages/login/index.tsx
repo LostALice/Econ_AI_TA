@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { useRouter } from "next/router";
 import NextLink from "next/link";
 import { AuthContext } from "@/contexts/AuthContext";
-import { Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem } from "@nextui-org/react";
+import { Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem } from "@heroui/react";
 import DefaultLayout from "@/layouts/default";
 
 // 身分別選項

@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { AuthContext } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import DefaultLayout from "@/layouts/default";
-import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Input } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Input } from "@heroui/react";
 import { PasswordChangeProvider, usePasswordChange } from "@/contexts/PasswordChangeContext";
 
 // 實際密碼變更表單組件

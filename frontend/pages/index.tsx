@@ -6,9 +6,9 @@ import { useRouter } from "next/router";
 
 import NextLink from "next/link";
 
-import { Card, CardBody } from "@nextui-org/card";
-import { Image } from "@nextui-org/image";
-import { Button } from "@nextui-org/react";
+import { Card, CardBody } from "@heroui/card";
+import { Image } from "@heroui/image";
+import { Button } from "@heroui/react";
 
 // 更新學生身份的內容，將基於課程的布局改為功能導向的布局
 const roleSpecificContent = {
@@ -113,13 +113,13 @@ export default function MainPage() {
   const isLoggedIn = role !== "未登入";
 
   // 根據角色獲取對應內容
-  const currentRoleContent = roleSpecificContent[role as keyof typeof roleSpecificContent] || 
-                           roleSpecificContent["未登入"];
+  const currentRoleContent = roleSpecificContent[role as keyof typeof roleSpecificContent] ||
+    roleSpecificContent["未登入"];
 
   // 卡片點擊事件處理
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>, href: string) => {
     if (!href) return; // 如果沒有href，不做任何操作
-    
+
     if (!isLoggedIn) {
       e.preventDefault();
       e.stopPropagation();
@@ -136,12 +136,12 @@ export default function MainPage() {
           <h1 className={title()}>逢甲大學經濟學課程智能TA</h1>
         </div>
       </section>
-      
+
       {/* 動態顯示針對當前角色的歡迎訊息 */}
       <section className="flex flex-col items-center justify-center p-4">
         <div className="inline-block text-center justify-center w-full">
           {isLoggedIn && (
-            <h2 className="text-xl font-medium text-blue-600 dark:text-blue-400 mb-2 text-center">
+            <h2 className="text-xl font-medium mb-2 text-center">
               {`歡迎，${role}${userInfo?.studentId ? ` (${userInfo.studentId})` : ''}`}
             </h2>
           )}
@@ -149,20 +149,19 @@ export default function MainPage() {
           <p className="text-lg text-center">{currentRoleContent.description}</p>
         </div>
       </section>
-      
+
       {/* 功能卡片 - 適用於所有已登入角色 */}
       {isLoggedIn && currentRoleContent.features && currentRoleContent.features.length > 0 && (
         <section className="items-center justify-center p-8">
           <h2 className="text-xl font-bold mb-6 text-center">
             {role === "學生" ? "學習資源" : "管理功能"}
           </h2>
-          <div className={`grid gap-4 grid-cols-1 ${
-            role === "學生" 
-              ? "md:grid-cols-2 lg:grid-cols-4" 
-              : role === "助教" 
-                ? "md:grid-cols-2" 
-                : "md:grid-cols-3"
-          } max-w-6xl mx-auto`}>
+          <div className={`grid gap-4 grid-cols-1 ${role === "學生"
+            ? "md:grid-cols-2 lg:grid-cols-4"
+            : role === "助教"
+              ? "md:grid-cols-2"
+              : "md:grid-cols-3"
+            } max-w-6xl mx-auto`}>
             {currentRoleContent.features.map((feature) => (
               <Card
                 key={feature.href}
@@ -173,46 +172,46 @@ export default function MainPage() {
                 <div className={`${feature.color} h-2 w-full`}></div>
                 <CardBody className="p-6">
                   <div className="text-center mb-4">
-                    <div className={`text-4xl inline-block p-4 rounded-full bg-gray-100 dark:bg-gray-800 text-center`}>
+                    <div className={`text-4xl inline-block p-4 rounded-full text-center`}>
                       {feature.icon}
                     </div>
                   </div>
                   <h3 className="font-bold text-xl text-center mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-center">{feature.description}</p>
+                  <p className="text-center">{feature.description}</p>
                 </CardBody>
               </Card>
             ))}
           </div>
         </section>
       )}
-      
+
       {/* 如果未登入，顯示登入提示區域 */}
       {!isLoggedIn && (
         <section className="items-center justify-center pb-8">
-          <div className="text-center bg-blue-50 dark:bg-slate-700 p-10 rounded-xl shadow-md border border-blue-100 dark:border-slate-600">
-            <h3 className="text-2xl font-bold mb-6 text-blue-800 dark:text-blue-200">請登入或註冊以使用系統功能</h3>
-            <p className="mb-8 text-lg text-gray-700 dark:text-gray-200 mx-auto max-w-2xl">
+          <div className="text-center p-10 rounded-xl shadow-md border">
+            <h3 className="text-2xl font-bold mb-6">請登入或註冊以使用系統功能</h3>
+            <p className="mb-8 text-lg mx-auto max-w-2xl">
               登入或註冊後，您將可以使用經濟學課程智能TA的所有功能。
             </p>
-            
+
             <div className="flex justify-center space-x-8">
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 variant="shadow"
                 size="lg"
-                as={NextLink} 
+                as={NextLink}
                 href="/login"
-                className="text-lg font-semibold px-10 py-6 bg-blue-600 hover:bg-blue-700"
+                className="text-lg font-semibold px-10 py-6 "
               >
                 登入系統
               </Button>
-              <Button 
-                color="secondary" 
-                variant="shadow" 
+              <Button
+                color="secondary"
+                variant="shadow"
                 size="lg"
-                as={NextLink} 
+                as={NextLink}
                 href="/register"
-                className="text-lg font-semibold px-10 py-6 bg-purple-600 hover:bg-purple-700 text-white"
+                className="text-lg font-semibold px-10 py-6 "
               >
                 註冊帳號
               </Button>

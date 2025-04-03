@@ -13,11 +13,11 @@ import {
     Divider,
     RadioGroup,
     Radio,
-} from "@nextui-org/react";
-import { Listbox, ListboxItem } from "@nextui-org/react";
-import { Spinner } from "@nextui-org/react";
-import { Link } from "@nextui-org/react";
-import { Button } from "@nextui-org/react";
+} from "@heroui/react";
+import { Listbox, ListboxItem } from "@heroui/react";
+import { Spinner } from "@heroui/react";
+import { Link } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { CsvMngButton } from "@/components/csvMng-btn";
 
 interface FileData {

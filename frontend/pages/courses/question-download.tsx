@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardBody, Checkbox, Button, Divider } from "@nextui-org/react";
+import { Card, CardBody, Checkbox, Button, Divider } from "@heroui/react";
 import DefaultLayout from "@/layouts/default";
 
 export default function QuestionDownload() {

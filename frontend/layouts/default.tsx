@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/navbar";
-import { Link } from "@nextui-org/link";
+import { Link } from "@heroui/link";
 import { Head } from "./head";
 import FloatingChatBot from "@/components/FloatingChatBot";
 

@@ -4,11 +4,11 @@ import { MessageBox } from "@/components/messageBox";
 import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
 
-import { Card, CardHeader, CardBody } from "@nextui-org/card";
-import { ScrollShadow } from "@nextui-org/scroll-shadow";
-import { Spinner } from "@nextui-org/spinner";
-import { Textarea } from "@nextui-org/input";
-import { Button } from "@nextui-org/button";
+import { Card, CardHeader, CardBody } from "@heroui/card";
+import { ScrollShadow } from "@heroui/scroll-shadow";
+import { Spinner } from "@heroui/spinner";
+import { Textarea } from "@heroui/input";
+import { Button } from "@heroui/button";
 
 import { askQuestion } from "@/pages/api/api";
 import { getCookie } from "cookies-next";

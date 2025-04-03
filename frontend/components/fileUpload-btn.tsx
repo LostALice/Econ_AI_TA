@@ -6,7 +6,7 @@ import {
   ModalFooter,
   Button,
   useDisclosure,
-} from "@nextui-org/react"
+} from "@heroui/react"
 import { useEffect, useState, useContext } from "react"
 
 import { getCookie } from "cookies-next"

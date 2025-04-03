@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import { AuthContext } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import DefaultLayout from "@/layouts/default";
-import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Input, Chip } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Input, Chip } from "@heroui/react";
 
 export default function ProfilePage() {
   const { userInfo, isLoggedIn, role } = useContext(AuthContext);

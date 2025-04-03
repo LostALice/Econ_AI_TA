@@ -4,7 +4,7 @@ import {
   NavbarBrand,
   NavbarItem,
   Button,
-} from "@nextui-org/react";
+} from "@heroui/react";
 
 import { siteConfig } from "@/config/site";
 import NextLink from "next/link";

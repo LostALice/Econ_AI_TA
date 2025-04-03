@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { AuthContext } from "@/contexts/AuthContext";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
-import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
+import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@heroui/react";
 
 export const LoginButton = () => {
   const { role, userInfo, logout } = useContext(AuthContext);

@@ -6,9 +6,9 @@ import {
     ModalFooter,
     Button,
     useDisclosure,
-  } from "@nextui-org/react"
+  } from "@heroui/react"
   import { useEffect, useState } from "react"
-  import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/table"
+  import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@heroui/table"
   
   interface CsvMngButtonProps {
     onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;

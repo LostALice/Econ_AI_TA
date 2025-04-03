@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import NextLink from "next/link";
-import { Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem } from "@nextui-org/react";
+import { Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem } from "@heroui/react";
 import DefaultLayout from "@/layouts/default";
 
 // 身分別選項
@@ -33,7 +33,7 @@ export default function RegisterPage() {
     studentId: "",
     department: ""
   });
-  
+
   // 錯誤訊息狀態
   const [errors, setErrors] = useState({
     role: "",
@@ -43,18 +43,18 @@ export default function RegisterPage() {
     studentId: "",
     department: ""
   });
-  
+
   // 表單提交狀態
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
-  
+
   const router = useRouter();
 
   // 處理表單輸入變更
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
-    
+
     // 清除該字段的錯誤訊息
     if (errors[field as keyof typeof errors]) {
       setErrors({ ...errors, [field]: "" });
@@ -77,7 +77,7 @@ export default function RegisterPage() {
       studentId: "",
       department: ""
     };
-    
+
     let isValid = true;
 
     // 驗證身分別
@@ -85,7 +85,7 @@ export default function RegisterPage() {
       newErrors.role = "請選擇身分別";
       isValid = false;
     }
-    
+
     // 驗證電子郵件
     if (!formData.email) {
       newErrors.email = "請輸入電子郵件";
@@ -94,7 +94,7 @@ export default function RegisterPage() {
       newErrors.email = "請輸入有效的電子郵件格式";
       isValid = false;
     }
-    
+
     // 驗證密碼
     if (!formData.password) {
       newErrors.password = "請輸入密碼";
@@ -103,25 +103,25 @@ export default function RegisterPage() {
       newErrors.password = "密碼長度至少需要8個字元";
       isValid = false;
     }
-    
+
     // 驗證確認密碼
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "兩次輸入的密碼不一致";
       isValid = false;
     }
-    
+
     // 驗證學號
     if (!formData.studentId) {
       newErrors.studentId = "請輸入學號";
       isValid = false;
     }
-    
+
     // 驗證科系
     if (!formData.department) {
       newErrors.department = "請選擇科系";
       isValid = false;
     }
-    
+
     setErrors(newErrors);
     return isValid;
   };
@@ -129,19 +129,19 @@ export default function RegisterPage() {
   // 提交表單 - 替換原始的 handleSubmit 函數
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     // 模擬後端處理時間
     setTimeout(() => {
       try {
         // 從本地儲存獲取現有用戶
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        
+
         // 檢查郵箱是否已被註冊
         const existingUser = users.find((user: any) => user.email === formData.email);
         if (existingUser) {
@@ -149,7 +149,7 @@ export default function RegisterPage() {
           setIsLoading(false);
           return;
         }
-        
+
         // 檢查學號是否已被註冊
         const existingStudentId = users.find((user: any) => user.studentId === formData.studentId);
         if (existingStudentId) {
@@ -157,7 +157,7 @@ export default function RegisterPage() {
           setIsLoading(false);
           return;
         }
-        
+
         // 創建新用戶
         const newUser = {
           id: Date.now().toString(),
@@ -168,14 +168,14 @@ export default function RegisterPage() {
           department: formData.department,
           createdAt: new Date().toISOString()
         };
-        
+
         // 添加到用戶列表
         users.push(newUser);
         localStorage.setItem('users', JSON.stringify(users));
-        
+
         // 顯示成功訊息
         alert("註冊成功！請使用您的電子郵件和密碼登入。");
-        
+
         // 重定向到登入頁面
         router.push("/login");
       } catch (error) {
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                   </SelectItem>
                 ))}
               </Select>
-              
+
               {/* 電子郵件 */}
               <Input
                 label="電子郵件"
@@ -228,7 +228,7 @@ export default function RegisterPage() {
                 errorMessage={errors.email}
                 type="email"
               />
-              
+
               {/* 密碼 */}
               <Input
                 label="密碼"
@@ -240,8 +240,8 @@ export default function RegisterPage() {
                 errorMessage={errors.password}
                 type={isPasswordVisible ? "text" : "password"}
                 endContent={
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={togglePasswordVisibility}
                     className="focus:outline-none"
                   >
@@ -249,7 +249,7 @@ export default function RegisterPage() {
                   </button>
                 }
               />
-              
+
               {/* 確認密碼 */}
               <Input
                 label="確認密碼"
@@ -261,8 +261,8 @@ export default function RegisterPage() {
                 errorMessage={errors.confirmPassword}
                 type={isConfirmPasswordVisible ? "text" : "password"}
                 endContent={
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={toggleConfirmPasswordVisibility}
                     className="focus:outline-none"
                   >
@@ -270,7 +270,7 @@ export default function RegisterPage() {
                   </button>
                 }
               />
-              
+
               {/* 學號 */}
               <Input
                 label="學號"
@@ -281,7 +281,7 @@ export default function RegisterPage() {
                 isInvalid={!!errors.studentId}
                 errorMessage={errors.studentId}
               />
-              
+
               {/* 科系 */}
               <Select
                 label="科系"
@@ -298,18 +298,18 @@ export default function RegisterPage() {
                   </SelectItem>
                 ))}
               </Select>
-              
+
               {/* 提交按鈕 */}
               <div className="flex flex-col space-y-4">
-                <Button 
-                  type="submit" 
-                  color="primary" 
+                <Button
+                  type="submit"
+                  color="primary"
                   isLoading={isLoading}
                   className="w-full"
                 >
                   註冊
                 </Button>
-                
+
                 <div className="text-center text-sm text-gray-500">
                   已經有帳號？{" "}
                   <NextLink href="/login" className="text-blue-600 hover:underline">
