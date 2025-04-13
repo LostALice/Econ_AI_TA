@@ -8,7 +8,7 @@ import {
     DrawerContent,
     DrawerHeader,
     DrawerBody,
-    useDisclosure
+    useDisclosure,
 } from "@heroui/react"
 
 import { IExamsInfoForStudent } from "@/types/mock/index";
@@ -33,10 +33,6 @@ export default function MockPage() {
         const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language]
         setRole(userRole)
     })
-
-    const getExamList = () => {
-
-    }
 
     const handleFetchExamTypeList = async (examType: string) => {
         const exam_data = await getTargetedExamTypeList(examType)
@@ -75,12 +71,28 @@ export default function MockPage() {
             </Drawer>
             <div className="flex items-center justify-center h-[90vh]">
                 <div className="flex flex-col justify-center items-center h-full w-3/6 gap-5">
+                    {
+                        role == LanguageTable.nav.role.unsigned[language] ?
+                            (
+                                <Button
+                                    className="border text-medium border-none"
+                                    as={Link}
+                                    href="/login"
+                                >
+                                    {LanguageTable.mock.index.loginFirst[language]}
+                                </Button>
+
+                            ) : (
+                                <></>
+                            )
+                    }
                     <Button
                         onPress={() => {
                             handleFetchExamTypeList("basic")
                             onOpenDrawer()
                         }}
                         className="w-full py-3 transition duration-200 text-center border rounded text-xl"
+                        isDisabled={role == LanguageTable.nav.role.unsigned[language] ? true : false}
                     >
                         {LanguageTable.mock.index.basic[language]}
                     </Button>
@@ -89,12 +101,13 @@ export default function MockPage() {
                             handleFetchExamTypeList("cse")
                             onOpenDrawer()
                         }}
+                        isDisabled={role == LanguageTable.nav.role.unsigned[language] ? true : false}
                         className="w-full py-3 transition duration-200 text-center border rounded text-xl"
                     >
                         {LanguageTable.mock.index.cse[language]}
                     </Button>
                     <Button
-                        isDisabled={role == "Admin" ? false : true}
+                        isDisabled={role == !LanguageTable.nav.role.admin[language]}
                         as={Link}
                         href="/mock/create"
                         underline="hover"

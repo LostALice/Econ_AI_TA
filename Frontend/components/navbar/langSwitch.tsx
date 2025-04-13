@@ -27,28 +27,26 @@ export const LangSwitch = () => {
     }
 
     return (
-        <div className="flex items-center">
-            <Dropdown>
-                <DropdownTrigger>
-                    <Button
-                        className="border bg-transparent text-medium border-none"
-                    >
-                        {displayLanguage(language)}
-                    </Button>
-                </DropdownTrigger>
-                <DropdownMenu
-                    aria-label="Select Language"
-                    disallowEmptySelection
-                    selectionMode="single"
-                    selectedKeys={language}
-                    onSelectionChange={(keys) => {
-                        setLang(keys.currentKey?.toString() as TLanguage);
-                    }}
+        <Dropdown>
+            <DropdownTrigger>
+                <Button
+                    className="border bg-transparent text-medium border-none"
                 >
-                    <DropdownItem key="en">English</DropdownItem>
-                    <DropdownItem key="zh">中文</DropdownItem>
-                </DropdownMenu>
-            </Dropdown>
-        </div >
+                    {displayLanguage(language)}
+                </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+                aria-label="Select Language"
+                disallowEmptySelection
+                selectionMode="single"
+                selectedKeys={language}
+                onSelectionChange={(keys) => {
+                    setLang(keys.currentKey?.toString() as TLanguage);
+                }}
+            >
+                <DropdownItem key="en">English</DropdownItem>
+                <DropdownItem key="zh">中文</DropdownItem>
+            </DropdownMenu>
+        </Dropdown>
     );
 }
