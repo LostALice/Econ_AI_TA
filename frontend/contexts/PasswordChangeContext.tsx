@@ -1,6 +1,8 @@
 import { createContext, useState, useContext } from "react";
 import { useRouter } from "next/router";
 import { AuthContext } from "@/contexts/AuthContext";
+import { LangContext } from "@/contexts/LangContext";
+import { LanguageTable } from "@/i18n";
 
 interface PasswordChangeContextType {
   isLoading: boolean;
@@ -32,6 +34,8 @@ export const PasswordChangeContext = createContext<PasswordChangeContextType | n
 
 export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userInfo, logout } = useContext(AuthContext);
+  const { language, setLang } = useContext(LangContext);
+
   const router = useRouter();
   const [formData, setFormData] = useState({
     currentPassword: "",
@@ -80,20 +84,20 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
     const newErrors = { ...errors };
 
     if (!formData.currentPassword.trim()) {
-      newErrors.currentPassword = "請輸入目前密碼";
+      newErrors.currentPassword = LanguageTable.password.error.inputPassword[language];
       valid = false;
     }
 
     if (!formData.newPassword.trim()) {
-      newErrors.newPassword = "請輸入新密碼";
+      newErrors.newPassword = LanguageTable.password.error.newPassword[language];
       valid = false;
     } else if (formData.newPassword.length < 8) {
-      newErrors.newPassword = "新密碼長度必須至少為 8 個字符";
+      newErrors.newPassword = LanguageTable.password.error.atLeast8Char[language];
       valid = false;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = "確認密碼與新密碼不符";
+      newErrors.confirmPassword = LanguageTable.password.error.notMatch[language];
       valid = false;
     }
 
@@ -113,76 +117,78 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
     try {
       // 模擬 API 調用延遲
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // 1. 從 localStorage 中獲取所有用戶
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      
+
       // 2. 獲取當前登入用戶信息
       const currentUserData = localStorage.getItem('currentUser');
       if (!currentUserData) {
         setSubmitResult({
           success: false,
-          message: "無法獲取用戶信息，請重新登入。"
+          message: LanguageTable.password.error.userNotFound[language]
         });
         setIsLoading(false);
         return;
       }
-      
+
       const currentUser = JSON.parse(currentUserData);
-      
+
       // 3. 在所有用戶中找到當前用戶
-      const userIndex = users.findIndex((u: any) => 
-        u.id === currentUser.id && 
+      const userIndex = users.findIndex((u: any) =>
+        u.id === currentUser.id &&
         u.email === currentUser.email
       );
-      
+
       if (userIndex === -1) {
         setSubmitResult({
           success: false,
-          message: "無法找到用戶信息，請重新登入。"
+          message: LanguageTable.password.error.userNotFound[language]
         });
         setIsLoading(false);
         return;
       }
-      
+
       // 4. 驗證當前密碼是否正確
       if (formData.currentPassword === users[userIndex].password) {
         // 5. 更新用戶密碼
         users[userIndex].password = formData.newPassword;
-        
+
         // 6. 保存更新後的用戶列表
         localStorage.setItem('users', JSON.stringify(users));
-        
+
         // 7. 顯示成功消息
         setSubmitResult({
           success: true,
-          message: "密碼已成功更改！系統將在3秒後登出，請使用新密碼重新登入。"
+          message: LanguageTable.password.success[language]
         });
-        
+
         // 8. 清空表單
         setFormData({
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
         });
-        
+
         // 9. 延遲登出
         setTimeout(() => {
           logout();
-          router.push('/login?message=密碼已更改，請使用新密碼登入');
+          // router.push('/login?message=密碼已更改，請使用新密碼登入');
+          router.push("/login");
         }, 3000);
       } else {
         // 10. 密碼不正確
         setSubmitResult({
           success: false,
-          message: "當前密碼不正確，請重新輸入。"
+          message: LanguageTable.password.error.incorrect[language]
         });
       }
     } catch (error) {
       console.error("密碼更改失敗:", error);
       setSubmitResult({
         success: false,
-        message: "密碼更改失敗，請稍後再試。"
+        message: LanguageTable.password.error.cantChange[language]
+
       });
     } finally {
       setIsLoading(false);

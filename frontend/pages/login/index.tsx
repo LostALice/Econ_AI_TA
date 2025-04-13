@@ -1,50 +1,71 @@
-import { useState, useContext } from "react";
-import { useRouter } from "next/router";
-import NextLink from "next/link";
-import { AuthContext } from "@/contexts/AuthContext";
-import { Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem } from "@heroui/react";
 import DefaultLayout from "@/layouts/default";
 
-// 身分別選項
-const roleOptions = [
-  { label: "學生", value: "student" },
-  { label: "助教", value: "ta" },
-  { label: "教師", value: "teacher" }
-];
+import { useDisclosure, Button, Input, Card, CardBody, CardHeader, Divider, Select, SelectItem, Form, addToast } from "@heroui/react";
+import { useState, useContext, useEffect } from "react";
+import { useRouter } from "next/router";
+import { setCookie, getCookie, deleteCookie, hasCookie } from "cookies-next";
+import { sha3_256 } from "js-sha3";
+import { siteConfig } from "@/config/site";
+
+import { LanguageTable } from "@/i18n";
+import { AuthContext } from "@/contexts/AuthContext";
+import { LangContext } from "@/contexts/LangContext";
+import { PasswordInput } from "@/components/login/password/passwordInput";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { role, setRole } = useContext(AuthContext);
+  const { language, setLang } = useContext(LangContext);
+
+  // 身分別選項
+  const roleOptions = [
+    { label: "學生", value: "student" },
+    { label: "助教", value: "ta" },
+    { label: "教師", value: "teacher" }
+  ];
+
   // 表單狀態
   const [formData, setFormData] = useState({
     role: "",
-    email: "",
+    username: "", // Changed from username to email based on original form
     password: "",
   });
-  
+
   // 錯誤訊息狀態
   const [errors, setErrors] = useState({
     role: "",
-    email: "",
+    username: "",
     password: "",
   });
-  
+
   // 登入相關狀態
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [loginError, setLoginError] = useState("");
-  
-  // 路由器和認證上下文
-  const router = useRouter();
-  const { setRole } = useContext(AuthContext);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+
+  // Modal controls
+  const logoutModal = useDisclosure();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    if (hasCookie("role") && hasCookie("jwt")) {
+      const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
+      setRole(userRole);
+      setIsLoggedIn(true);
+      router.push("/"); // Redirect to home if already logged in
+    }
+  }, [setRole, language, router]);
 
   // 處理表單輸入變更
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
-    
+
     // 清除該字段的錯誤訊息
     if (errors[field as keyof typeof errors]) {
       setErrors({ ...errors, [field]: "" });
     }
-    
+
     // 清除登入錯誤
     if (loginError) {
       setLoginError("");
@@ -55,10 +76,10 @@ export default function LoginPage() {
   const validateForm = () => {
     const newErrors = {
       role: "",
-      email: "",
+      username: "",
       password: "",
     };
-    
+
     let isValid = true;
 
     // 驗證身分別
@@ -66,128 +87,153 @@ export default function LoginPage() {
       newErrors.role = "請選擇身分別";
       isValid = false;
     }
-    
+
     // 驗證電子郵件
-    if (!formData.email) {
-      newErrors.email = "請輸入電子郵件";
+    if (!formData.username) {
+      newErrors.username = "請輸入電子郵件";
       isValid = false;
     }
-    
+
     // 驗證密碼
     if (!formData.password) {
       newErrors.password = "請輸入密碼";
       isValid = false;
     }
-    
+
     setErrors(newErrors);
     return isValid;
   };
 
-  // 提交表單
-  const handleSubmit = (e: React.FormEvent) => {
+  // 登出功能
+  const logout = () => {
+    deleteCookie("role");
+    deleteCookie("jwt");
+    setIsLoggedIn(false);
+    setFormData({
+      role: "",
+      username: "",
+      password: "",
+    });
+    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
+    setRole(userRole);
+    router.push("/login");
+  };
+
+  // 提交表單 - 使用API進行身份驗證
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
     setLoginError("");
-    
-    // 模擬後端處理時間
-    setTimeout(() => {
-      try {
-        // 從本地儲存獲取用戶
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        
-        // 尋找符合條件的用戶
-        const user = users.find((u: any) => 
-          u.email === formData.email && 
-          u.password === formData.password &&
-          u.role === formData.role
-        );
-        
-        // 在找到匹配用戶後
-        if (user) {
+
+    try {
+      // 使用SHA3-256哈希密碼
+      const hashed_password = sha3_256(formData.password);
+
+      const response = await fetch(siteConfig.api_url + "/authorization/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: formData.username,  // Using username as username
+          hashed_password: hashed_password,
+          role: formData.role,  // Added role to the request
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.success) {
           // 登入成功
-          console.log("登入成功:", user);
-          
-          // 儲存已登入用戶資訊到 localStorage，確保包含完整的原始角色值
-          const userToStore = {
-            id: user.id,
-            email: user.email,
-            role: user.role, // 這是原始的角色值如 'student', 'ta', 'teacher'
-            studentId: user.studentId,
-            department: user.department
-          };
-          localStorage.setItem('currentUser', JSON.stringify(userToStore));
-          console.log("保存到 localStorage:", userToStore);
-          
-          // 更新認證上下文
-          setRole(getRoleDisplayName(user.role));
-          
+          setCookie("jwt", data.jwt_token);
+          setCookie("role", data.role);
+
+          const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
+          setRole(userRole);
+          setIsLoggedIn(true);
+
           // 顯示成功訊息並導向首頁
-          alert("登入成功！歡迎回來。");
+          // alert("登入成功！歡迎回來。");
+          addToast({
+            color: "success",
+            title: LanguageTable.login.loginSuccess[language]
+          })
           router.push("/");
         } else {
-          // 查找僅匹配電子郵件的用戶
-          const emailMatch = users.find((u: any) => u.email === formData.email);
-          
-          if (emailMatch) {
-            if (emailMatch.role !== formData.role) {
-              setLoginError("身分別不符合，請選擇正確的身分。");
-            } else {
-              setLoginError("密碼不正確，請重新輸入。");
-            }
-          } else {
-            setLoginError("找不到此電子郵件的帳號，請確認或註冊新帳號。");
-          }
+          // API返回成功但登入失敗
+          setLoginError(data.message || LanguageTable.login.loginSuccess[language]);
+          addToast({
+            color: "warning",
+            title: LanguageTable.login.loginFail[language],
+          });
         }
-      } catch (error) {
-        console.error("登入處理錯誤:", error);
-        setLoginError("登入過程發生錯誤，請稍後再試。");
-      } finally {
-        setIsLoading(false);
+      } else {
+        // API請求失敗
+        setLoginError(LanguageTable.login.loginSuccess[language]);
+        addToast({
+          color: "warning",
+          title: LanguageTable.login.loginFail[language],
+        });
+        console.error("API request failed:", response.status);
       }
-    }, 1000); // 模擬 1 秒的處理時間
-  };
-
-  // 將角色值轉換為顯示名稱
-  const getRoleDisplayName = (roleValue: string): string => {
-    switch (roleValue) {
-      case 'student':
-        return '學生';
-      case 'ta':
-        return '助教';
-      case 'teacher':
-        return '教師';
-      default:
-        return '未登入';
+    } catch (error) {
+      console.error("登入處理錯誤:", error);
+      addToast({
+        color: "warning",
+        title: LanguageTable.login.loginFail[language],
+      });
+      setLoginError("登入過程發生錯誤，請稍後再試。");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
+  // const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
+
+  // If already logged in, we could show different content or redirect
+  if (isLoggedIn) {
+    return (
+      <DefaultLayout>
+        <div className="flex justify-center items-center py-10 px-4 min-h-[calc(100vh-14rem)]">
+          <Card className="max-w-md w-full">
+            <CardHeader className="flex flex-col items-center gap-3">
+              <h1 className="text-2xl font-bold">{LanguageTable.login.logged[language]}</h1>
+            </CardHeader>
+            <CardBody className="flex flex-col items-center">
+              <p className="mb-4">{LanguageTable.login.backHome[language]}</p>
+              <Button color="primary" onPress={() => router.push("/")}>
+                {LanguageTable.login.logged[language]}
+              </Button>
+              <Button color="danger" className="mt-2" onPress={() => logoutModal.onOpen()}>
+                {LanguageTable.login.logout[language]}
+              </Button>
+            </CardBody>
+          </Card>
+        </div>
+      </DefaultLayout>
+    );
+  }
 
   return (
     <DefaultLayout>
       <div className="flex justify-center items-center py-10 px-4 min-h-[calc(100vh-14rem)]">
         <Card className="max-w-md w-full">
           <CardHeader className="flex flex-col items-center gap-3">
-            <h1 className="text-2xl font-bold">登入系統</h1>
+            <h1 className="text-2xl font-bold">{LanguageTable.login.system[language]}</h1>
           </CardHeader>
           <Divider />
           <CardBody>
-            {loginError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-5">
-                {loginError}
-              </div>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <Form onSubmit={handleSubmit} className="space-y-6">
               {/* 身分別選擇 */}
               <Select
-                label="身分別"
-                placeholder="請選擇您的身分"
+                label={LanguageTable.login.SelectRole[language]}
+                placeholder={LanguageTable.login.inputRole[language]}
                 selectedKeys={formData.role ? [formData.role] : []}
                 onChange={(e) => handleChange("role", e.target.value)}
                 isRequired
@@ -195,64 +241,47 @@ export default function LoginPage() {
                 errorMessage={errors.role}
               >
                 {roleOptions.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label}
+                  <SelectItem key={role.value}>
+                    {LanguageTable.login.role[role.value as keyof typeof LanguageTable.login.role][language]}
                   </SelectItem>
                 ))}
               </Select>
-              
-              {/* 電子郵件 */}
+
+              {/* 使用者名稱 */}
               <Input
-                label="電子郵件"
-                placeholder="請輸入您的電子郵件"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
+                label={LanguageTable.login.username[language]}
+                placeholder={LanguageTable.login.inputUsername[language]}
+                value={formData.username}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("username", e.target.value)}
                 isRequired
-                isInvalid={!!errors.email}
-                errorMessage={errors.email}
-                type="email"
+                isInvalid={!!errors.username}
+                errorMessage={errors.username}
+                type="username"
               />
-              
+
               {/* 密碼 */}
-              <Input
-                label="密碼"
-                placeholder="請輸入密碼"
+              <PasswordInput
+                label={LanguageTable.login.password[language]}
+                placeholder={LanguageTable.login.inputPassword[language]}
                 value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                isRequired
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("password", e.target.value)}
                 isInvalid={!!errors.password}
                 errorMessage={errors.password}
-                type={isPasswordVisible ? "text" : "password"}
-                endContent={
-                  <button 
-                    type="button" 
-                    onClick={togglePasswordVisibility}
-                    className="focus:outline-none"
-                  >
-                    {isPasswordVisible ? "隱藏" : "顯示"}
-                  </button>
-                }
-              />
-              
+              >
+              </PasswordInput>
+
               {/* 提交按鈕 */}
               <div className="flex flex-col space-y-4 pt-2">
-                <Button 
-                  type="submit" 
-                  color="primary" 
+                <Button
+                  type="submit"
+                  color="primary"
                   isLoading={isLoading}
                   className="w-full"
                 >
-                  登入
+                  {LanguageTable.nav.login.login[language]}
                 </Button>
-                
-                <div className="text-center text-sm text-gray-500">
-                  還沒有帳號？{" "}
-                  <NextLink href="/register" className="text-blue-600 hover:underline">
-                    立即註冊
-                  </NextLink>
-                </div>
               </div>
-            </form>
+            </Form>
           </CardBody>
         </Card>
       </div>

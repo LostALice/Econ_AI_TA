@@ -1,5 +1,23 @@
-now=$(date +"%s")
+#!/bin/bash
+# Code by AkinoAlice@TyrantRey
 
-docker image build -t llm_backend:$now .
+REMOTE_URL=$(git config --get remote.origin.url)
 
-echo "\e[1;35m Build successfully \e[0m"
+REPO_NAME=$(basename -s .git "$REMOTE_URL")
+
+IMAGE_NAME="${REPO_NAME,,}"
+IMAGE_NAME="${IMAGE_NAME//-/_}"
+IMAGE_NAME="${IMAGE_NAME}_backend"
+
+IMAGE_TAG=$(date +"%Y%m%d-%H%M%S")
+
+echo "Building image: ${IMAGE_NAME}:${IMAGE_TAG}"
+
+docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+
+if [ $? -eq 0 ]; then
+    echo "Docker image ${IMAGE_NAME}:${IMAGE_TAG} built successfully."
+else
+    echo "Docker image build failed."
+    exit 1
+fi
