@@ -75,8 +75,42 @@ export const LanguageTable = {
         zh: "學生",
         en: "Student",
       },
+      ta: {
+        zh: "助教",
+        en: "Teacher Assistant",
+      },
+      teacher: {
+        zh: "教師",
+        en: "Teacher",
+      },
     },
-    loginForm: {
+    login: {
+      loginBtn: {
+        login: {
+          zh: "登入",
+          en: "Login",
+        },
+        logout: {
+          zh: "登出",
+          en: "Logout",
+        },
+        confirm: {
+          zh: "確認",
+          en: "Confirm",
+        },
+        cancel: {
+          zh: "取消",
+          en: "Cancel",
+        },
+        profile: {
+          zh: "個人資料",
+          en: "Profile",
+        },
+        settings: {
+          zh: "變更密碼",
+          en: "Settings",
+        },
+      },
       username: {
         username: {
           zh: "使用者名稱",
@@ -252,6 +286,10 @@ export const LanguageTable = {
       create: {
         zh: "新增模擬考試",
         en: "New Examination",
+      },
+      loginFirst: {
+        zh: "請先登入",
+        en: "Please Login First",
       },
     },
     crate: {
@@ -519,6 +557,150 @@ export const LanguageTable = {
         zh: "模擬公務員高普考試",
         en: "Civil Service Examination",
       },
+    },
+  },
+  login: {
+    system: {
+      zh: "登入系統",
+      en: "Login System",
+    },
+    shown: {
+      zh: "顯示",
+      en: "Shown",
+    },
+    hidden: {
+      zh: "隱藏",
+      en: "Hidden",
+    },
+    inputPassword: {
+      zh: "輸入您的密碼",
+      en: "Enter your password",
+    },
+    inputUsername: {
+      zh: "請輸入您的使用者名稱",
+      en: "Enter your email",
+    },
+    inputRole: {
+      zh: "請選擇您的身分",
+      en: "Enter your role",
+    },
+    password: {
+      zh: "輸入您的密碼",
+      en: "Password",
+    },
+    username: {
+      zh: "請輸入您的使用者名稱",
+      en: "Username",
+    },
+    SelectRole: {
+      zh: "請選擇您的身分",
+      en: "Role",
+    },
+    role: {
+      student: {
+        zh: "學生",
+        en: "Student",
+      },
+      ta: {
+        zh: "助教",
+        en: "Teacher Assistant",
+      },
+      teacher: {
+        zh: "教師",
+        en: "Teacher",
+      },
+      unsigned: {
+        zh: "未登入",
+        en: "Not signed in",
+      },
+    },
+    backHome: {
+      zh: "返回首頁",
+      en: "Back to Home page",
+    },
+    logged: {
+      zh: "您已經登入系統。",
+      en: "Logged In",
+    },
+    logout: {
+      zh: "登出",
+      en: "Logout",
+    },
+    loginFail: {
+      zh: "登入失敗",
+      en: "Login Fail",
+    },
+    loginSuccess: {
+      zh: "登入成功",
+      en: "Login Success",
+    },
+  },
+  password: {
+    changePassword: {
+      zh: "請輸入您當前的密碼和新密碼",
+      en: "Please enter your current password and new password",
+    },
+    currentPassword: {
+      zh: "請輸入目前密碼",
+      en: "Please enter your current password and new password",
+    },
+    newPassword: {
+      zh: "請輸入新密碼",
+      en: "Please enter your new password",
+    },
+    notLessThenEightCharacter: {
+      zh: "密碼長度必須至少為 8 個字元",
+      en: "Password length at least 8 characters",
+    },
+    confirmPassword: {
+      zh: "再次確認新密碼",
+      en: "Confirm new password",
+    },
+    cancel: {
+      zh: "取消",
+      en: "Cancel",
+    },
+    modify: {
+      zh: "更改密碼",
+      en: "Change Password",
+    },
+    error: {
+      inputPassword: {
+        zh: "請輸入目前密碼",
+        en: "Please enter your current password",
+      },
+      newPassword: {
+        zh: "請輸入新密碼",
+        en: "Please enter new password",
+      },
+      atLeast8Char: {
+        zh: "新密碼長度必須至少為 8 個字符",
+        en: "New password must be at least 8 characters long",
+      },
+      notMatch: {
+        zh: "確認密碼與新密碼不符",
+        en: "The confirmed password does not match the new password",
+      },
+      userNotFound: {
+        zh: "無法獲取用戶信息",
+        en: "User Not Found",
+      },
+      notSuccess: {
+        zh: "無法獲取用戶信息",
+        en: "User Not Found",
+      },
+      incorrect: {
+        zh: "當前密碼不正確",
+        en: "Password incorrect",
+      },
+      cantChange: {
+        zh: "密碼更改失敗",
+        en: "",
+      },
+    },
+    success: {
+      zh: "密碼已成功更改！",
+      en: "Password have been changed",
     },
   },
 };

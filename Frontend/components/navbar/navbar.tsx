@@ -1,6 +1,6 @@
 // Code by AkinoAlice@TyrantRey
 
-import { useState, useContext } from "react";
+import { useContext } from "react";
 import {
   Navbar as NextUINavbar,
   NavbarContent,
