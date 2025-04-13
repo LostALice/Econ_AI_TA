@@ -109,7 +109,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setRoleState(userRole);
     setUserInfo(null);
-    localStorage.clear()
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("role");
     console.log("User logged out");
   };
 
