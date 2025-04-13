@@ -107,7 +107,7 @@ export default function MockPage() {
                         {LanguageTable.mock.index.cse[language]}
                     </Button>
                     <Button
-                        isDisabled={role == LanguageTable.nav.role.admin[language] ? false : true}
+                        isDisabled={role == !LanguageTable.nav.role.admin[language]}
                         as={Link}
                         href="/mock/create"
                         underline="hover"
