@@ -242,8 +242,23 @@ async def modify_question(question: ExamQuestionModel) -> bool:
     return mysql_client.modify_question(question=question, image_uuids=image_uuids)
 
 
-@router.delete("/mock/delete/exam/")
-async def delete_exam(exam_id: int) -> bool:
+@router.delete("/mock/enable/exam/")
+async def enable_exam(exam_id: int) -> bool:
+    """
+    Endpoint to delete exam.
+
+    Args:
+        question: question information
+    Return:
+        bool
+    """
+
+    logger.debug(exam_id)
+    return mysql_client.disable_exam(exam_id)
+
+
+@router.delete("/mock/disable/exam/")
+async def disable_exam(exam_id: int) -> bool:
     """
     Endpoint to delete exam.
 

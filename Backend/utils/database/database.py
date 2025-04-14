@@ -1157,7 +1157,7 @@ class MySQLHandler(SetupMYSQL):
             FROM exams
             WHERE exam_id = %s
             """,
-            (last_id,)
+            (last_id,),
         )
         inserted_exam_info = self.cursor.fetchone()
         self.logger.info(inserted_exam_info)
@@ -1373,9 +1373,9 @@ class MySQLHandler(SetupMYSQL):
             self.sql_query_logger()
         return self.commit()
 
-    def disable_exam(self, exam_id: int) -> bool:
+    def enable_exam(self, exam_id: int) -> bool:
         """
-        This function deletes an exam record from the exam table in the database.
+        This function enable an exam record from the exam table in the database.
         It pings the database connection, executes the deletion SQL query, logs the SQL query, and commits the transaction.
 
         Args:
@@ -1388,12 +1388,37 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
-            SET enabled=%s
+            SET is_enabled=0
             WHERE exam_id=%s
             """,
-            (1, exam_id),
+            (exam_id,),
         )
 
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def disable_exam(self, exam_id: int) -> bool:
+        """
+        This function disable an exam record from the exam table in the database.
+        It pings the database connection, executes the deletion SQL query, logs the SQL query, and commits the transaction.
+
+        Args:
+            exam_id: int - The unique identifier of the exam to be deleted.
+
+        Return:
+            bool - True if the deletion was successful and the transaction was committed; False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            UPDATE {self._DATABASE}.exam
+            SET is_enabled=1
+            WHERE exam_id=%s
+            """,
+            (exam_id,),
+        )
 
         self.sql_query_logger()
         success = self.commit()
@@ -1438,10 +1463,10 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
-            SET enabled=%s
+            SET is_enabled=1
             WHERE question_id=%s
             """,
-            (1, question_id),
+            (question_id,),
         )
 
         self.sql_query_logger()
@@ -1517,7 +1542,7 @@ class MySQLHandler(SetupMYSQL):
                 FROM exam_questions AS q
                 LEFT JOIN exam_options AS o
                         ON q.question_id = o.question_id
-                WHERE q.exam_id = %s
+                WHERE q.exam_id = %s AND q.is_enabled = 0
                 GROUP BY q.exam_id, q.question_id, q.question_text
                 ) AS s;
             """,
