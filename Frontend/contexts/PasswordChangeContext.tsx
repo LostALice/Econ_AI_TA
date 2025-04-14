@@ -109,7 +109,7 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setSubmitResult({ success: false, message: "" });
