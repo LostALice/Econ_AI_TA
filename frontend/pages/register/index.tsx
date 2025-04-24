@@ -273,8 +273,8 @@ export default function RegisterPage() {
               
               {/* 學號 */}
               <Input
-                label="學號"
-                placeholder="請輸入您的學號"
+                label="學號/教師證號"
+                placeholder="請輸入您的學號/教師證號"
                 value={formData.studentId}
                 onChange={(e) => handleChange("studentId", e.target.value)}
                 isRequired

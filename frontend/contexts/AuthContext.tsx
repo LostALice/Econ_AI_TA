@@ -1,13 +1,24 @@
+/**
+ * AuthContext.tsx
+ * 
+ * 此檔案實現了應用程序的身份認證上下文，用於管理用戶登入狀態和角色權限。
+ * 
+ * 功能:
+ * - 管理用戶登入狀態 (isLoggedIn)
+ * - 存儲和更新用戶角色 (role: 學生/助教/教師)
+ * - 提供登出功能
+ * - 跨瀏覽器標籤頁同步登入狀態 (透過 localStorage 事件監聽)
+ * - 保持用戶會話狀態 (透過 localStorage 持久化)
+ * 
+ * 資料結構:
+ * - role: 字串，表示用戶角色 ('學生', '助教', '教師' 或 '未登入')
+ * - userInfo: 包含用戶詳細信息的對象
+ */
+
 import { createContext, useState, useEffect } from "react";
+import { TAuthRole, UserInfo } from "@/types/Auth";
 
-export type TAuthRole = {
-  role: string;
-  setRole: (role: string) => void;
-  isLoggedIn: boolean;
-  logout: () => void;
-  userInfo: any | null; // 添加用戶信息
-};
-
+// 創建認證上下文，設定默認值
 export const AuthContext = createContext<TAuthRole>({
   role: "未登入",
   setRole: (role: string) => {},
@@ -16,11 +27,20 @@ export const AuthContext = createContext<TAuthRole>({
   userInfo: null,
 });
 
+/**
+ * AuthProvider 元件
+ * 
+ * 提供認證上下文給應用程序的所有子元件。
+ * 管理用戶身份狀態並提供相關功能。
+ * 
+ * @param {React.ReactNode} children - 子元件
+ * @returns {React.ReactElement} 包含認證上下文的 Provider 元件
+ */
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [role, setRoleState] = useState<string>("未登入");
-  const [userInfo, setUserInfo] = useState<any | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   
   // 初始化時從 localStorage 讀取用戶狀態
   useEffect(() => {
@@ -68,7 +88,12 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // 轉換角色值為顯示名稱
+  /**
+   * 將後端角色值轉換為前端顯示名稱
+   * 
+   * @param {string} roleValue - 後端存儲的角色值
+   * @returns {string} 轉換後的角色顯示名稱
+   */
   const getRoleDisplayName = (roleValue: string): string => {
     switch (roleValue) {
       case 'student':
@@ -82,12 +107,19 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // 封裝 setRole 函數
+  /**
+   * 設置用戶角色的函數
+   * 
+   * @param {string} newRole - 新角色值
+   */
   const setRole = (newRole: string) => {
     setRoleState(newRole);
   };
 
-  // 登出功能
+  /**
+   * 登出功能
+   * 清除用戶數據並重置狀態
+   */
   const logout = () => {
     setRoleState("未登入");
     setUserInfo(null);
@@ -95,7 +127,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("User logged out");
   };
   
-  // 調試輸出當前狀態
+  // 調試輸出當前認證狀態
   useEffect(() => {
     console.log("Current auth state:", { role, isLoggedIn: role !== "未登入" });
   }, [role]);

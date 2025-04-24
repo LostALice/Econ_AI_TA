@@ -1,65 +1,92 @@
+/**
+ * PasswordChangeContext.tsx
+ * 
+ * 此檔案實現了密碼更改的上下文管理，用於處理用戶密碼修改流程。
+ * 
+ * 功能:
+ * - 管理密碼更改表單數據
+ * - 提供表單驗證邏輯
+ * - 處理密碼更改的提交流程
+ * - 管理密碼欄位的可見性切換
+ * - 提供錯誤處理和狀態反饋
+ * 
+ * 資料結構:
+ * - formData: 包含當前密碼、新密碼和確認密碼的表單數據
+ * - errors: 存儲表單驗證錯誤信息
+ * - isVisible: 控制各密碼欄位是否可見
+ * - submitResult: 提交結果狀態和消息
+ */
+
 import { createContext, useState, useContext } from "react";
 import { useRouter } from "next/router";
 import { AuthContext } from "@/contexts/AuthContext";
+import { 
+  PasswordChangeContextType, 
+  PasswordErrors,
+  PasswordFormData, 
+  PasswordVisibility,
+  SubmitResult 
+} from "@/types/Auth/passwordChange";
 
-interface PasswordChangeContextType {
-  isLoading: boolean;
-  errors: {
-    currentPassword: string;
-    newPassword: string;
-    confirmPassword: string;
-  };
-  formData: {
-    currentPassword: string;
-    newPassword: string;
-    confirmPassword: string;
-  };
-  submitResult: {
-    success: boolean;
-    message: string;
-  };
-  handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
-  toggleVisibility: (field: 'currentPassword' | 'newPassword' | 'confirmPassword') => void;
-  isVisible: {
-    currentPassword: boolean;
-    newPassword: boolean;
-    confirmPassword: boolean;
-  };
-}
-
+// 創建密碼更改上下文
 export const PasswordChangeContext = createContext<PasswordChangeContextType | null>(null);
 
+/**
+ * PasswordChangeProvider 元件
+ * 
+ * 提供密碼更改功能相關的上下文給子元件。
+ * 管理密碼更改流程的所有狀態和操作。
+ * 
+ * @param {React.ReactNode} children - 子元件
+ * @returns {React.ReactElement} 包含密碼更改上下文的 Provider 元件
+ */
 export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { userInfo, logout } = useContext(AuthContext);
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  
+  // 表單數據狀態
+  const [formData, setFormData] = useState<PasswordFormData>({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [errors, setErrors] = useState({
+  
+  // 表單驗證錯誤狀態
+  const [errors, setErrors] = useState<PasswordErrors>({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [isVisible, setIsVisible] = useState({
+  
+  // 密碼可見性狀態
+  const [isVisible, setIsVisible] = useState<PasswordVisibility>({
     currentPassword: false,
     newPassword: false,
     confirmPassword: false,
   });
+  
+  // 提交狀態管理
   const [isLoading, setIsLoading] = useState(false);
-  const [submitResult, setSubmitResult] = useState({ success: false, message: "" });
+  const [submitResult, setSubmitResult] = useState<SubmitResult>({ success: false, message: "" });
 
-  // 切換密碼可見性
-  const toggleVisibility = (field: keyof typeof isVisible) => {
+  /**
+   * 切換密碼欄位可見性
+   * 
+   * @param {keyof PasswordVisibility} field - 要切換可見性的欄位名稱
+   */
+  const toggleVisibility = (field: keyof PasswordVisibility) => {
     setIsVisible(prev => ({
       ...prev,
       [field]: !prev[field]
     }));
   };
 
-  // 處理表單輸入變更
+  /**
+   * 處理表單輸入變更
+   * 更新表單數據並清除對應欄位的錯誤信息
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement>} e - 輸入事件對象
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -74,16 +101,23 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
     }));
   };
 
-  // 驗證表單
+  /**
+   * 驗證表單數據
+   * 檢查各欄位是否符合要求並設置錯誤信息
+   * 
+   * @returns {boolean} 表單是否有效
+   */
   const validateForm = () => {
     let valid = true;
     const newErrors = { ...errors };
 
+    // 驗證當前密碼
     if (!formData.currentPassword.trim()) {
       newErrors.currentPassword = "請輸入目前密碼";
       valid = false;
     }
 
+    // 驗證新密碼
     if (!formData.newPassword.trim()) {
       newErrors.newPassword = "請輸入新密碼";
       valid = false;
@@ -92,6 +126,7 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
       valid = false;
     }
 
+    // 驗證確認密碼
     if (formData.newPassword !== formData.confirmPassword) {
       newErrors.confirmPassword = "確認密碼與新密碼不符";
       valid = false;
@@ -101,10 +136,16 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
     return valid;
   };
 
-  // 處理表單提交
+  /**
+   * 處理表單提交
+   * 驗證表單並執行密碼更改流程
+   * 
+   * @param {React.FormEvent} e - 表單提交事件對象
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 驗證表單
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -189,6 +230,7 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
+  // 提供給上下文的值
   const value = {
     isLoading,
     errors,
@@ -207,7 +249,13 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
   );
 };
 
-// 自定義 hook 方便使用
+/**
+ * 自定義 hook 用於簡化密碼更改上下文的使用
+ * 提供類型安全的上下文訪問
+ * 
+ * @returns {PasswordChangeContextType} 密碼更改上下文
+ * @throws {Error} 如果在 PasswordChangeProvider 外部使用
+ */
 export const usePasswordChange = () => {
   const context = useContext(PasswordChangeContext);
   if (!context) {
