@@ -1,20 +1,27 @@
-import "@/styles/globals.css";
-import "@/styles/chat.css"; // 添加聊天樣式
-import { NextUIProvider } from "@nextui-org/react";
+import type { AppProps } from "next/app";
+
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { fontSans, fontMono } from "@/config/fonts";
-import type { AppProps } from "next/app";
+import { HeroUIProvider } from "@heroui/react";
+import { useRouter } from "next/router";
+
 import AuthProvider from "@/contexts/AuthContext";
+import LangProvider from "@/contexts/LangContext";
+
+import "@/styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
   return (
-    <NextUIProvider>
+    <HeroUIProvider navigate={router.push}>
       <NextThemesProvider>
         <AuthProvider>
-          <Component {...pageProps} />
+          <LangProvider>
+            <Component {...pageProps} />
+          </LangProvider>
         </AuthProvider>
       </NextThemesProvider>
-    </NextUIProvider>
+    </HeroUIProvider>
   );
 }
 

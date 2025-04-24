@@ -1,2 +1,37 @@
-/model
-/files
+# Setting file
+# ===================
+/Scripts
+/Lib
+/Include
+/share
+/Library
+/.vscode/**
+**/setting.*
+/.vscode/setting.json
+**/.venv/**
+**/__pycache__/**
+**/node_modules/**
+**/.next/**
+
+# Backend
+# ===================
+/Backend/images/**
+**/*.png
+
+# LLM
+# ===================
+*.gguf
+
+# Files
+# ===================
+pyvenv.cfg
+*.pyc
+*.pdf
+.dockerfile
+
+# Testing file
+# ===================
+test.*
+*.log
+*.docx
+.env
