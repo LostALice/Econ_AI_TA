@@ -86,7 +86,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  });
+  }, [language]); // 添加 language 作為依賴項，因為 getRoleDisplayName 函數依賴它
 
   /**
    * 將後端角色值轉換為前端顯示名稱

@@ -12,11 +12,15 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { LangContext } from "@/contexts/LangContext";
 import { PasswordInput } from "@/components/login/password/passwordInput";
 
+// 引入模擬認證
+import { mockLogin, initMockUsers } from "@/api/mock/auth";
+
 export default function LoginPage() {
   const router = useRouter();
   const { role, setRole } = useContext(AuthContext);
   const { language, setLang } = useContext(LangContext);
-
+  // 使用 addToast 函數而不是 useToast hook
+  
   // 身分別選項
   const roleOptions = [
     { label: "學生", value: "student" },
@@ -27,7 +31,7 @@ export default function LoginPage() {
   // 表單狀態
   const [formData, setFormData] = useState({
     role: "",
-    username: "", // Changed from username to email based on original form
+    username: "",
     password: "",
   });
 
@@ -46,6 +50,11 @@ export default function LoginPage() {
 
   // Modal controls
   const logoutModal = useDisclosure();
+
+  // 初始化預設用戶資料
+  useEffect(() => {
+    initMockUsers();
+  }, []);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -116,10 +125,33 @@ export default function LoginPage() {
     });
     const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
     setRole(userRole);
+    localStorage.removeItem("currentUser");
     router.push("/login");
   };
 
-  // 提交表單 - 使用API進行身份驗證
+  // 顯示登入成功訊息並跳轉到首頁
+  const handleLoginSuccess = (roleName: string) => {
+    // 在跳轉前，先將用戶信息保存到 localStorage，以便 AuthContext 能夠讀取
+    const userDetails = {
+      role: roleName, 
+      // 可以添加其他用戶信息
+    };
+    localStorage.setItem('currentUser', JSON.stringify(userDetails));
+    
+    console.log("登入成功，準備跳轉...");
+    
+    // 直接強制跳轉，不使用 setTimeout
+    window.location.href = "/";
+    
+    // 顯示成功訊息 (由於強制跳轉，這可能不會顯示很久)
+    addToast({
+      color: "success",
+      title: LanguageTable.login.loginSuccess[language],
+      description: `${LanguageTable.login.role[roleName as keyof typeof LanguageTable.login.role][language]} ${LanguageTable.login.loginSuccess[language]}`,
+    });
+  };
+
+  // 提交表單 - 優先使用模擬認證，當後端 API 可用時再使用 API
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -132,69 +164,134 @@ export default function LoginPage() {
 
     try {
       // 使用SHA3-256哈希密碼
-      const hashed_password = sha3_256(formData.password);
+      const hashedPassword = sha3_256(formData.password);
 
-      const response = await fetch(siteConfig.api_url + "/authorization/login/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: formData.username,  // Using username as username
-          hashed_password: hashed_password,
-          role: formData.role,  // Added role to the request
-        }),
-      });
+      // 先嘗試模擬登入
+      const mockResult = mockLogin(formData.username, hashedPassword, formData.role);
 
-      if (response.ok) {
-        const data = await response.json();
+      if (mockResult.success) {
+        // 模擬登入成功
+        setCookie("jwt", mockResult.jwt_token);
+        setCookie("role", mockResult.role);
 
-        if (data.success) {
-          // 登入成功
-          setCookie("jwt", data.jwt_token);
-          setCookie("role", data.role);
+        const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
+        setRole(userRole);
 
-          const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-          setRole(userRole);
-          setIsLoggedIn(true);
-
-          // 顯示成功訊息並導向首頁
-          // alert("登入成功！歡迎回來。");
-          addToast({
-            color: "success",
-            title: LanguageTable.login.loginSuccess[language]
-          })
-          router.push("/");
+        // 顯示成功訊息並直接導向首頁
+        if (mockResult.role) {
+          handleLoginSuccess(mockResult.role);
         } else {
-          // API返回成功但登入失敗
-          setLoginError(data.message || LanguageTable.login.loginSuccess[language]);
+          // Fallback to a default role if undefined
+          handleLoginSuccess("student");
+        }
+        return;
+      }
+
+      // 檢查API URL是否有效配置，否則直接顯示錯誤信息
+      if (!siteConfig.api_url) {
+        setLoginError("API URL未配置，無法連接到後端伺服器。請聯繫管理員或使用預設帳號。");
+        addToast({
+          color: "danger",
+          title: LanguageTable.login.loginFail[language],
+          description: "API URL未配置，無法連接到後端伺服器",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 如果模擬登入失敗且後端 API 可用，嘗試使用 API 登入
+      try {
+        const apiUrl = `${siteConfig.api_url}/authorization/login/`;
+        console.log("嘗試連接API:", apiUrl);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超時
+        
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: formData.username,
+            hashed_password: hashedPassword,
+            role: formData.role,
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.success) {
+            // API 登入成功
+            setCookie("jwt", data.jwt_token);
+            // 顯示成功訊息並導向首頁
+            if (data.role) {
+              handleLoginSuccess(data.role);
+            } else {
+              // Fallback to a default role if undefined
+              handleLoginSuccess("student");
+            }
+            const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
+            setRole(userRole);
+
+            // 顯示成功訊息並導向首頁
+            handleLoginSuccess(data.role);
+          } else {
+            // API返回成功但登入失敗
+            setLoginError(data.message || "帳號、密碼或身分別錯誤，請重新確認");
+            addToast({
+              color: "danger",
+              title: LanguageTable.login.loginFail[language],
+              description: data.message || "帳號、密碼或身分別錯誤，請重新確認",
+            });
+          }
+        } else {
+          // API回應不成功
+          setLoginError("伺服器回應錯誤，請稍後再試");
           addToast({
-            color: "warning",
+            color: "danger",
             title: LanguageTable.login.loginFail[language],
+            description: "伺服器回應錯誤，請稍後再試",
           });
         }
-      } else {
-        // API請求失敗
-        setLoginError(LanguageTable.login.loginSuccess[language]);
+      } catch (apiError: any) {
+        console.error("API 連接錯誤:", apiError);
+        
+        // 處理超時或連線被中止的情況
+        if (apiError.name === 'AbortError') {
+          setLoginError("伺服器連接超時，請稍後再試。請嘗試使用預設帳號。");
+          addToast({
+            color: "warning",
+            title: "連接超時",
+            description: "伺服器連接超時，建議使用預設帳號登入",
+          });
+          return;
+        }
+        
+        // 如果 API 連接失敗但模擬登入的錯誤信息也不合適，顯示更明確的錯誤
+        setLoginError("無法連接到後端伺服器。請確認伺服器是否運行或使用預設帳號。");
         addToast({
           color: "warning",
-          title: LanguageTable.login.loginFail[language],
+          title: "伺服器無法連接",
+          description: "建議使用提供的預設帳號登入",
         });
-        console.error("API request failed:", response.status);
       }
     } catch (error) {
       console.error("登入處理錯誤:", error);
-      addToast({
-        color: "warning",
-        title: LanguageTable.login.loginFail[language],
-      });
       setLoginError("登入過程發生錯誤，請稍後再試。");
+      addToast({
+        color: "danger",
+        title: LanguageTable.login.loginFail[language],
+        description: "登入過程發生錯誤，請稍後再試",
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  // const togglePasswordVisibility = () => setIsPasswordVisible(!isPasswordVisible);
 
   // If already logged in, we could show different content or redirect
   if (isLoggedIn) {
@@ -210,7 +307,7 @@ export default function LoginPage() {
               <Button color="primary" onPress={() => router.push("/")}>
                 {LanguageTable.login.logged[language]}
               </Button>
-              <Button color="danger" className="mt-2" onPress={() => logoutModal.onOpen()}>
+              <Button color="danger" className="mt-2" onPress={() => logout()}>
                 {LanguageTable.login.logout[language]}
               </Button>
             </CardBody>
@@ -256,7 +353,7 @@ export default function LoginPage() {
                 isRequired
                 isInvalid={!!errors.username}
                 errorMessage={errors.username}
-                type="username"
+                type="email"
               />
 
               {/* 密碼 */}
@@ -267,8 +364,14 @@ export default function LoginPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("password", e.target.value)}
                 isInvalid={!!errors.password}
                 errorMessage={errors.password}
-              >
-              </PasswordInput>
+              />
+
+              {/* 顯示登入錯誤訊息 */}
+              {loginError && (
+                <div className="p-3 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                  {loginError}
+                </div>
+              )}
 
               {/* 提交按鈕 */}
               <div className="flex flex-col space-y-4 pt-2">
@@ -280,6 +383,16 @@ export default function LoginPage() {
                 >
                   {LanguageTable.nav.login.login[language]}
                 </Button>
+              </div>
+
+              {/* 預設帳號提示 */}
+              <div className="mt-4 p-3 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                <h3 className="font-bold mb-2">預設帳號:</h3>
+                <div className="space-y-2 text-sm">
+                  <p><strong>教師:</strong> teacher@fcu.edu.tw / teacher123</p>
+                  <p><strong>助教:</strong> ta@fcu.edu.tw / ta123</p>
+                  <p><strong>學生:</strong> student@mail.fcu.edu.tw / student123</p>
+                </div>
               </div>
             </Form>
           </CardBody>

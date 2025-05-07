@@ -211,6 +211,27 @@ export const LoginButton = () => {
     router.push("/login/profile");
   };
 
+  // 將 role 標準化為小寫並確保找到對應的本地化文本
+  const getNormalizedRoleText = (roleValue: string) => {
+    // 檢查角色是否為 teacher、ta 或 student
+    const normalizedRole = roleValue.toLowerCase();
+    
+    // 確保我們取得的是標準角色鍵值
+    let roleKey: string;
+    if (normalizedRole.includes('teacher') || normalizedRole.includes('教師')) {
+      roleKey = 'teacher';
+    } else if (normalizedRole.includes('ta') || normalizedRole.includes('助教')) {
+      roleKey = 'ta';
+    } else if (normalizedRole.includes('student') || normalizedRole.includes('學生')) {
+      roleKey = 'student';
+    } else {
+      roleKey = 'unsigned';
+    }
+    
+    // 從 LanguageTable 獲取相應的本地化文本
+    return LanguageTable.nav.role[roleKey as keyof typeof LanguageTable.nav.role][language];
+  };
+
   if (!isLoggedIn) {
     return (
       <Button
@@ -234,7 +255,7 @@ export const LoginButton = () => {
         <Button
           className="border bg-transparent text-medium border-none"
         >
-          {LanguageTable.nav.role[role.toLowerCase() as keyof typeof LanguageTable.nav.role][language]}
+          {getNormalizedRoleText(role)}
           {/* {userInfo?.studentId ? `(${userInfo.studentId})` : ''} */}
         </Button>
       </DropdownTrigger>

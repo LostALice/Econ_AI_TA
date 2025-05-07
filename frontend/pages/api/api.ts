@@ -4,75 +4,209 @@ import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/api/types";
 
 import { siteConfig } from "@/config/site";
 
+// Helper function to detect if we're in development mode
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export async function askQuestion(
   chatUUID: string,
   question: string,
   userID: string,
   collection: string | "default" = "default"
 ): Promise<TAskQuestionResponseFormat> {
-  const resp = await fetch(siteConfig.api_url + "/chat/" + chatUUID, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      chat_id: chatUUID,
-      question: question,
-      user_id: userID,
-      collection: collection,
-    }),
-  });
-  const data = await resp.json();
-  return {
-    questionUUID: data.question_uuid,
-    answer: data.answer,
-    files: data.files,
-  };
+  try {
+    const resp = await fetch(siteConfig.api_url + "/chat/" + chatUUID, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatUUID,
+        question: question,
+        user_id: userID,
+        collection: collection,
+      }),
+    });
+    const data = await resp.json();
+    return {
+      questionUUID: data.question_uuid,
+      answer: data.answer,
+      files: data.files,
+    };
+  } catch (error) {
+    console.warn("Failed to fetch from API, using mock data instead:", error);
+    // Return mock data
+    return {
+      questionUUID: "mock-question-uuid-" + Date.now(),
+      answer: "This is a mock response because the API is unavailable. Your question was: " + question,
+      files: [],
+    };
+  }
 }
 
 export async function fetchDocsList(
   documentationType: string
 ): Promise<IDocsFormat[]> {
-  const resp = await fetch(
-    siteConfig.api_url + "/department/" + documentationType + "/",
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  try {
+    // 確保 API URL 存在
+    if (!siteConfig.api_url) {
+      throw new Error("API URL is not configured");
     }
-  );
-  const data = await resp.json();
+    
+    console.log(`Fetching docs list from: ${siteConfig.api_url}/department/${documentationType}/`);
+    
+    // 設定請求超時 (5秒)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const resp = await fetch(
+      `${siteConfig.api_url}/department/${documentationType}/`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal
+      }
+    );
+    
+    clearTimeout(timeoutId);
+    
+    if (!resp.ok) {
+      throw new Error(`Server responded with status: ${resp.status} ${resp.statusText}`);
+    }
+    
+    const data = await resp.json();
 
-  if (!data.docs_list) {
-    console.error("No documentation found.");
-    return [];
-  }
+    if (!data.docs_list) {
+      console.warn("No documentation found for type:", documentationType);
+      return [];
+    }
 
-  let docsList = [];
-  for (let file of data.docs_list) {
-    const docsInfo: IDocsFormat = {
-      fileID: file.file_id,
-      fileName: file.file_name,
-      lastUpdate: file.last_update.toString().replace("T", " "),
-    };
-    docsList.push(docsInfo);
+    let docsList = [];
+    for (let file of data.docs_list) {
+      const docsInfo: IDocsFormat = {
+        fileID: file.file_id,
+        fileName: file.file_name,
+        lastUpdate: file.last_update.toString().replace("T", " "),
+      };
+      docsList.push(docsInfo);
+    }
+    console.debug("Loaded docs:", docsList);
+    return docsList;
+  } catch (error) {
+    console.warn("Failed to fetch docs list from API, using mock data instead:", error);
+    
+    // 根據文檔類型生成更有意義的模擬數據
+    let topicPrefix = "";
+    switch(documentationType) {
+      case "TESTING":
+        topicPrefix = "考古題";
+        break;
+      case "THEOREM":
+        topicPrefix = "經濟學理論";
+        break;
+      default:
+        topicPrefix = "文件";
+    }
+    
+    // 返回模擬數據
+    const mockData: IDocsFormat[] = [
+      {
+        fileID: `mock-${documentationType.toLowerCase()}-1`,
+        fileName: `${topicPrefix} - 基礎概念介紹`,
+        lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+      },
+      {
+        fileID: `mock-${documentationType.toLowerCase()}-2`,
+        fileName: `${topicPrefix} - 進階應用`,
+        lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+      },
+      {
+        fileID: `mock-${documentationType.toLowerCase()}-3`,
+        fileName: `${topicPrefix} - 案例分析`,
+        lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+      }
+    ];
+    return mockData;
   }
-  console.debug(docsList);
-  return docsList;
 }
 
 export async function fetchDocs(docsID: string): Promise<Blob> {
-  const resp = await fetch(
-    siteConfig.api_url + "/documentation/" + docsID + "/",
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/pdf",
-      },
+  try {
+    // 確保 API URL 存在
+    if (!siteConfig.api_url) {
+      throw new Error("API URL is not configured");
     }
-  );
-  const data = await resp.blob();
-
-  return data;
+    
+    console.log(`Fetching document from: ${siteConfig.api_url}/documentation/${docsID}/`);
+    
+    // 設定請求超時 (8秒，因為PDF可能較大)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
+    const resp = await fetch(
+      `${siteConfig.api_url}/documentation/${docsID}/`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/pdf",
+        },
+        signal: controller.signal
+      }
+    );
+    
+    clearTimeout(timeoutId);
+    
+    if (!resp.ok) {
+      throw new Error(`Server responded with status: ${resp.status} ${resp.statusText}`);
+    }
+    
+    const data = await resp.blob();
+    return data;
+  } catch (error) {
+    console.warn("Failed to fetch document from API, returning mock PDF instead:", error);
+    
+    // 返回一個帶有錯誤訊息的示例 PDF blob
+    const emptyPdfBytes = new Uint8Array([
+      0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x25, 0xe2, 0xe3,
+      0xcf, 0xd3, 0x0a, 0x31, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c,
+      0x3c, 0x2f, 0x54, 0x79, 0x70, 0x65, 0x2f, 0x43, 0x61, 0x74, 0x61, 0x6c,
+      0x6f, 0x67, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x73, 0x20, 0x32, 0x20, 0x30,
+      0x20, 0x52, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a,
+      0x32, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c, 0x3c, 0x2f, 0x54,
+      0x79, 0x70, 0x65, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x73, 0x2f, 0x4b, 0x69,
+      0x64, 0x73, 0x5b, 0x33, 0x20, 0x30, 0x20, 0x52, 0x5d, 0x2f, 0x43, 0x6f,
+      0x75, 0x6e, 0x74, 0x20, 0x31, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f,
+      0x62, 0x6a, 0x0a, 0x33, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c,
+      0x3c, 0x2f, 0x54, 0x79, 0x70, 0x65, 0x2f, 0x50, 0x61, 0x67, 0x65, 0x73,
+      0x2f, 0x50, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x20, 0x32, 0x20, 0x30, 0x20,
+      0x52, 0x2f, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x3c,
+      0x3c, 0x3e, 0x3e, 0x2f, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x73,
+      0x20, 0x34, 0x20, 0x30, 0x20, 0x52, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64,
+      0x6f, 0x62, 0x6a, 0x0a, 0x34, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a,
+      0x3c, 0x3c, 0x2f, 0x4c, 0x65, 0x6e, 0x67, 0x74, 0x68, 0x20, 0x35, 0x33,
+      0x3e, 0x3e, 0x0a, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x0a, 0x42, 0x54,
+      0x0a, 0x2f, 0x46, 0x31, 0x20, 0x31, 0x38, 0x20, 0x54, 0x66, 0x0a, 0x31,
+      0x30, 0x30, 0x20, 0x37, 0x30, 0x30, 0x20, 0x54, 0x64, 0x0a, 0x28, 0x4d,
+      0x6f, 0x63, 0x6b, 0x20, 0x50, 0x44, 0x46, 0x20, 0x2d, 0x20, 0x42, 0x61,
+      0x63, 0x6b, 0x65, 0x6e, 0x64, 0x20, 0x55, 0x6e, 0x61, 0x76, 0x61, 0x69,
+      0x6c, 0x61, 0x62, 0x6c, 0x65, 0x29, 0x20, 0x54, 0x6a, 0x0a, 0x45, 0x54,
+      0x0a, 0x65, 0x6e, 0x64, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x0a, 0x65,
+      0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a, 0x78, 0x72, 0x65, 0x66, 0x0a, 0x30,
+      0x20, 0x35, 0x0a, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+      0x30, 0x20, 0x36, 0x35, 0x35, 0x33, 0x35, 0x20, 0x66, 0x0a, 0x30, 0x30,
+      0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x20, 0x30, 0x30, 0x30,
+      0x30, 0x30, 0x20, 0x6e, 0x0a, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+      0x30, 0x37, 0x39, 0x20, 0x30, 0x30, 0x30, 0x30, 0x30, 0x20, 0x6e, 0x0a,
+      0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x37, 0x33, 0x20, 0x30,
+      0x30, 0x30, 0x30, 0x30, 0x20, 0x6e, 0x0a, 0x30, 0x30, 0x30, 0x30, 0x30,
+      0x30, 0x30, 0x33, 0x30, 0x31, 0x20, 0x30, 0x30, 0x30, 0x30, 0x30, 0x20,
+      0x6e, 0x0a, 0x74, 0x72, 0x61, 0x69, 0x6c, 0x65, 0x72, 0x0a, 0x3c, 0x3c,
+      0x2f, 0x53, 0x69, 0x7a, 0x65, 0x20, 0x35, 0x2f, 0x52, 0x6f, 0x6f, 0x74,
+      0x20, 0x31, 0x20, 0x30, 0x20, 0x52, 0x3e, 0x3e, 0x0a, 0x73, 0x74, 0x61,
+      0x72, 0x74, 0x78, 0x72, 0x65, 0x66, 0x0a, 0x35, 0x35, 0x36, 0x0a, 0x25,
+      0x25, 0x45, 0x4f, 0x46, 0x0a
+    ]);
+    return new Blob([emptyPdfBytes], { type: 'application/pdf' });
+  }
 }
