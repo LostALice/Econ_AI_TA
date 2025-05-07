@@ -9,14 +9,7 @@ import {
 import { LangContext } from "@/contexts/LangContext";
 import { LanguageTable } from "@/i18n";
 import { useContext } from "react";
-
-export type TAuthRole = {
-  role: string;
-  setRole: (role: string) => void;
-  isLoggedIn: boolean;
-  logout: () => void;
-  userInfo: any | null; // 添加用戶信息
-};
+import { TAuthRole, UserInfo } from "@/types/Auth";
 
 export const AuthContext = createContext<TAuthRole>({
   role: "未登入",
