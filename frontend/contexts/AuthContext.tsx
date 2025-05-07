@@ -10,6 +10,7 @@ import { LangContext } from "@/contexts/LangContext";
 import { LanguageTable } from "@/i18n";
 import { useContext } from "react";
 import { TAuthRole, UserInfo } from "@/types/Auth";
+import { mockVerifyToken } from "@/api/mock/auth";
 
 export const AuthContext = createContext<TAuthRole>({
   role: "未登入",
@@ -32,61 +33,10 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [role, setRoleState] = useState<string>("未登入");
-  const [userInfo, setUserInfo] = useState<any | null>(null);
-  const { language, setLang } = useContext(LangContext);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const { language } = useContext(LangContext);
 
-  // 初始化時從 localStorage 讀取用戶狀態
-  useEffect(() => {
-    const initAuth = () => {
-      try {
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-
-          // 設置用戶信息
-          setUserInfo(parsedUser);
-
-          // 設置角色顯示名稱
-          if (parsedUser.role) {
-            const displayRole = getRoleDisplayName(parsedUser.role);
-            setRole(displayRole);
-            console.log("Auth initialized with role:", displayRole);
-          }
-        } else {
-          console.log("No stored user found");
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      }
-    };
-
-    // 執行初始化
-    initAuth();
-
-    // 添加存儲事件監聽，以便在其他標籤頁修改 localStorage 時響應
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'currentUser') {
-        if (event.newValue) {
-          const user = JSON.parse(event.newValue);
-          setUserInfo(user);
-          setRoleState(getRoleDisplayName(user.role));
-        } else {
-          setUserInfo(null);
-          setRoleState(LanguageTable.nav.role.unsigned[language]);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [language]); // 添加 language 作為依賴項，因為 getRoleDisplayName 函數依賴它
-
-  /**
-   * 將後端角色值轉換為前端顯示名稱
-   * 
-   * @param {string} roleValue - 後端存儲的角色值
-   * @returns {string} 轉換後的角色顯示名稱
-   */
+  // 將後端角色值轉換為前端顯示名稱
   const getRoleDisplayName = (roleValue: string): string => {
     switch (roleValue) {
       case 'student':
@@ -96,9 +46,82 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       case 'teacher':
         return LanguageTable.login.role.teacher[language];
       default:
-        return LanguageTable.login.role.unsigned[language];
+        return LanguageTable.nav.role.unsigned[language];
     }
   };
+
+  // 初始化時從 Cookie 讀取用戶狀態
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // 檢查 JWT 和用戶信息 Cookie 是否存在
+        if (hasCookie("jwt") && hasCookie("userInfo")) {
+          const jwtToken = getCookie("jwt") as string;
+          
+          // 驗證 JWT 令牌
+          const verifyResult = await mockVerifyToken(jwtToken);
+          
+          if (verifyResult.valid) {
+            // 從 Cookie 解析用戶信息
+            const userInfoStr = getCookie("userInfo") as string;
+            const parsedUser = JSON.parse(userInfoStr);
+            
+            // 設置用戶信息
+            setUserInfo(parsedUser);
+
+            // 設置角色顯示名稱
+            if (parsedUser.role) {
+              const displayRole = getRoleDisplayName(parsedUser.role);
+              setRoleState(displayRole);
+              console.log("Auth initialized with role:", displayRole);
+            } else {
+              console.log("User info exists but no role found, resetting to unsigned");
+              setRoleState(LanguageTable.nav.role.unsigned[language]);
+              setUserInfo(null);
+            }
+          } else {
+            console.log("JWT 驗證失敗:", verifyResult.error);
+            resetAuthState();
+          }
+        } else {
+          console.log("No valid auth cookies found");
+          resetAuthState();
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        // 錯誤時重置狀態
+        resetAuthState();
+      }
+    };
+
+    // 重置認證狀態
+    const resetAuthState = () => {
+      setRoleState(LanguageTable.nav.role.unsigned[language]);
+      setUserInfo(null);
+      // 清除可能損壞的 cookie
+      const cookieOptions = { path: '/' };
+      deleteCookie("jwt", cookieOptions);
+      deleteCookie("role", cookieOptions);
+      deleteCookie("userInfo", cookieOptions);
+    };
+
+    // 執行初始化
+    initAuth();
+    
+    // 監聽 storage 事件，確保在不同標籤頁間保持一致性（僅用於 localStorage，對 Cookie 無效，但保留以備未來使用）
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'userInfo' || e.key === 'jwt') {
+        initAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [language]); // 添加 language 作為依賴項
+
   // 封裝 setRole 函數
   const setRole = (newRole: string) => {
     setRoleState(newRole);
@@ -109,25 +132,31 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
    * 清除用戶數據並重置狀態
    */
   const logout = () => {
-    // copy from default out function
-    deleteCookie("role");
-    deleteCookie("jwt");
-    // setUsername("");
-    // setPassword("");
-    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-    setRole(userRole);
+    // 設置通用 Cookie 選項，確保刪除時路徑匹配
+    const cookieOptions = {
+      path: "/",
+    };
+    
+    // 刪除所有認證相關的 Cookies
+    deleteCookie("jwt", cookieOptions);
+    deleteCookie("role", cookieOptions);
+    deleteCookie("userInfo", cookieOptions);
 
-    setRoleState(userRole);
+    // 重置狀態
+    setRoleState(LanguageTable.nav.role.unsigned[language]);
     setUserInfo(null);
-    localStorage.removeItem("jwt");
-    localStorage.removeItem("role");
+    
     console.log("User logged out");
   };
 
   // 調試輸出當前狀態
   useEffect(() => {
-    console.log("Current auth state:", { role, isLoggedIn: role !== LanguageTable.nav.role.unsigned[language] });
-  }, [role, language]);
+    console.log("Current auth state:", { 
+      role, 
+      isLoggedIn: role !== LanguageTable.nav.role.unsigned[language],
+      userInfo: userInfo ? `User ${userInfo.email}` : "No user info"
+    });
+  }, [role, userInfo, language]);
 
   return (
     <AuthContext.Provider

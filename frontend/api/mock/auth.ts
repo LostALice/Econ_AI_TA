@@ -1,115 +1,297 @@
-// Code by AkinoAlice@TyrantRey
-// 模擬認證 API，包含預設帳號
+/**
+ * 模擬認證服務
+ * 
+ * 此文件提供前端模擬認證功能，用於開發和測試環境
+ * 實際生產環境應替換為真實的後端 API 調用
+ */
+/*
+* 使用 HS256 演算法進行簽名，純前端環境中可以正常執行
+* 有後端 API 後，需修改 mockLogin 和 mockVerifyToken，替換成真的 API 
+* 前端邏輯（如角色管理、Cookie 存儲等）可以保持不變
+*/
 
-import { sha3_256 } from "js-sha3";
+import { v4 as uuidv4 } from 'uuid';
+import * as jose from 'jose';
 
-// 預設使用者列表
-export const mockUsers = [
+/**
+ * 預設用戶列表
+ */
+const defaultUsers = [
   {
-    id: "teacher001",
-    username: "teacher@fcu.edu.tw",
-    password: sha3_256("teacher123"), // 密碼: teacher123
-    role: "teacher",
-    name: "王大明",
+    id: "teacher-001",
     email: "teacher@fcu.edu.tw",
-    department: "經濟系",
-    studentId: "", // 教師無學號
-    createdAt: "2025-01-01T00:00:00Z",
-    lastLogin: "2025-05-01T09:30:00Z"
+    password: "teacher123",
+    role: "teacher",
+    studentId: "",
+    department: "經濟學系",
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
   },
   {
-    id: "ta001",
-    username: "ta@fcu.edu.tw",
-    password: sha3_256("ta123"), // 密碼: ta123
-    role: "ta",
-    name: "李小華",
+    id: "ta-001",
     email: "ta@fcu.edu.tw",
-    department: "經濟系",
-    studentId: "D12345678",
-    createdAt: "2025-01-05T00:00:00Z",
-    lastLogin: "2025-05-01T10:15:00Z"
+    password: "ta123",
+    role: "ta",
+    studentId: "D0123456",
+    department: "經濟學系",
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
   },
   {
-    id: "student001",
-    username: "student@mail.fcu.edu.tw",
-    password: sha3_256("student123"), // 密碼: student123
-    role: "student",
-    name: "張小明",
+    id: "student-001",
     email: "student@mail.fcu.edu.tw",
-    department: "經濟系",
-    studentId: "D87654321",
-    createdAt: "2025-01-10T00:00:00Z",
-    lastLogin: "2025-05-01T11:00:00Z"
+    password: "student123",
+    role: "student",
+    studentId: "D0987654",
+    department: "經濟學系",
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
   }
 ];
 
-// 模擬登入函數
-export const mockLogin = (username: string, password: string, role: string) => {
-  // 尋找符合條件的用戶
-  const user = mockUsers.find(u => 
-    u.username.toLowerCase() === username.toLowerCase() && 
-    u.password === password &&
+// 建立一個固定的密鑰用於開發環境
+// 在實際生產環境中，這應該是從安全的環境變量中獲取
+const JWT_SECRET_KEY = 'economic-brain-jwt-secret-key-for-development-environment';
+
+/**
+ * 創建真正的 JWT 令牌
+ * 前端開發環境下使用 jose 庫實現
+ * 
+ * @param payload 要編碼的數據
+ * @returns JWT 令牌
+ */
+export async function createJWT(payload: any): Promise<string> {
+  // 創建密鑰
+  const secretKey = new TextEncoder().encode(JWT_SECRET_KEY);
+  
+  // 創建 JWT
+  const jwt = await new jose.SignJWT({ ...payload })
+    .setProtectedHeader({ alg: 'HS256' }) // 使用 HMAC SHA-256
+    .setIssuedAt() // 設置發行時間
+    .setExpirationTime('7d') // 7天有效期
+    .sign(secretKey); // 使用密鑰簽名
+  
+  return jwt;
+}
+
+/**
+ * 驗證 JWT 令牌
+ * 
+ * @param token JWT 令牌
+ * @returns 驗證結果
+ */
+export async function verifyJWT(token: string): Promise<{
+  valid: boolean;
+  payload?: any;
+  error?: string;
+}> {
+  try {
+    // 創建密鑰
+    const secretKey = new TextEncoder().encode(JWT_SECRET_KEY);
+    
+    // 驗證 JWT
+    const { payload } = await jose.jwtVerify(token, secretKey);
+    
+    return { valid: true, payload };
+  } catch (error) {
+    return { 
+      valid: false, 
+      error: error instanceof Error ? error.message : '令牌驗證失敗' 
+    };
+  }
+}
+
+// 初始化模擬用戶數據
+export function initMockUsers() {
+  if (typeof window !== 'undefined') {
+    // 檢查 localStorage 是否已有用戶數據
+    const existingUsers = localStorage.getItem('users');
+    if (!existingUsers) {
+      localStorage.setItem('users', JSON.stringify(defaultUsers));
+    }
+  }
+}
+
+/**
+ * 模擬登入功能
+ * 
+ * @param email 用戶郵箱
+ * @param password 用戶密碼（使用明文或哈希）
+ * @param role 用戶角色
+ * @returns 登入結果，成功時包含 JWT 令牌和用戶數據
+ */
+export async function mockLogin(email: string, password: string, role: string) {
+  if (typeof window === 'undefined') {
+    return { success: false, message: '只能在瀏覽器端使用' };
+  }
+
+  // 獲取模擬用戶列表
+  const usersJson = localStorage.getItem('users');
+  if (!usersJson) {
+    return { success: false, message: '找不到用戶數據' };
+  }
+
+  const users = JSON.parse(usersJson);
+  
+  // 查找匹配的用戶
+  const user = users.find((u: any) => 
+    u.email.toLowerCase() === email.toLowerCase() && 
+    u.password === password && 
     u.role === role
   );
 
-  if (user) {
-    // 模擬 JWT 令牌
-    const jwtToken = `mock-jwt-${user.id}-${Date.now()}`;
-    
-    // 創建要返回的用戶資料 (不包含密碼)
-    const userInfo = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-      name: user.name,
+  if (!user) {
+    return { success: false, message: '帳號、密碼或身份別錯誤' };
+  }
+
+  try {
+    // 創建 JWT token payload
+    const tokenPayload = {
+      sub: user.id,
       email: user.email,
-      department: user.department,
-      studentId: user.studentId,
-      lastLogin: new Date().toISOString()
+      role: user.role,
+      name: user.name || '',
     };
     
-    // 將完整用戶資訊存入 localStorage，模擬後端處理
-    localStorage.setItem('currentUser', JSON.stringify(userInfo));
-    
-    // 更新用戶最後登入時間
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const existingUserIndex = users.findIndex((u: any) => u.id === user.id);
-    
-    if (existingUserIndex >= 0) {
-      users[existingUserIndex] = {
-        ...users[existingUserIndex],
-        lastLogin: new Date().toISOString()
-      };
-    } else {
-      users.push({
-        ...userInfo,
-        lastLogin: new Date().toISOString()
-      });
-    }
-    
+    // 使用 jose 庫創建真正的 JWT
+    const jwtToken = await createJWT(tokenPayload);
+
+    // 更新最後登入時間
+    user.lastLogin = new Date().toISOString();
     localStorage.setItem('users', JSON.stringify(users));
-    
+
+    // 返回登入成功的結果
     return {
       success: true,
-      message: "登入成功",
       jwt_token: jwtToken,
       role: user.role,
-      userInfo
+      userData: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId,
+        department: user.department
+      }
+    };
+  } catch (error) {
+    console.error('JWT 創建失敗:', error);
+    return { 
+      success: false, 
+      message: '認證系統錯誤，請稍後再試' 
     };
   }
-  
-  return {
-    success: false,
-    message: "帳號、密碼或身分別錯誤，請重新確認"
-  };
-};
+}
 
-// 初始化預設用戶
-export const initMockUsers = () => {
-  // 檢查是否已經初始化過
-  if (!localStorage.getItem('usersInitialized')) {
-    localStorage.setItem('users', JSON.stringify(mockUsers));
-    localStorage.setItem('usersInitialized', 'true');
-    console.log('預設用戶已初始化');
+/**
+ * 模擬註冊功能
+ * 
+ * @param email 用戶郵箱
+ * @param password 用戶密碼
+ * @param role 用戶角色
+ * @param studentId 學號（可選）
+ * @param department 系所（可選）
+ * @returns 註冊結果
+ */
+export async function mockRegister(
+  email: string, 
+  password: string, 
+  role: string, 
+  studentId: string = '', 
+  department: string = ''
+) {
+  if (typeof window === 'undefined') {
+    return { success: false, message: '只能在瀏覽器端使用' };
   }
-};
+
+  // 獲取現有用戶列表
+  const usersJson = localStorage.getItem('users');
+  if (!usersJson) {
+    return { success: false, message: '用戶數據初始化錯誤' };
+  }
+
+  const users = JSON.parse(usersJson);
+  
+  // 檢查用戶是否已存在
+  const existingUser = users.find((u: any) => 
+    u.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (existingUser) {
+    return { success: false, message: '此電子郵件已被註冊' };
+  }
+
+  // 創建新用戶
+  const newUser = {
+    id: `${role}-${uuidv4().substring(0, 8)}`,
+    email,
+    password,
+    role,
+    studentId,
+    department,
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString(),
+  };
+
+  // 添加到用戶列表
+  users.push(newUser);
+  localStorage.setItem('users', JSON.stringify(users));
+
+  try {
+    // 創建 JWT token payload
+    const tokenPayload = {
+      sub: newUser.id,
+      email: newUser.email,
+      role: newUser.role
+    };
+    
+    // 使用 jose 庫創建真正的 JWT
+    const jwtToken = await createJWT(tokenPayload);
+
+    // 返回註冊成功的結果
+    return {
+      success: true,
+      jwt_token: jwtToken,
+      role: newUser.role,
+      userData: {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        studentId: newUser.studentId,
+        department: newUser.department
+      }
+    };
+  } catch (error) {
+    console.error('JWT 創建失敗:', error);
+    return { 
+      success: false, 
+      message: '認證系統錯誤，請稍後再試' 
+    };
+  }
+}
+
+/**
+ * 模擬檢查 JWT 令牌有效性
+ * 僅用於開發和測試環境
+ * 
+ * @param token JWT令牌
+ * @returns 驗證結果
+ */
+export async function mockVerifyToken(token: string) {
+  if (typeof window === 'undefined' || !token) {
+    return { valid: false };
+  }
+
+  try {
+    const result = await verifyJWT(token);
+    
+    return result.valid
+      ? { valid: true, userData: result.payload }
+      : { valid: false, error: result.error };
+  } catch (error) {
+    console.error('JWT 驗證錯誤:', error);
+    return { 
+      valid: false, 
+      error: error instanceof Error ? error.message : '令牌驗證失敗' 
+    };
+  }
+}

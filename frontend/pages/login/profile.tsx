@@ -3,6 +3,7 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { useRouter } from "next/router";
 import DefaultLayout from "@/layouts/default";
 import { Card, CardHeader, CardBody, CardFooter, Divider, Button, Input, Chip, addToast } from "@heroui/react";
+import { setCookie, getCookie, hasCookie } from "cookies-next";
 
 export default function ProfilePage() {
   const { userInfo, isLoggedIn, role } = useContext(AuthContext);
@@ -35,7 +36,10 @@ export default function ProfilePage() {
     e.preventDefault();
 
     try {
-      // 從 localStorage 獲取所有用戶數據
+      // 在生產環境中，這裡應該發送請求到後端 API 來更新用戶資訊
+      // 目前我們使用模擬的方式，僅更新前端數據
+
+      // 從 localStorage 獲取所有用戶數據（僅用於模擬驗證）
       const users = JSON.parse(localStorage.getItem('users') || '[]');
 
       // 找到當前用戶
@@ -44,8 +48,10 @@ export default function ProfilePage() {
       if (userIndex === -1) {
         setMessage({ type: "error", text: "無法更新個人資料，找不到用戶資訊" });
         addToast({
-          title: "",
-        })
+          color: "danger",
+          title: "更新失敗",
+          description: "無法更新個人資料，找不到用戶資訊"
+        });
         return;
       }
 
@@ -57,21 +63,33 @@ export default function ProfilePage() {
         department: formData.department,
       };
 
-      // 更新 localStorage
+      // 更新 localStorage（僅用於模擬）
       localStorage.setItem('users', JSON.stringify(users));
 
-      // 更新當前登入用戶的資訊
-      const currentUser = {
-        ...JSON.parse(localStorage.getItem('currentUser') || '{}'),
+      // 準備更新後的用戶信息
+      const updatedUserInfo = {
+        ...userInfo,
         email: formData.email,
         studentId: formData.studentId,
         department: formData.department,
       };
 
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      // 更新 Cookie 中的用戶資訊
+      const cookieOptions = {
+        maxAge: 7 * 24 * 60 * 60, // 7天有效期
+        secure: process.env.NODE_ENV === "production", // 生產環境使用 HTTPS
+        sameSite: "strict" as const  // 防止 CSRF
+      };
+      
+      setCookie("userInfo", JSON.stringify(updatedUserInfo), cookieOptions);
 
       // 顯示成功訊息
       setMessage({ type: "success", text: "個人資料已成功更新！" });
+      addToast({
+        color: "success",
+        title: "更新成功",
+        description: "個人資料已成功更新！"
+      });
 
       // 關閉編輯模式
       setIsEditing(false);
@@ -83,6 +101,11 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("更新個人資料失敗:", error);
       setMessage({ type: "error", text: "更新個人資料發生錯誤，請稍後再試" });
+      addToast({
+        color: "danger",
+        title: "更新失敗",
+        description: "更新個人資料發生錯誤，請稍後再試"
+      });
     }
   };
 
@@ -192,7 +215,7 @@ export default function ProfilePage() {
                 </Button>
                 <Button
                   color="primary"
-                  onSubmit={handleSubmit}
+                  onClick={handleSubmit}
                 >
                   儲存更改
                 </Button>

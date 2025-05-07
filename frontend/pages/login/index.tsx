@@ -18,8 +18,7 @@ import { mockLogin, initMockUsers } from "@/api/mock/auth";
 export default function LoginPage() {
   const router = useRouter();
   const { role, setRole } = useContext(AuthContext);
-  const { language, setLang } = useContext(LangContext);
-  // 使用 addToast 函數而不是 useToast hook
+  const { language } = useContext(LangContext);
   
   // 身分別選項
   const roleOptions = [
@@ -44,7 +43,6 @@ export default function LoginPage() {
 
   // 登入相關狀態
   const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
@@ -56,15 +54,43 @@ export default function LoginPage() {
     initMockUsers();
   }, []);
 
-  // Check if user is already logged in
+  // 檢查用戶是否已登入
   useEffect(() => {
-    if (hasCookie("role") && hasCookie("jwt")) {
-      const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-      setRole(userRole);
-      setIsLoggedIn(true);
-      router.push("/"); // Redirect to home if already logged in
+    // 確認用戶是否已登入
+    if (hasCookie("jwt") && hasCookie("userInfo")) {
+      try {
+        const userInfoStr = getCookie("userInfo") as string;
+        const parsedUser = JSON.parse(userInfoStr);
+        
+        if (parsedUser && parsedUser.role) {
+          // 獲取顯示角色名稱
+          setRole(getRoleDisplayName(parsedUser.role));
+          setIsLoggedIn(true);
+          router.push("/"); // 已登入則重定向到首頁
+        }
+      } catch (error) {
+        console.error("解析用戶信息時發生錯誤:", error);
+        // 清除可能損壞的 cookie
+        deleteCookie("jwt", { path: '/' });
+        deleteCookie("role", { path: '/' });
+        deleteCookie("userInfo", { path: '/' });
+      }
     }
   }, [setRole, language, router]);
+
+  // 將後端角色值轉換為前端顯示名稱
+  const getRoleDisplayName = (roleValue: string): string => {
+    switch (roleValue) {
+      case 'student':
+        return LanguageTable.login.role.student[language];
+      case 'ta':
+        return LanguageTable.login.role.ta[language];
+      case 'teacher':
+        return LanguageTable.login.role.teacher[language];
+      default:
+        return LanguageTable.nav.role.unsigned[language];
+    }
+  };
 
   // 處理表單輸入變更
   const handleChange = (field: string, value: string) => {
@@ -115,43 +141,78 @@ export default function LoginPage() {
 
   // 登出功能
   const logout = () => {
-    deleteCookie("role");
-    deleteCookie("jwt");
+    const cookieOptions = { path: '/' };
+    deleteCookie("jwt", cookieOptions);
+    deleteCookie("role", cookieOptions);
+    deleteCookie("userInfo", cookieOptions);
     setIsLoggedIn(false);
     setFormData({
       role: "",
       username: "",
       password: "",
     });
-    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-    setRole(userRole);
-    localStorage.removeItem("currentUser");
+    setRole(LanguageTable.nav.role.unsigned[language]);
     router.push("/login");
   };
 
   // 顯示登入成功訊息並跳轉到首頁
-  const handleLoginSuccess = (roleName: string) => {
-    // 在跳轉前，先將用戶信息保存到 localStorage，以便 AuthContext 能夠讀取
-    const userDetails = {
-      role: roleName, 
-      // 可以添加其他用戶信息
+  const handleLoginSuccess = (roleName: string, userData: any) => {
+    // 儲存用戶信息到 Cookie (避免存儲敏感信息)
+    const safeUserInfo = {
+      id: userData.id,
+      role: roleName,
+      email: userData.email,
+      studentId: userData.studentId || "",
+      department: userData.department || ""
     };
-    localStorage.setItem('currentUser', JSON.stringify(userDetails));
+    
+    // 設定 Cookie - 適用於開發環境
+    const cookieOptions = {
+      maxAge: 7 * 24 * 60 * 60, // 7天有效期
+      path: "/", // 確保 cookie 在所有路徑可訪問
+      sameSite: "lax" as const  // 開發環境使用 lax
+    };
+    
+    // 設置 JWT cookie
+    setCookie("jwt", userData.jwt_token || "", cookieOptions);
+    setCookie("userInfo", JSON.stringify(safeUserInfo), cookieOptions);
     
     console.log("登入成功，準備跳轉...");
     
-    // 直接強制跳轉，不使用 setTimeout
-    window.location.href = "/";
-    
-    // 顯示成功訊息 (由於強制跳轉，這可能不會顯示很久)
+    // 顯示成功訊息
     addToast({
       color: "success",
       title: LanguageTable.login.loginSuccess[language],
       description: `${LanguageTable.login.role[roleName as keyof typeof LanguageTable.login.role][language]} ${LanguageTable.login.loginSuccess[language]}`,
     });
+    
+    // 設置登入狀態
+    setRole(getRoleDisplayName(roleName));
+    setIsLoggedIn(true);
+    
+    // 短暫延遲後導向首頁，確保狀態更新
+    setTimeout(() => {
+      router.push("/");
+    }, 500);
   };
 
-  // 提交表單 - 優先使用模擬認證，當後端 API 可用時再使用 API
+  // 檢查是否是默認帳號
+  const isDefaultAccount = (username: string, password: string, role: string): boolean => {
+    // 預設帳號列表
+    const defaults = [
+      { email: "teacher@fcu.edu.tw", password: "teacher123", role: "teacher" },
+      { email: "ta@fcu.edu.tw", password: "ta123", role: "ta" },
+      { email: "student@mail.fcu.edu.tw", password: "student123", role: "student" },
+    ];
+    
+    return defaults.some(account => 
+      account.email.toLowerCase() === username.toLowerCase() && 
+      account.password === password && 
+      account.role === role
+    );
+  };
+
+  // 提交表單 - 使用模擬認證並支持異步 JWT
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -163,122 +224,41 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      // 使用SHA3-256哈希密碼
-      const hashedPassword = sha3_256(formData.password);
-
-      // 先嘗試模擬登入
-      const mockResult = mockLogin(formData.username, hashedPassword, formData.role);
-
-      if (mockResult.success) {
-        // 模擬登入成功
-        setCookie("jwt", mockResult.jwt_token);
-        setCookie("role", mockResult.role);
-
-        const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-        setRole(userRole);
-
-        // 顯示成功訊息並直接導向首頁
-        if (mockResult.role) {
-          handleLoginSuccess(mockResult.role);
+      // 檢查是否為預設帳號
+      if (isDefaultAccount(formData.username, formData.password, formData.role)) {
+        // 對預設帳號使用明文密碼進行認證
+        const mockResult = await mockLogin(formData.username, formData.password, formData.role);
+        
+        if (mockResult.success) {
+          // 模擬登入成功
+          handleLoginSuccess(mockResult.role, {
+            ...mockResult.userData,
+            jwt_token: mockResult.jwt_token
+          });
         } else {
-          // Fallback to a default role if undefined
-          handleLoginSuccess("student");
+          console.error("預設帳號登入失敗，這是不應該發生的:", mockResult.message);
+          setLoginError("登入過程發生錯誤，請稍後再試。");
         }
-        return;
-      }
+      } else {
+        // 非預設帳號使用 SHA3-256 哈希密碼進行認證
+        const hashedPassword = sha3_256(formData.password);
+        const mockResult = await mockLogin(formData.username, hashedPassword, formData.role);
 
-      // 檢查API URL是否有效配置，否則直接顯示錯誤信息
-      if (!siteConfig.api_url) {
-        setLoginError("API URL未配置，無法連接到後端伺服器。請聯繫管理員或使用預設帳號。");
-        addToast({
-          color: "danger",
-          title: LanguageTable.login.loginFail[language],
-          description: "API URL未配置，無法連接到後端伺服器",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // 如果模擬登入失敗且後端 API 可用，嘗試使用 API 登入
-      try {
-        const apiUrl = `${siteConfig.api_url}/authorization/login/`;
-        console.log("嘗試連接API:", apiUrl);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超時
-        
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username: formData.username,
-            hashed_password: hashedPassword,
-            role: formData.role,
-          }),
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.success) {
-            // API 登入成功
-            setCookie("jwt", data.jwt_token);
-            // 顯示成功訊息並導向首頁
-            if (data.role) {
-              handleLoginSuccess(data.role);
-            } else {
-              // Fallback to a default role if undefined
-              handleLoginSuccess("student");
-            }
-            const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
-            setRole(userRole);
-
-            // 顯示成功訊息並導向首頁
-            handleLoginSuccess(data.role);
-          } else {
-            // API返回成功但登入失敗
-            setLoginError(data.message || "帳號、密碼或身分別錯誤，請重新確認");
-            addToast({
-              color: "danger",
-              title: LanguageTable.login.loginFail[language],
-              description: data.message || "帳號、密碼或身分別錯誤，請重新確認",
-            });
-          }
+        if (mockResult.success) {
+          // 模擬登入成功
+          handleLoginSuccess(mockResult.role, {
+            ...mockResult.userData,
+            jwt_token: mockResult.jwt_token
+          });
         } else {
-          // API回應不成功
-          setLoginError("伺服器回應錯誤，請稍後再試");
+          // 模擬登入失敗 - 顯示錯誤
+          setLoginError("帳號、密碼或身份別錯誤，請重新確認");
           addToast({
             color: "danger",
             title: LanguageTable.login.loginFail[language],
-            description: "伺服器回應錯誤，請稍後再試",
+            description: "帳號、密碼或身份別錯誤，請重新確認",
           });
         }
-      } catch (apiError: any) {
-        console.error("API 連接錯誤:", apiError);
-        
-        // 處理超時或連線被中止的情況
-        if (apiError.name === 'AbortError') {
-          setLoginError("伺服器連接超時，請稍後再試。請嘗試使用預設帳號。");
-          addToast({
-            color: "warning",
-            title: "連接超時",
-            description: "伺服器連接超時，建議使用預設帳號登入",
-          });
-          return;
-        }
-        
-        // 如果 API 連接失敗但模擬登入的錯誤信息也不合適，顯示更明確的錯誤
-        setLoginError("無法連接到後端伺服器。請確認伺服器是否運行或使用預設帳號。");
-        addToast({
-          color: "warning",
-          title: "伺服器無法連接",
-          description: "建議使用提供的預設帳號登入",
-        });
       }
     } catch (error) {
       console.error("登入處理錯誤:", error);
@@ -293,7 +273,7 @@ export default function LoginPage() {
     }
   };
 
-  // If already logged in, we could show different content or redirect
+  // 如果已登入，顯示不同的內容
   if (isLoggedIn) {
     return (
       <DefaultLayout>

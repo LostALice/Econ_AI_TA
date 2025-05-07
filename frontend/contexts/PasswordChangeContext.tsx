@@ -19,6 +19,7 @@
 
 import { createContext, useState, useContext } from "react";
 import { useRouter } from "next/router";
+import { setCookie, getCookie, deleteCookie, hasCookie } from "cookies-next";
 import { AuthContext } from "@/contexts/AuthContext";
 import { LangContext } from "@/contexts/LangContext";
 import { LanguageTable } from "@/i18n";
@@ -152,12 +153,8 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
       // 模擬 API 調用延遲
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 1. 從 localStorage 中獲取所有用戶
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-
-      // 2. 獲取當前登入用戶信息
-      const currentUserData = localStorage.getItem('currentUser');
-      if (!currentUserData) {
+      // 獲取當前登入用戶信息
+      if (!hasCookie("userInfo") || !hasCookie("jwt")) {
         setSubmitResult({
           success: false,
           message: LanguageTable.password.error.userNotFound[language]
@@ -166,8 +163,22 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
         return;
       }
 
-      const currentUser = JSON.parse(currentUserData);
+      // 1. 從 Cookie 中獲取用戶信息
+      const userInfoStr = getCookie("userInfo") as string;
+      if (!userInfoStr) {
+        setSubmitResult({
+          success: false,
+          message: LanguageTable.password.error.userNotFound[language]
+        });
+        setIsLoading(false);
+        return;
+      }
 
+      const currentUser = JSON.parse(userInfoStr);
+
+      // 2. 從 localStorage 獲取用戶數據 (僅用於模擬驗證，實際應用應使用後端 API)
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      
       // 3. 在所有用戶中找到當前用戶
       const userIndex = users.findIndex((u: any) =>
         u.id === currentUser.id &&
@@ -188,7 +199,7 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
         // 5. 更新用戶密碼
         users[userIndex].password = formData.newPassword;
 
-        // 6. 保存更新後的用戶列表
+        // 6. 保存更新後的用戶列表 (僅模擬用途，實際應使用後端 API)
         localStorage.setItem('users', JSON.stringify(users));
 
         // 7. 顯示成功消息
@@ -207,7 +218,6 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
         // 9. 延遲登出
         setTimeout(() => {
           logout();
-          // router.push('/login?message=密碼已更改，請使用新密碼登入');
           router.push("/login");
         }, 3000);
       } else {
@@ -222,7 +232,6 @@ export const PasswordChangeProvider: React.FC<{ children: React.ReactNode }> = (
       setSubmitResult({
         success: false,
         message: LanguageTable.password.error.cantChange[language]
-
       });
     } finally {
       setIsLoading(false);
