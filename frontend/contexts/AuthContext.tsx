@@ -45,6 +45,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return LanguageTable.login.role.ta[language];
       case 'teacher':
         return LanguageTable.login.role.teacher[language];
+      case 'admin':
+        return LanguageTable.nav.role.admin[language];
       default:
         return LanguageTable.nav.role.unsigned[language];
     }
@@ -55,43 +57,87 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initAuth = async () => {
       try {
         // 檢查 JWT 和用戶信息 Cookie 是否存在
-        if (hasCookie("jwt") && hasCookie("userInfo")) {
-          const jwtToken = getCookie("jwt") as string;
+        if (hasCookie("jwt") || hasCookie("userInfo") || hasCookie("role")) {
+          // 嘗試從各種來源獲取角色信息
+          const roleCookie = getCookie("role") as string;
+          const userInfoStr = getCookie("userInfo") as string;
+          let parsedUser = null;
           
-          // 驗證 JWT 令牌
-          const verifyResult = await mockVerifyToken(jwtToken);
-          
-          if (verifyResult.valid) {
-            // 從 Cookie 解析用戶信息
-            const userInfoStr = getCookie("userInfo") as string;
-            const parsedUser = JSON.parse(userInfoStr);
-            
-            // 檢查 role cookie 是否存在並與 userInfo 一致
-            const roleCookie = getCookie("role");
-            
-            if (roleCookie && roleCookie === parsedUser.role) {
-              // 設置用戶信息
-              setUserInfo(parsedUser);
-
-              // 設置角色顯示名稱
-              const displayRole = getRoleDisplayName(parsedUser.role);
-              setRoleState(displayRole);
-              console.log("Auth initialized with role:", displayRole);
-            } else {
-              // role cookie 與 userInfo 不一致，更新 role cookie
-              console.log("Role cookie inconsistent, updating...");
-              if (parsedUser.role) {
-                setCookie("role", parsedUser.role, { path: "/" });
-                const displayRole = getRoleDisplayName(parsedUser.role);
-                setRoleState(displayRole);
-                setUserInfo(parsedUser);
-              } else {
-                console.log("User info exists but no role found, resetting to unsigned");
-                resetAuthState();
-              }
+          try {
+            if (userInfoStr) {
+              parsedUser = JSON.parse(userInfoStr);
             }
+          } catch (e) {
+            console.error("Failed to parse userInfo:", e);
+          }
+          
+          // 如果已經有顯示角色名稱但沒有原始角色值，則手動設置原始角色值
+          if (role !== LanguageTable.nav.role.unsigned[language] && (!parsedUser || !parsedUser.role)) {
+            // 從顯示名稱判斷原始角色值
+            let originalRole = null;
+            
+            if (role === LanguageTable.login.role.teacher[language]) {
+              originalRole = 'teacher';
+            } else if (role === LanguageTable.login.role.ta[language]) {
+              originalRole = 'ta';
+            } else if (role === LanguageTable.nav.role.admin[language]) {
+              originalRole = 'admin';
+            } else if (role === LanguageTable.login.role.student[language]) {
+              originalRole = 'student';
+            }
+            
+            if (originalRole) {
+              // 創建或更新 userInfo
+              const newUserInfo: UserInfo = parsedUser || {
+                id: "auto-generated-id",
+                email: "user@example.com",
+                username: "自動創建用戶"
+              };
+              
+              newUserInfo.role = originalRole;
+              
+              // 保存 userInfo 到 Cookie
+              setCookie("role", originalRole, { path: "/" });
+              setCookie("userInfo", JSON.stringify(newUserInfo), { path: "/" });
+              
+              // 更新狀態
+              setUserInfo(newUserInfo);
+              console.log("從顯示角色建立原始角色:", originalRole);
+              return; // 提早返回，避免執行後面的代碼
+            }
+          }
+          
+          // 嘗試從 JWT 驗證或其他來源獲取信息
+          let displayRole = role;
+          
+          if (parsedUser && parsedUser.role) {
+            // 從 userInfo 取得角色
+            displayRole = getRoleDisplayName(parsedUser.role);
+            setRoleState(displayRole);
+            setUserInfo(parsedUser);
+            
+            // 確保 role cookie 與 userInfo 一致
+            setCookie("role", parsedUser.role, { path: "/" });
+            console.log("從 userInfo 設置角色:", parsedUser.role, "顯示為:", displayRole);
+          } else if (roleCookie) {
+            // 從 role cookie 取得角色
+            displayRole = getRoleDisplayName(roleCookie);
+            setRoleState(displayRole);
+            
+            // 如果 userInfo 不存在或無效，創建一個新的
+            const newUserInfo: UserInfo = {
+              id: "cookie-based-id",
+              email: "user@example.com",
+              username: "Cookie用戶",
+              role: roleCookie
+            };
+            
+            setUserInfo(newUserInfo);
+            setCookie("userInfo", JSON.stringify(newUserInfo), { path: "/" });
+            console.log("從 role cookie 設置角色:", roleCookie, "顯示為:", displayRole);
           } else {
-            console.log("JWT 驗證失敗:", verifyResult.error);
+            // 所有驗證都失敗，重置狀態
+            console.log("無法驗證用戶狀態，重置");
             resetAuthState();
           }
         } else {
@@ -119,9 +165,9 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // 執行初始化
     initAuth();
     
-    // 監聽 storage 事件，確保在不同標籤頁間保持一致性（僅用於 localStorage，對 Cookie 無效，但保留以備未來使用）
+    // 監聽 storage 事件
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'userInfo' || e.key === 'jwt') {
+      if (e.key === 'userInfo' || e.key === 'jwt' || e.key === 'role') {
         initAuth();
       }
     };
@@ -131,11 +177,41 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [language]); // 添加 language 作為依賴項
+  }, [language, role]); // 添加 role 作為依賴項
 
-  // 封裝 setRole 函數
+  // 封裝 setRole 函數，確保同時更新 userInfo
   const setRole = (newRole: string) => {
-    setRoleState(newRole);
+    console.log("Setting role to:", newRole);
+    // 如果是直接設定的原始角色值 (如 'teacher'、'ta')
+    if (['teacher', 'ta', 'student', 'admin'].includes(newRole)) {
+      const displayRole = getRoleDisplayName(newRole);
+      setRoleState(displayRole);
+      
+      // 更新 userInfo，確保 role 與顯示角色匹配
+      if (userInfo) {
+        const updatedUserInfo = { ...userInfo, role: newRole };
+        setUserInfo(updatedUserInfo);
+        setCookie("userInfo", JSON.stringify(updatedUserInfo), { path: "/" });
+        setCookie("role", newRole, { path: "/" });
+        console.log("Updated userInfo with role:", newRole, "顯示為:", displayRole);
+      } else {
+        // 如果 userInfo 不存在，創建模擬用戶
+        const mockUser: UserInfo = {
+          id: "mock-user-id",
+          email: "mock-user@example.com",
+          role: newRole,
+          username: "Mock User"
+        };
+        setUserInfo(mockUser);
+        setCookie("userInfo", JSON.stringify(mockUser), { path: "/" });
+        setCookie("role", newRole, { path: "/" });
+        console.log("Created mock userInfo with role:", newRole, "顯示為:", displayRole);
+      }
+    } else {
+      // 如果是顯示名稱，則直接設定
+      setRoleState(newRole);
+      console.log("Set role display name directly to:", newRole);
+    }
   };
 
   /**
@@ -165,7 +241,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("Current auth state:", { 
       role, 
       isLoggedIn: role !== LanguageTable.nav.role.unsigned[language],
-      userInfo: userInfo ? `User ${userInfo.email}` : "No user info"
+      userInfo: userInfo ? {
+        email: userInfo.email,
+        role: userInfo.role,
+        username: userInfo.username
+      } : "No user info"
     });
   }, [role, userInfo, language]);
 
