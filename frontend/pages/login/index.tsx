@@ -44,7 +44,6 @@ export default function LoginPage() {
   // 登入相關狀態
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   // Modal controls
   const logoutModal = useDisclosure();
@@ -54,7 +53,7 @@ export default function LoginPage() {
     initMockUsers();
   }, []);
 
-  // 檢查用戶是否已登入
+  // 檢查用戶是否已登入 - 修改為直接跳轉到首頁
   useEffect(() => {
     // 確認用戶是否已登入
     if (hasCookie("jwt") && hasCookie("userInfo")) {
@@ -65,8 +64,8 @@ export default function LoginPage() {
         if (parsedUser && parsedUser.role) {
           // 獲取顯示角色名稱
           setRole(getRoleDisplayName(parsedUser.role));
-          setIsLoggedIn(true);
-          router.push("/"); // 已登入則重定向到首頁
+          // 直接重定向到聊天頁面，不顯示中間頁面
+          router.push("/chat");
         }
       } catch (error) {
         console.error("解析用戶信息時發生錯誤:", error);
@@ -145,7 +144,6 @@ export default function LoginPage() {
     deleteCookie("jwt", cookieOptions);
     deleteCookie("role", cookieOptions);
     deleteCookie("userInfo", cookieOptions);
-    setIsLoggedIn(false);
     setFormData({
       role: "",
       username: "",
@@ -155,7 +153,7 @@ export default function LoginPage() {
     router.push("/login");
   };
 
-  // 顯示登入成功訊息並跳轉到首頁
+  // 顯示登入成功訊息並跳轉到首頁 - 修改為直接跳轉
   const handleLoginSuccess = (roleName: string, userData: any) => {
     // 儲存用戶信息到 Cookie (避免存儲敏感信息)
     const safeUserInfo = {
@@ -179,7 +177,7 @@ export default function LoginPage() {
     setCookie("role", roleName, cookieOptions);
     setCookie("userInfo", JSON.stringify(safeUserInfo), cookieOptions);
     
-    console.log("登入成功，準備跳轉...");
+    console.log("登入成功，直接跳轉到聊天頁面...");
     
     // 顯示成功訊息
     addToast({
@@ -188,14 +186,11 @@ export default function LoginPage() {
       description: `${LanguageTable.login.role[roleName as keyof typeof LanguageTable.login.role][language]} ${LanguageTable.login.loginSuccess[language]}`,
     });
     
-    // 設置登入狀態
+    // 設置角色
     setRole(getRoleDisplayName(roleName));
-    setIsLoggedIn(true);
     
-    // 短暫延遲後導向首頁，確保狀態更新
-    setTimeout(() => {
-      router.push("/");
-    }, 500);
+    // 立即導向聊天頁面，不顯示中間頁面
+    router.push("/chat");
   };
 
   // 檢查是否是默認帳號
@@ -275,30 +270,7 @@ export default function LoginPage() {
     }
   };
 
-  // 如果已登入，顯示不同的內容
-  if (isLoggedIn) {
-    return (
-      <DefaultLayout>
-        <div className="flex justify-center items-center py-10 px-4 min-h-[calc(100vh-14rem)]">
-          <Card className="max-w-md w-full">
-            <CardHeader className="flex flex-col items-center gap-3">
-              <h1 className="text-2xl font-bold">{LanguageTable.login.logged[language]}</h1>
-            </CardHeader>
-            <CardBody className="flex flex-col items-center">
-              <p className="mb-4">{LanguageTable.login.backHome[language]}</p>
-              <Button color="primary" onPress={() => router.push("/")}>
-                {LanguageTable.login.logged[language]}
-              </Button>
-              <Button color="danger" className="mt-2" onPress={() => logout()}>
-                {LanguageTable.login.logout[language]}
-              </Button>
-            </CardBody>
-          </Card>
-        </div>
-      </DefaultLayout>
-    );
-  }
-
+  // 移除顯示已登入狀態的中間頁面，只返回登入表單
   return (
     <DefaultLayout>
       <div className="flex justify-center items-center py-10 px-4 min-h-[calc(100vh-14rem)]">
