@@ -175,6 +175,8 @@ export default function LoginPage() {
     
     // 設置 JWT cookie
     setCookie("jwt", userData.jwt_token || "", cookieOptions);
+    // 同時保存 role cookie (重要) - 確保與 AuthContext 一致
+    setCookie("role", roleName, cookieOptions);
     setCookie("userInfo", JSON.stringify(safeUserInfo), cookieOptions);
     
     console.log("登入成功，準備跳轉...");
@@ -354,7 +356,7 @@ export default function LoginPage() {
               )}
 
               {/* 提交按鈕 */}
-              <div className="flex flex-col space-y-4 pt-2">
+              <div className="flex items-center justify-center w-full pt-2">
                 <Button
                   type="submit"
                   color="primary"
@@ -365,13 +367,15 @@ export default function LoginPage() {
                 </Button>
               </div>
 
-              {/* 預設帳號提示 */}
-              <div className="mt-4 p-3 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                <h3 className="font-bold mb-2">預設帳號:</h3>
-                <div className="space-y-2 text-sm">
-                  <p><strong>教師:</strong> teacher@fcu.edu.tw / teacher123</p>
-                  <p><strong>助教:</strong> ta@fcu.edu.tw / ta123</p>
-                  <p><strong>學生:</strong> student@mail.fcu.edu.tw / student123</p>
+              {/* 預設帳號提示 - 框置中，文字靠左 */}
+              <div className="flex justify-center w-full mt-4">
+                <div className="w-5/6 p-3 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 text-left">
+                  <h3 className="font-bold mb-2">預設帳號:</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><strong>教師:</strong> teacher@fcu.edu.tw / teacher123</p>
+                    <p><strong>助教:</strong> ta@fcu.edu.tw / ta123</p>
+                    <p><strong>學生:</strong> student@mail.fcu.edu.tw / student123</p>
+                  </div>
                 </div>
               </div>
             </Form>

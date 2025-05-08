@@ -66,18 +66,29 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             const userInfoStr = getCookie("userInfo") as string;
             const parsedUser = JSON.parse(userInfoStr);
             
-            // 設置用戶信息
-            setUserInfo(parsedUser);
+            // 檢查 role cookie 是否存在並與 userInfo 一致
+            const roleCookie = getCookie("role");
+            
+            if (roleCookie && roleCookie === parsedUser.role) {
+              // 設置用戶信息
+              setUserInfo(parsedUser);
 
-            // 設置角色顯示名稱
-            if (parsedUser.role) {
+              // 設置角色顯示名稱
               const displayRole = getRoleDisplayName(parsedUser.role);
               setRoleState(displayRole);
               console.log("Auth initialized with role:", displayRole);
             } else {
-              console.log("User info exists but no role found, resetting to unsigned");
-              setRoleState(LanguageTable.nav.role.unsigned[language]);
-              setUserInfo(null);
+              // role cookie 與 userInfo 不一致，更新 role cookie
+              console.log("Role cookie inconsistent, updating...");
+              if (parsedUser.role) {
+                setCookie("role", parsedUser.role, { path: "/" });
+                const displayRole = getRoleDisplayName(parsedUser.role);
+                setRoleState(displayRole);
+                setUserInfo(parsedUser);
+              } else {
+                console.log("User info exists but no role found, resetting to unsigned");
+                resetAuthState();
+              }
             }
           } else {
             console.log("JWT 驗證失敗:", verifyResult.error);

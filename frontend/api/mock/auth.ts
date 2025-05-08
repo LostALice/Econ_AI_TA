@@ -6,8 +6,9 @@
  */
 /*
 * 使用 HS256 演算法進行簽名，純前端環境中可以正常執行
-* 有後端 API 後，需修改 mockLogin 和 mockVerifyToken，替換成真的 API 
+* 有後端 API 後，需修改 mockLogin() 和 mockVerifyToken()，替換成真的 API 
 * 前端邏輯（如角色管理、Cookie 存儲等）可以保持不變
+* 現在是純前端
 */
 
 import { v4 as uuidv4 } from 'uuid';
