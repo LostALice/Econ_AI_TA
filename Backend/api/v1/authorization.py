@@ -10,31 +10,63 @@ from Backend.utils.helper.model.database.database import (
     UserInfoModel as DatabaseUserInfoModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.database.database import MySQLHandler
+from Backend.utils.database.database import mysql_client
+from Backend.utils.helper.model.api.dependency import JWTPayload
+from Backend.utils.helper.api.dependency import require_user
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
 from typing import Union
+from datetime import timedelta
 
 import datetime
 import hashlib
 import jwt
 import os
+import re
+
+router = APIRouter()
+logger = CustomLoggerHandler().get_logger()
 
 # development
-if os.getenv("DEBUG") is None:
+GLOBAL_DEBUG_MODE = os.getenv("DEBUG")
+logger.debug("| Authorization Loading Finished |")
 
+
+if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
 
 
-router = APIRouter()
-mysql_client = MySQLHandler()
-logger = CustomLoggerHandler(__name__).setup_logging()
+def parse_duration(duration_str: str) -> timedelta:
+    pattern = r"(?P<value>\d+)(?P<unit>[smhdw])"
+    match = re.fullmatch(pattern, duration_str.strip())
+
+    if not match:
+        raise ValueError("Invalid duration format. Use formats like 1d, 5h, 30m, etc.")
+
+    value = int(match.group("value"))
+    unit = match.group("unit")
+
+    if unit == "s":
+        return timedelta(seconds=value)
+    elif unit == "m":
+        return timedelta(minutes=value)
+    elif unit == "h":
+        return timedelta(hours=value)
+    elif unit == "d":
+        return timedelta(days=value)
+    elif unit == "w":
+        return timedelta(weeks=value)
+    else:
+        raise ValueError("Unsupported time unit")
 
 
-@router.post("/authorization/login/", status_code=200)
+@router.post("/login/", status_code=200)
 async def login(
     login_form: LoginFormModel,
 ) -> Union[LoginFormSuccessModel, LoginFormUnsuccessModel]:
@@ -100,10 +132,15 @@ async def login(
             "PS384",
             "PS512",
             "EdDSA",
-        ], "Missing MYSQL_HOST environment variable"
+        ], "Missing JWT_ALGORITHM environment variable"
+
+        _jwt_timeout = os.getenv("JWT_TIMEOUT")
+        assert _jwt_timeout is not None, "Missing JWT_TIMEOUT environment variable"
+        jwt_expired_time = parse_duration(_jwt_timeout)
+        assert jwt_expired_time is not None, "Missing JWT_TIMEOUT environment variable"
 
         login_info = {
-            "expire_time": str(datetime.datetime.now() + datetime.timedelta(days=1)),
+            "expire_time": str(datetime.datetime.now() + jwt_expired_time),
             "role_name": user_info.role_name,
             "username": user_info.username,
             "user_id": user_info.user_id,
@@ -129,8 +166,12 @@ async def login(
     raise HTTPException(status_code=401, detail="Unrecognized")
 
 
-@router.post("/authorization/signup", status_code=200)
-async def sign_in(username: str, password: str) -> SingUpSuccessModel:
+@router.post("/signup", status_code=200)
+async def sign_in(
+    username: str,
+    password: str,
+    # role_name: Literal["User", "Admin"] = "User",
+) -> SingUpSuccessModel:
     """
     Register a new user with the provided username and password.
 
@@ -154,8 +195,15 @@ async def sign_in(username: str, password: str) -> SingUpSuccessModel:
     hash_function.update(password.encode())
     hashed_password = hash_function.hexdigest()
 
-    _success = mysql_client.create_user(username, hashed_password)
+    _success = mysql_client.create_user(
+        username=username, hashed_password=hashed_password, role_name="User"
+    )
     if _success:
         return SingUpSuccessModel(status_code=200, success=True)
     else:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/test/", status_code=200, tags=["test", "Authorization"])
+async def test(user: JWTPayload = Depends(require_user)):
+    return {"message": f"Hello, {user.username}!"}

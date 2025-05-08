@@ -1,6 +1,6 @@
 # Code by AkinoAlice@TyrantRey
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import Literal, Union
 
 

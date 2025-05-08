@@ -4,13 +4,15 @@ from Backend.utils.helper.model.api.v1.documentation import (
     QueryDocumentListModel,
     FileUploadSuccessModel,
 )
-from Backend.utils.database.vector_database import MilvusHandler
-from Backend.utils.RAG.document_handler import DocumentSplitter
-from Backend.utils.RAG.vector_extractor import VectorHandler
+from Backend.utils.database.vector_database import milvus_client
+from Backend.utils.RAG.document_handler import docs_client
+from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.database.database import MySQLHandler
+from Backend.utils.database.database import mysql_client
+from Backend.utils.helper.api.dependency import require_user, require_root
+from Backend.utils.helper.model.api.dependency import JWTPayload
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi import UploadFile, Form
 
 from starlette.responses import FileResponse
@@ -22,15 +24,16 @@ import uuid
 import json
 
 # FastAPI router setup
-router = APIRouter()
-mysql_client = MySQLHandler()
-milvus_client = MilvusHandler()
-docs_client = DocumentSplitter()
-encoder_client = VectorHandler()
-logger = CustomLoggerHandler(__name__).setup_logging()
+router = APIRouter(dependencies=[Depends(require_user)])
+# mysql_client = MySQLHandler()
+# milvus_client = MilvusHandler()
+# docs_client = DocumentSplitter()
+# encoder_client = VectorHandler()
+logger = CustomLoggerHandler().get_logger()
+logger.debug("| Documentation Loading Finished |")
 
 
-@router.get("/documentation/{docs_id}", status_code=200)
+@router.get("/{docs_id}", status_code=200)
 async def get_docs(docs_id: str) -> FileResponse:
     """
     Retrieve and return a specific document file based on its unique identifier.
@@ -69,7 +72,7 @@ async def get_docs(docs_id: str) -> FileResponse:
         raise HTTPException(500, detail="Incorrect uuid format or file not found")
 
 
-@router.get("/documentation/{documentation_type}/", status_code=200)
+@router.get("/{documentation_type}/", status_code=200)
 async def get_documentation_list(
     documentation_type: str = "其他",
 ) -> QueryDocumentListModel:
@@ -103,12 +106,13 @@ async def get_documentation_list(
     )
 
 
-@router.post("/documentation/upload/", status_code=200)
+@router.post("/upload/", status_code=200)
 async def file_upload(
     docs_file: UploadFile,
     tags: Annotated[list[str], Form()],
     docs_type: str,
     collection: str = "default",
+    user: JWTPayload = Depends(require_root),
 ) -> FileUploadSuccessModel:
     """
     Upload a document file, process its content, and store it in the database.

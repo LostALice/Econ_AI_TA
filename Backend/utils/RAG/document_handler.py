@@ -11,7 +11,7 @@ from unstructured.partition.pdf import partition_pdf
 from typing import Literal
 
 
-class DocumentSplitter(object):
+class DocumentSplitter:
     def __init__(self) -> None: ...
 
     def document_splitter(
@@ -76,3 +76,6 @@ class DocumentSplitter(object):
         ).split("。")
 
         return splitted_page_content
+
+
+docs_client = DocumentSplitter()

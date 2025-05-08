@@ -6,30 +6,30 @@ from Backend.utils.helper.model.api.v1.chatroom import (
     QuestioningModel,
     QuestionResponseModel,
 )
-from Backend.utils.database.vector_database import MilvusHandler
-from Backend.utils.RAG.response_handler import ResponseHandler
-from Backend.utils.RAG.vector_extractor import VectorHandler
+from Backend.utils.database.vector_database import milvus_client
+from Backend.utils.RAG.response_handler import response_client
+from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.database.database import MySQLHandler
+from Backend.utils.database.database import mysql_client
+from Backend.utils.helper.api.dependency import require_user
 
-# from Backend.utils.helper.model.model import *
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
 from uuid import uuid4
 
 import base64
 import os
 
-router = APIRouter()
-mysql_client = MySQLHandler()
-milvus_client = MilvusHandler()
-encoder_client = VectorHandler()
-response_client = ResponseHandler()
-logger = CustomLoggerHandler(__name__).setup_logging()
+router = APIRouter(dependencies=[Depends(require_user)])
+# mysql_client = MySQLHandler()
+# milvus_client = MilvusHandler()
+# encoder_client = VectorHandler()
+# response_client = ResponseHandler()
+logger = CustomLoggerHandler().get_logger()
+logger.debug("| Chatroom Loading Finished |")
 
 
-@router.get("/chatroom/uuid/")
+@router.get("/uuid/")
 async def get_uuid() -> str:
     """
     Generates uuid for a new chatroom.
@@ -42,7 +42,7 @@ async def get_uuid() -> str:
     return chatroom_uuid
 
 
-@router.patch("/chatroom/rating/", status_code=200)
+@router.patch("/rating/", status_code=200)
 async def answer_rating(
     rating_model: RatingModel,
 ) -> AnswerRatingModel:
@@ -87,7 +87,7 @@ async def answer_rating(
     raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/chatroom/{chat_id}/", status_code=200)
+@router.post("/{chat_id}/", status_code=200)
 async def questioning(
     question_model: QuestioningModel,
 ) -> QuestionResponseModel:

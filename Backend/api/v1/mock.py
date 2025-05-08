@@ -1,9 +1,9 @@
 # Code by AkinoAlice@TyrantRey
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.database.database import MySQLHandler
+from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.model.api.v1.mock import (
     ExamType,
     ExamOptionModel,
@@ -16,7 +16,10 @@ from Backend.utils.helper.model.api.v1.mock import (
     MockExamInformationModel,
     ExamResultModel,
     SubmittedExamModel,
+    TagModel,
 )
+from Backend.utils.helper.api.dependency import require_user, require_root
+from Backend.utils.helper.model.api.dependency import JWTPayload
 
 # development
 from dotenv import load_dotenv
@@ -27,16 +30,22 @@ from typing import Optional, Union
 import base64
 import os
 
+logger = CustomLoggerHandler().get_logger()
 # development
-if os.getenv("DEBUG") is None:
+GLOBAL_DEBUG_MODE = os.getenv("DEBUG")
+
+
+if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
 
 
-router = APIRouter()
-mysql_client = MySQLHandler()
-logger = CustomLoggerHandler(__name__).setup_logging()
+router = APIRouter(dependencies=[Depends(require_user)])
+# mysql_client = MySQLHandler()
 
 
 def encode_image_to_base64(file_path: str) -> str:
@@ -77,7 +86,7 @@ def question_images_uuid_to_base64(
     return question_image_uuids
 
 
-@router.get("/mock/exam-lists/", status_code=200)
+@router.get("/exam-lists/", status_code=200)
 async def get_mock_info() -> list[ExamsInfoModel]:
     """
     Endpoint to get mock exam lists
@@ -110,7 +119,7 @@ async def get_mock_info() -> list[ExamsInfoModel]:
     return mock_exam_data
 
 
-@router.get("/mock/exam/{mock_type}/", status_code=200)
+@router.get("/exam/{mock_type}/", status_code=200)
 async def get_mock_exams(mock_type: ExamType):
     """
     Endpoint to get mock exam according to mock type
@@ -125,8 +134,10 @@ async def get_mock_exams(mock_type: ExamType):
     return [] if mock_exam_data is None else mock_exam_data
 
 
-@router.post("/mock/new/exam/")
-async def create_new_exam(exam_prams: CreateNewExamParamsModel) -> ExamsInfoModel:
+@router.post("/new/exam/")
+async def create_new_exam(
+    exam_prams: CreateNewExamParamsModel, user: JWTPayload = Depends(require_root)
+) -> ExamsInfoModel:
     """
     Endpoint to create new exam
 
@@ -142,9 +153,9 @@ async def create_new_exam(exam_prams: CreateNewExamParamsModel) -> ExamsInfoMode
     return new_exam
 
 
-@router.post("/mock/new/question/")
+@router.post("/new/question/")
 async def create_new_question(
-    question: CreateNewQuestionParamsModel,
+    question: CreateNewQuestionParamsModel, user: JWTPayload = Depends(require_root)
 ) -> ExamQuestionModel:
     """
     Endpoint to add new question to an exam.
@@ -161,9 +172,9 @@ async def create_new_question(
     return new_question
 
 
-@router.post("/mock/new/options/")
+@router.post("/new/options/")
 async def create_new_options(
-    options: list[CreateNewOptionParamsModel],
+    options: list[CreateNewOptionParamsModel], user: JWTPayload = Depends(require_root)
 ) -> list[ExamOptionModel]:
     """
     Endpoint to add new question options to an exam.
@@ -182,8 +193,10 @@ async def create_new_options(
     return new_options
 
 
-@router.put("/mock/modify/exam/")
-async def modify_exam(exam: ExamsInfoModel) -> None:
+@router.put("/modify/exam/")
+async def modify_exam(
+    exam: ExamsInfoModel, user: JWTPayload = Depends(require_root)
+) -> None:
     """
     Endpoint to modify exam.
 
@@ -195,8 +208,10 @@ async def modify_exam(exam: ExamsInfoModel) -> None:
     logger.debug(exam)
 
 
-@router.put("/mock/modify/question/")
-async def modify_question(question: ExamQuestionModel) -> bool:
+@router.put("/modify/question/")
+async def modify_question(
+    question: ExamQuestionModel, user: JWTPayload = Depends(require_root)
+) -> bool:
     """
     Update an exam question along with its associated images.
 
@@ -242,8 +257,8 @@ async def modify_question(question: ExamQuestionModel) -> bool:
     return mysql_client.modify_question(question=question, image_uuids=image_uuids)
 
 
-@router.delete("/mock/enable/exam/")
-async def enable_exam(exam_id: int) -> bool:
+@router.delete("/enable/exam/")
+async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) -> bool:
     """
     Endpoint to delete exam.
 
@@ -257,8 +272,8 @@ async def enable_exam(exam_id: int) -> bool:
     return mysql_client.disable_exam(exam_id)
 
 
-@router.delete("/mock/disable/exam/")
-async def disable_exam(exam_id: int) -> bool:
+@router.delete("/disable/exam/")
+async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) -> bool:
     """
     Endpoint to delete exam.
 
@@ -272,8 +287,10 @@ async def disable_exam(exam_id: int) -> bool:
     return mysql_client.disable_exam(exam_id)
 
 
-@router.delete("/mock/delete/question/{question_id}")
-async def delete_question(question_id: int) -> bool:
+@router.delete("/delete/question/{question_id}")
+async def delete_question(
+    question_id: int, user: JWTPayload = Depends(require_root)
+) -> bool:
     """
     Endpoint to delete question to an exam.
 
@@ -287,7 +304,7 @@ async def delete_question(question_id: int) -> bool:
     return mysql_client.disable_question(question_id=question_id)
 
 
-@router.post("/mock/submit/")
+@router.post("/submit/")
 async def submit(submitted_exam: SubmittedExamModel) -> Optional[int]:
     """
     Endpoint to submit exam.
@@ -324,7 +341,7 @@ async def submit(submitted_exam: SubmittedExamModel) -> Optional[int]:
     return submission_id if submission_id else None
 
 
-@router.get("/mock/results/{submission_id}")
+@router.get("/results/{submission_id}")
 async def query_mock_exam_results(submission_id: int) -> Optional[ExamResultModel]:
     """
     Query mock exam results based on submission ID.
@@ -340,7 +357,7 @@ async def query_mock_exam_results(submission_id: int) -> Optional[ExamResultMode
     return exam_results if exam_results else None
 
 
-@router.get("/mock/{mock_id}/")
+@router.get("/{mock_id}/")
 async def fetch_mock_exam_questions_list(
     mock_id: int,
 ) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
@@ -383,3 +400,41 @@ async def fetch_mock_exam_questions_list(
         question.question_images = question_image_uuids
 
     return mock_exam_question_list, mock_exam_information
+
+
+@router.get("/tag/list/")
+async def get_tag_list() -> list[TagModel]:
+    tag_list = mysql_client.query_tag_list()
+
+    logger.info(tag_list)
+
+    return tag_list
+
+
+@router.get("/tag/{tag_id}")
+async def get_tag(tag_id: int) -> TagModel | None:
+    tag = mysql_client.query_tag(tag_id=tag_id)
+
+    logger.info(tag)
+
+    return tag
+
+
+@router.post("/tag/create/")
+async def create_tag(tag_name: str, tag_description: str) -> bool:
+    return mysql_client.create_tag(tag_name=tag_name, tag_description=tag_description)
+
+
+@router.post("/tag/add/{question_id}")
+async def add_tag(tag_id: int, question_id: int) -> bool:
+    return True
+
+
+@router.post("/tag/remove/{question_id}")
+async def remove_tag(tag_id: int, question_id: int) -> bool:
+    return True
+
+
+@router.post("/tag/delete/")
+async def delete_tag(tag_id: int) -> bool:
+    return mysql_client.disable_tag(tag_id=tag_id)

@@ -16,6 +16,7 @@ from Backend.utils.helper.model.api.v1.mock import (
     MockExamInformationModel,
     SubmittedExamModel,
     ExamResultModel,
+    TagModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 from typing import Literal, Optional
@@ -26,26 +27,21 @@ import json
 from pprint import pformat
 from os import getenv
 
-
 # development
-if getenv("DEBUG") == "True":
+GLOBAL_DEBUG_MODE = getenv("DEBUG")
+
+
+if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
+    from dotenv import load_dotenv
+
+    load_dotenv("./.env")
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
 
 
-class SetupMYSQL(object):
-    _instance = None
-
-    def __new__(cls):
-        if not cls._instance:
-            if not cls._instance:
-                cls._instance = super(SetupMYSQL, cls).__new__(cls)
-                cls._instance._initialize()
-
-        return cls._instance
-
-    def _initialize(self) -> None:
+class SetupMYSQL:
+    def __init__(self) -> None:
         self._DEBUG = getenv("MYSQL_DEBUG")
 
         self._HOST = getenv("MYSQL_HOST")
@@ -77,17 +73,13 @@ class SetupMYSQL(object):
         )
 
         # logger
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
-        self.logger.debug("=======================")
         self.logger.debug("| Start loading MYSQL |")
-        self.logger.debug("=======================")
 
         self._setup()
 
-        self.logger.debug("==========================")
         self.logger.debug("| MYSQL Loading Finished |")
-        self.logger.debug("==========================")
 
     def _setup(self):
         """
@@ -118,7 +110,6 @@ class SetupMYSQL(object):
         self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
         try:
-            self.connection.database = self._DATABASE
             self.logger.debug(f"Debug Mode: {self._DEBUG}")
             if self._DEBUG in ["True", "true"]:
                 self.logger.warning("Dropping database")
@@ -127,9 +118,9 @@ class SetupMYSQL(object):
                 self.create_database()
             else:
                 self.logger.info(f"Skipped recrate database, Debug: {self._DEBUG}")
+            self.connection.database = self._DATABASE
         except connector.Error as error:
             self.logger.error(error)
-            self.logger.debug(pformat(f"Creating MYSQL database {self._DATABASE}"))
             self.create_database()
         finally:
             self.logger.debug(f"Using MYSQL database {self._DATABASE}")
@@ -137,7 +128,8 @@ class SetupMYSQL(object):
             self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
     def create_database(self) -> None:
-        self.cursor.execute(f"CREATE DATABASE {self._DATABASE};")
+        self.logger.debug(f"Creating MYSQL database {self._DATABASE}")
+        self.cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self._DATABASE};")
         self.connection.connect(database=self._DATABASE)
         self.connection.commit()
 
@@ -324,7 +316,8 @@ class SetupMYSQL(object):
                 exam_id INT NOT NULL,
                 user_id INT NOT NULL,
                 submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
             );
             """
         )
@@ -339,6 +332,58 @@ class SetupMYSQL(object):
                 FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
                 FOREIGN KEY (question_id) REFERENCES exam_questions(question_id),
                 FOREIGN KEY (selected_option_id) REFERENCES exam_options(option_id)
+            );
+            """
+        )
+
+        # classes table
+        self.cursor.execute(
+            """
+            CREATE TABLE class (
+                class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                is_teacher TINYINT(1) NOT NULL DEFAULT False,
+                FOREIGN KEY (user_id) REFERENCES `user`(user_id)
+            );
+            """
+        )
+
+        # exam_teacher table
+        self.cursor.execute(
+            """
+            CREATE TABLE exam_class (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                classname VARCHAR(15) NOT NULL DEFAULT "New Class",
+                exam_id INT NOT NULL,
+                class_id INT NOT NULL,
+                FOREIGN KEY (class_id) REFERENCES `user`(user_id),
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+            );
+            """
+        )
+
+        # tag table
+        self.cursor.execute(
+            """
+            CREATE TABLE tag (
+                tag_id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(15) NOT NULL UNIQUE,
+                description VARCHAR(255) NOT NULL UNIQUE,
+                enable TINYINT(1) NOT NULL DEFAULT TRUE
+            );
+            """
+        )
+
+        # question_tag table
+        self.cursor.execute(
+            """
+            CREATE TABLE question_tag (
+                question_tag_id INT AUTO_INCREMENT PRIMARY KEY,
+                question_id INT NOT NULL,
+                tag_id INT NOT NULL,
+                enable TINYINT(1) NOT NULL DEFAULT TRUE,
+                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id) ON DELETE CASCADE,
+                FOREIGN KEY (tag_id) REFERENCES tag(tag_id) ON DELETE CASCADE
             );
             """
         )
@@ -390,6 +435,20 @@ class SetupMYSQL(object):
         )
         self.connection.commit()
 
+        # User
+        self.cursor.execute(
+            """
+            INSERT INTO `role` (`role_name`) VALUES ("User");
+            """
+        )
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 3);
+            """,
+            ("User",),
+        )
+        self.connection.commit()
+
         self.logger.debug(pformat(f"Created MYSQL database {self._DATABASE}"))
 
 
@@ -420,64 +479,88 @@ class MySQLHandler(SetupMYSQL):
 
         return int(role_id) if role_id else None
 
+    def remove_expired_token(self, user_id: int) -> None:
+        self.cursor.execute(
+            """UPDATE login SET jwt = "" WHERE user_id = %s""",
+            (user_id,),
+        )
+
+    def verify_login_token(self, user_id: int, token: str) -> bool:
+        self.cursor.execute(
+            """SELECT jwt FROM login WHERE user_id = %s AND jwt = %s;""",
+            (user_id, token),
+        )
+        result = self.cursor.fetchone()
+
+        if result:
+            return True
+
+        return False
+
     def create_user(
         self,
         username: str,
         hashed_password: str,
-        role_name: Literal["user", "admin"] = "user",
+        role_name: Literal["User", "Admin"] = "User",
     ) -> int | bool:
-        """create a new user
-
-        Args:
-            username (str): provide a username
-            password (str): password
-            role_name (str): admin | user
+        """
+        Create a new user account.
 
         Returns:
-            int:
-                200: success
-                302: username exists in database
-                500: database error
+            200: Success
+            302: Username already exists
+            500: Error during database commit
         """
         self.connection.ping(attempts=3)
         self.logger.debug(
             pformat(f"create_user {username} {hashed_password} {role_name}")
         )
 
-        # check if user already exists
+        # Check if username already exists
         self.cursor.execute(
-            """SELECT username FROM `users` WHERE username = %s""", (username,)
+            "SELECT username FROM `user` WHERE username = %s", (username,)
         )
-
         self.sql_query_logger()
-        is_username_exist = self.cursor.fetchone()
-        self.logger.info("is_username_exist", is_username_exist)
-
-        if is_username_exist:
+        if self.cursor.fetchone():
             return 302
 
-        # check if role exists in database
+        # Get role_id from role table
         self.cursor.execute(
-            """SELECT role_id FROM `role` WHERE role_name = %s""", (role_name,)
+            "SELECT role_id FROM `role` WHERE role_name = %s", (role_name,)
+        )
+        self.sql_query_logger()
+        role_row = self.cursor.fetchone()
+
+        if not role_row:
+            self.logger.error(f"Role '{role_name}' not found in the database")
+            return 500
+
+        role_id = role_row["role_id"]
+
+        # Insert user into `user` table
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (username, role_id)
+            VALUES (%s, %s)
+            """,
+            (username, role_id),
         )
 
-        self.sql_query_logger()
-        role_id = self.cursor.fetchone()
-        self.logger.info(pformat(role_id))
+        user_id = self.cursor.lastrowid
 
-        if is_username_exist:
-            return 302
-
+        # Insert hashed password into `login` table
         self.cursor.execute(
             """
             INSERT INTO `login` (user_id, password)
-            VALUES (
-                %s, %s,
-            );""",
-            (username, hashed_password),
+            VALUES (%s, %s)
+            """,
+            (user_id, hashed_password),
         )
 
-        return self.commit()
+        # Commit all DB changes
+        if self.commit():
+            return 200
+        return 500
 
     def insert_login_token(self, user_id: int, jwt_token: str) -> bool:
         """
@@ -1759,6 +1842,100 @@ class MySQLHandler(SetupMYSQL):
             score_percentage=fetch_data["score_percentage"],
         )
 
+    def create_tag(self, tag_name: str, tag_description: str) -> bool:
+        self.cursor.execute(
+            """
+            INSERT INTO tag (name, description) VALUES (%s, %s);
+            """,
+            (tag_name, tag_description),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def disable_tag(self, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            UPDATE tag SET enable = FALSE
+            WHERE tag_id = %s;
+            """,
+            (tag_id,),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def query_tag(self, tag_id: int) -> TagModel | None:
+        self.cursor.execute(
+            """
+            SELECT tag_id, name, description FROM tag WHERE enable = TRUE AND tag_id = %s;
+            """,
+            (tag_id,),
+        )
+
+        self.sql_query_logger()
+        fetch_data = self.cursor.fetchall()
+
+        if not fetch_data:
+            return None
+
+        self.logger.debug(pformat(fetch_data))
+        return fetch_data
+
+    def query_tag_list(self) -> list[TagModel]:
+        self.cursor.execute(
+            """
+            SELECT tag_id, name, description FROM tag WHERE enable = TRUE;
+            """,
+        )
+        self.sql_query_logger()
+        fetch_data = self.cursor.fetchall()
+
+        self.logger.debug(pformat(fetch_data))
+        if not fetch_data:
+            return []
+        self.logger.debug(pformat(fetch_data))
+        return [
+            TagModel(
+                tag_id=tag["tag_id"],
+                name=tag["name"],
+                description=tag["description"],
+            )
+            for tag in fetch_data
+        ]
+
+    def add_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            INSERT INTO question_tag (question_id, tag_id) VALUES (%s, %s);
+            """,
+            (question_id, tag_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def remove_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            UPDATE question_tag SET enable = FALSE
+            WHERE tag_id = %s AND question_id = %s;
+            """,
+            (tag_id, question_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    # logger
     def sql_query_logger(self) -> None:
         """Log sql query"""
         self.logger.debug(pformat(f"Committed SQL query: {str(self.cursor.statement)}"))
@@ -1796,6 +1973,8 @@ class MySQLHandler(SetupMYSQL):
                 self.connection.close()
                 self.logger.debug(pformat("Mysql connection closed"))
 
+
+mysql_client = MySQLHandler()
 
 if __name__ == "__main__":
     from dotenv import load_dotenv

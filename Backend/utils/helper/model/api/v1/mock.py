@@ -100,3 +100,9 @@ class ExamResultModel(BaseModel):
     exam_date: str
     total_correct_answers: int
     score_percentage: float
+
+
+class TagModel(BaseModel):
+    tag_id: int
+    name: str
+    description: str
