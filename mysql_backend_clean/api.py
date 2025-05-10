@@ -152,17 +152,27 @@ async def get_questions(file_id: str):
         # 轉換題目資料為前端需要的格式
         formatted_questions = []
         for q in questions:
+            # 準備選項數據
+            options = []
+            if q.get("option_a"):
+                options.append(q.get("option_a"))
+            if q.get("option_b"):
+                options.append(q.get("option_b"))
+            if q.get("option_c"):
+                options.append(q.get("option_c"))
+            if q.get("option_d"):
+                options.append(q.get("option_d"))
+            
+            # 如果沒有單獨的選項，檢查是否存在選項陣列
+            if not options and isinstance(q.get("options", []), list):
+                options = q.get("options")
+            
             formatted_questions.append({
                 "id": str(q.get("id", "")),
-                "question": q.get("question", q.get("question_text", "")),
-                "options": q.get("options", [
-                    q.get("option_a", ""),
-                    q.get("option_b", ""),
-                    q.get("option_c", ""),
-                    q.get("option_d", "")
-                ]),
-                "answer": q.get("answer", q.get("correct_answer", "")),
-                "category": q.get("category", q.get("chapter_no", "")),
+                "question": q.get("question", "") or q.get("question_text", ""),
+                "options": options,
+                "answer": q.get("answer", "") or q.get("correct_answer", ""),
+                "category": q.get("category", "") or q.get("chapter_no", ""),
                 "difficulty": q.get("difficulty", "普通"),
                 "modified": False,
                 "picture": q.get("picture", None)
@@ -175,6 +185,9 @@ async def get_questions(file_id: str):
         )
     except HTTPException:
         raise
+    except Exception as e:
+        logger.error(f"取得題目錯誤: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}")
     except Exception as e:
         logger.error(f"取得題目錯誤: {str(e)}")
         raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}")

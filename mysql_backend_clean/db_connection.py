@@ -48,7 +48,7 @@ class DBConnection:
             self.connection.close()
             logger.info("資料庫連接已關閉")
     
-    def insert_questions(self, questions: List[Dict[str, Any]], file_name: str, doc_type: str) -> bool:
+    def insert_questions(self, questions: List[Dict[str, Any]], file_name: str, doc_type: str) -> int:
         """
         插入多個題目到資料庫
         
@@ -61,51 +61,139 @@ class DBConnection:
             成功插入的題目數量
         """
         successful_inserts = 0
+        failed_inserts = 0
+        failures = {}
+        
         try:
             with self.connection.cursor() as cursor:
-                for question in questions:
-                    # 從字典獲取題目資料（使用轉換後的欄位名稱）
-                    question_no = question.get('question_no', '')
-                    chapter_no = question.get('chapter_no', '')
-                    question_text = question.get('question_text', '')
-                    option_a = question.get('option_a', '')
-                    option_b = question.get('option_b', '')
-                    option_c = question.get('option_c', '')
-                    option_d = question.get('option_d', '')
-                    correct_answer = question.get('correct_answer', '')
-                    explanation = question.get('explanation', '')
-                    picture = question.get('picture', '')  # 可以為空
-                    
-                    # SQL 插入語句
-                    sql = """
-                    INSERT INTO questions (question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
-                                          correct_answer, explanation, picture, file_name, doc_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                    chapter_no = VALUES(chapter_no),
-                    question_text = VALUES(question_text),
-                    option_a = VALUES(option_a),
-                    option_b = VALUES(option_b),
-                    option_c = VALUES(option_c),
-                    option_d = VALUES(option_d),
-                    correct_answer = VALUES(correct_answer),
-                    explanation = VALUES(explanation),
-                    picture = VALUES(picture),
-                    doc_type = VALUES(doc_type)
-                    """
-                    
-                    # 執行 SQL
-                    cursor.execute(sql, (question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
-                                       correct_answer, explanation, picture, file_name, doc_type))
-                    successful_inserts += 1
+                # 先刪除可能存在的舊題目，確保不會有重複
+                try:
+                    delete_sql = "DELETE FROM questions WHERE file_name = %s"
+                    cursor.execute(delete_sql, (file_name,))
+                    deleted_count = cursor.rowcount
+                    if deleted_count > 0:
+                        logger.info(f"已刪除舊有題目 {deleted_count} 題 (檔案名: {file_name})")
+                    self.connection.commit()
+                except Exception as e:
+                    logger.warning(f"刪除舊有題目時發生錯誤: {e}")
+                    self.connection.rollback()
                 
-                # 提交事務
-                self.connection.commit()
-                logger.info(f"成功插入/更新 {successful_inserts} 個題目")
+                # 批次處理，每50題一批
+                batch_size = 50
+                total_batches = (len(questions) + batch_size - 1) // batch_size
+                
+                for batch_index in range(total_batches):
+                    start_idx = batch_index * batch_size
+                    end_idx = min(start_idx + batch_size, len(questions))
+                    batch_questions = questions[start_idx:end_idx]
+                    
+                    logger.info(f"處理第 {batch_index + 1}/{total_batches} 批次題目 ({start_idx+1} 到 {end_idx})")
+                    
+                    # 處理批次中的每個題目
+                    batch_successful = 0
+                    for idx, question in enumerate(batch_questions):
+                        try:
+                            # 從字典獲取題目資料（使用轉換後的欄位名稱）
+                            question_no = question.get('question_no', '')
+                            chapter_no = question.get('chapter_no', '')
+                            question_text = question.get('question_text', '')
+                            option_a = question.get('option_a', '')
+                            option_b = question.get('option_b', '')
+                            option_c = question.get('option_c', '')
+                            option_d = question.get('option_d', '')
+                            correct_answer = question.get('correct_answer', '')
+                            explanation = question.get('explanation', '')
+                            picture = question.get('picture', '')  # 可以為空
+                            
+                            # 檢查問題內容是否超出資料庫欄位長度
+                            if len(question_text) > 65000:  # MEDIUMTEXT 欄位的最大長度
+                                logger.warning(f"第 {start_idx+idx+1} 題 - 題目內容過長 ({len(question_text)}字元), 會被截斷")
+                                question_text = question_text[:65000]  # 留有餘量
+                            
+                            # 檢查是否有重複題目 (相同 question_no, chapter_no, file_name)
+                            check_sql = """
+                            SELECT id FROM questions 
+                            WHERE question_no = %s AND chapter_no = %s AND file_name = %s
+                            """
+                            cursor.execute(check_sql, (question_no, chapter_no, file_name))
+                            existing = cursor.fetchone()
+                            
+                            if existing:
+                                # 如果找到重複題目，使用 UPDATE 語句
+                                update_sql = """
+                                UPDATE questions SET
+                                    question_text = %s,
+                                    option_a = %s,
+                                    option_b = %s,
+                                    option_c = %s,
+                                    option_d = %s,
+                                    correct_answer = %s,
+                                    explanation = %s,
+                                    picture = %s,
+                                    doc_type = %s
+                                WHERE id = %s
+                                """
+                                cursor.execute(update_sql, (
+                                    question_text, option_a, option_b, option_c, option_d, 
+                                    correct_answer, explanation, picture, doc_type, 
+                                    existing['id']
+                                ))
+                                logger.info(f"更新第 {start_idx+idx+1} 題 (ID: {existing['id']}, 題號: {question_no}, 章節: {chapter_no})")
+                            else:
+                                # 如果沒有重複，使用 INSERT 語句
+                                sql = """
+                                INSERT INTO questions 
+                                    (question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
+                                    correct_answer, explanation, picture, file_name, doc_type)
+                                VALUES 
+                                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """
+                                cursor.execute(sql, (
+                                    question_no, chapter_no, question_text, 
+                                    option_a, option_b, option_c, option_d, 
+                                    correct_answer, explanation, picture, 
+                                    file_name, doc_type
+                                ))
+                            
+                            batch_successful += 1
+                            successful_inserts += 1
+                        
+                        except Exception as e:
+                            failed_inserts += 1
+                            error_type = str(type(e).__name__)
+                            failures[error_type] = failures.get(error_type, 0) + 1
+                            logger.error(f"第 {start_idx+idx+1} 題插入失敗: {str(e)[:200]}")
+                    
+                    # 每個批次完成後提交事務
+                    try:
+                        self.connection.commit()
+                        logger.info(f"第 {batch_index + 1} 批次完成，本批次成功插入 {batch_successful} 題")
+                    except Exception as commit_error:
+                        logger.error(f"提交第 {batch_index + 1} 批次時發生錯誤: {commit_error}")
+                        self.connection.rollback()
+                
+                # 詳細記錄結果
+                logger.info(f"題目插入結果統計: 成功={successful_inserts}, 失敗={failed_inserts}, 總計={len(questions)}")
+                
+                # 如果有失敗，記錄各類型錯誤數量
+                if failed_inserts > 0:
+                    logger.error(f"插入失敗類型統計:")
+                    for error_type, count in failures.items():
+                        logger.error(f"- {error_type}: {count} 題")
+                
+                # 驗證實際插入數量
+                verify_sql = "SELECT COUNT(*) as count FROM questions WHERE file_name = %s"
+                cursor.execute(verify_sql, (file_name,))
+                verify_result = cursor.fetchone()
+                verify_count = verify_result.get('count', 0) if verify_result else 0
+                
+                if verify_count != successful_inserts:
+                    logger.warning(f"插入數量驗證不符：計數={successful_inserts}，實際={verify_count}")
+                    successful_inserts = verify_count
                 
                 return successful_inserts
         except Exception as e:
-            logger.error(f"插入題目時發生錯誤: {e}")
+            logger.error(f"整體插入題目時發生錯誤: {e}")
             self.connection.rollback()
             return 0
     
@@ -254,7 +342,7 @@ class DBConnection:
         try:
             # 首先獲取檔案名稱
             with self.connection.cursor() as cursor:
-                sql_file = "SELECT file_name FROM uploaded_files WHERE file_id = %s"
+                sql_file = "SELECT file_name, question_count FROM uploaded_files WHERE file_id = %s"
                 cursor.execute(sql_file, (file_id,))
                 file_result = cursor.fetchone()
                 
@@ -263,8 +351,17 @@ class DBConnection:
                     return []
                 
                 file_name = file_result['file_name']
+                expected_count = file_result.get('question_count', 0)
+                logger.info(f"預期題目數量: {expected_count} (檔案名: {file_name})")
                 
-                # 再獲取檔案的題目
+                # 先獲取實際題目數量
+                count_sql = "SELECT COUNT(*) as total FROM questions WHERE file_name = %s"
+                cursor.execute(count_sql, (file_name,))
+                count_result = cursor.fetchone()
+                actual_count = count_result.get('total', 0) if count_result else 0
+                logger.info(f"資料庫實際題目數量: {actual_count} (檔案名: {file_name})")
+                
+                # 再獲取檔案的題目（無限制）
                 sql = """
                 SELECT id, question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
                        correct_answer, explanation, picture, file_name, upload_time
@@ -275,47 +372,82 @@ class DBConnection:
                 cursor.execute(sql, (file_name,))
                 
                 result = cursor.fetchall()
+                logger.info(f"查詢返回題目數量: {len(result)} (檔案名: {file_name})")
                 
                 # 轉換日期時間為字串以便 JSON 序列化
                 for item in result:
                     if 'upload_time' in item and item['upload_time']:
                         item['upload_time'] = item['upload_time'].strftime('%Y-%m-%d %H:%M:%S')
-                    
                     # 將資料轉換為前端需要的格式
                     item['id'] = str(item['id'])
                     item['question'] = item['question_text']
-                    item['options'] = [
-                        item['option_a'],
-                        item['option_b'],
-                        item['option_c'],
-                        item['option_d']
-                    ]
+                    
+                    # 確保選項數據有效
+                    valid_options = []
+                    if item.get('option_a'):
+                        valid_options.append(item['option_a'])
+                    if item.get('option_b'):
+                        valid_options.append(item['option_b'])
+                    if item.get('option_c'):
+                        valid_options.append(item['option_c'])
+                    if item.get('option_d'):
+                        valid_options.append(item['option_d'])
+                    
+                    # 如果沒有有效選項，則提供空陣列
+                    item['options'] = valid_options if valid_options else []
+                    
                     item['answer'] = item['correct_answer']
                     item['category'] = item['chapter_no']
                     item['difficulty'] = "普通"  # 預設難度
                     item['modified'] = False
+                    
+                    # 輸出調試信息，檢查選項數據
+                    if len(valid_options) == 0:
+                        logger.warning(f"題目 {item['id']} 沒有有效選項")
+                
+                # 更新預期題目數量與實際數量不符的情況
+                if expected_count != actual_count:
+                    logger.warning(f"題目數量不一致：預期 {expected_count}，實際 {actual_count}，調整記錄")
+                    try:
+                        update_sql = "UPDATE uploaded_files SET question_count = %s WHERE file_id = %s"
+                        cursor.execute(update_sql, (actual_count, file_id))
+                        self.connection.commit()
+                    except Exception as e:
+                        logger.error(f"更新題目數量失敗: {e}")
                 
                 return result
         except Exception as e:
             logger.error(f"獲取題目時發生錯誤: {e}")
             return []
     
-    def delete_file_and_questions(self, file_id: str, file_name: str) -> bool:
+    def delete_file_and_questions(self, file_id: str) -> bool:
         """
         刪除檔案記錄和對應的題目
         
         參數:
             file_id: 檔案 ID
-            file_name: 檔案名稱
         
         返回:
             是否成功
         """
         try:
             with self.connection.cursor() as cursor:
-                # 首先刪除題目
+                # 首先查詢 file_name
+                sql_get_file_name = "SELECT file_name FROM uploaded_files WHERE file_id = %s"
+                cursor.execute(sql_get_file_name, (file_id,))
+                file_result = cursor.fetchone()
+                
+                if not file_result:
+                    logger.error(f"找不到檔案ID: {file_id}")
+                    return False
+                
+                file_name = file_result['file_name']
+                
+                # 先刪除題目
                 sql_delete_questions = "DELETE FROM questions WHERE file_name = %s"
                 cursor.execute(sql_delete_questions, (file_name,))
+                questions_deleted = cursor.rowcount
+                logger.info(f"已刪除 {questions_deleted} 個題目來自檔案: {file_name}")
                 
                 # 再刪除檔案記錄
                 sql_delete_file = "DELETE FROM uploaded_files WHERE file_id = %s"
@@ -387,3 +519,29 @@ class DBConnection:
         except Exception as e:
             logger.error(f"獲取檔案資訊時發生錯誤: {e}")
             return {}
+    
+    def get_questions_by_file_name(self, file_name: str) -> List[Dict[str, Any]]:
+        """
+        取得特定檔案的題目 (依檔案名稱)
+        
+        參數:
+            file_name: 檔案名稱
+            
+        返回:
+            題目列表
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                SELECT * FROM questions 
+                WHERE file_name = %s
+                ORDER BY chapter_no, question_no
+                """
+                cursor.execute(sql, (file_name,))
+                questions = cursor.fetchall()
+                
+                logger.info(f"找到 {len(questions)} 個題目 (檔案名: {file_name})")
+                return questions
+        except Exception as e:
+            logger.error(f"取得檔案題目錯誤: {e}")
+            return []
