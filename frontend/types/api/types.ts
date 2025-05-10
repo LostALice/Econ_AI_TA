@@ -1,6 +1,6 @@
 // Code by AkinoAlice@TyrantRey
 
-import { IFiles } from "@/types/global"
+import { IFiles, IDocsFormat } from "@/types/global"
 
 export interface TAskQuestionRequestFormat {
     chatID: string
@@ -15,8 +15,5 @@ export interface TAskQuestionResponseFormat {
     files: IFiles[]
 }
 
-export interface IDocsFormat {
-    fileID: string
-    fileName: string
-    lastUpdate: string
-}
+// 重新導出 global.ts 中的 IDocsFormat 類型
+export type { IDocsFormat }

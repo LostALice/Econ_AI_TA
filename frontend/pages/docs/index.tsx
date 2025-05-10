@@ -41,10 +41,12 @@ import { LanguageTable } from "@/i18n";
 import { LangContext } from "@/contexts/LangContext";
 import { AuthContext } from "@/contexts/AuthContext";
 
-import { IDocsFormat } from "@/types/api/types";
-import { IExcelQuestion, IDocContent } from "@/types/global";
+import { IExcelQuestion, IDocContent, IDocsFormat } from "@/types/global";
 
 import { FileUploadButton } from "@/components/upload/fileUpload-btn";
+
+// 導入 Excel API 函數
+import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFile } from "@/api/excel";
 
 // 用於在本地存儲模擬文件列表
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
@@ -76,7 +78,6 @@ export default function DocsPage() {
                          role === LanguageTable.login.role.teacher[language] || 
                          role === LanguageTable.login.role.ta[language] || 
                          role === LanguageTable.nav.role.admin[language];
-
   // 輸出調試信息，幫助排查問題
   useEffect(() => {
     console.log("====== 角色狀態檢查 ======");
@@ -94,6 +95,13 @@ export default function DocsPage() {
     });
     console.log("==========================");
   }, [role, userInfo, isTeacherOrTA, isLoggedIn]);
+  
+  // 頁面載入時自動載入文件列表
+  useEffect(() => {
+    // 確保組件掛載後立即載入檔案列表
+    loadFileList(currentDocType);
+    console.log("頁面載入，自動載入文件列表:", currentDocType);
+  }, []);
 
   const documentationTypeList = [
     {
@@ -132,42 +140,67 @@ export default function DocsPage() {
       console.error("Error saving docs to localStorage:", error);
     }
   };
-
-  // 載入文件列表，只使用用戶上傳的文件
+  // 載入文件列表，從資料庫取得
   async function loadFileList(documentationType: string) {
     setIsLoading(true);
     setCurrentDocType(documentationType);
     setViewMode('list'); // 重置視圖模式
     
     try {
-      // 從本地存儲獲取用戶上傳的文件列表
-      const localDocs = loadLocalStorageDocsList(documentationType);
+      // 先嘗試從資料庫取得檔案列表
+      const dbDocs = await fetchExcelFileList(documentationType);
       
-      setFileList(localDocs);
-      
-      if (localDocs.length > 0) {
+      if (dbDocs && dbDocs.length > 0) {
+        // 使用資料庫資料
+        setFileList(dbDocs);
         addToast({
           color: "success",
           title: "文件載入成功",
-          description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+          description: `已成功載入 ${dbDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
         });
       } else {
-        addToast({
-          color: "primary",
-          title: "尚無文件",
-          description: `請上傳${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
-        });
+        // 尚無資料，也可以嘗試載入本地緩存的資料作為備用
+        const localDocs = loadLocalStorageDocsList(documentationType);
+        
+        if (localDocs && localDocs.length > 0) {
+          setFileList(localDocs);
+          addToast({
+            color: "success",
+            title: "文件載入成功 (本地緩存)",
+            description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+          });
+        } else {
+          // 完全沒有資料
+          setFileList([]);
+          addToast({
+            color: "primary",
+            title: "尚無文件",
+            description: `請上傳${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading file list:", error);
-      addToast({
-        color: "danger",
-        title: "載入失敗",
-        description: "無法載入文件列表，請稍後再試",
-      });
       
-      // 重置文件列表
-      setFileList([]);
+      // 嘗試從本地緩存載入資料作為備用
+      const localDocs = loadLocalStorageDocsList(documentationType);
+      
+      if (localDocs && localDocs.length > 0) {
+        setFileList(localDocs);
+        addToast({
+          color: "warning",
+          title: "資料庫連接失敗",
+          description: "使用本地緩存資料替代",
+        });
+      } else {
+        // 完全沒有資料
+        setFileList([]);
+        addToast({
+          color: "danger",
+          title: "載入失敗",
+          description: "無法載入文件列表，請稍後再試",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -497,107 +530,221 @@ export default function DocsPage() {
       return fileContent;
     }
   };
-
-  // 處理文件上傳
+  // 處理文件上傳，將文件上傳至資料庫
   const handleFileUpload = async (file: File) => {
     try {
       setIsLoading(true);
       
-      // 創建一個新的文件記錄
-      const newFileID = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      // 檢查是否為 Excel 檔案
+      if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        addToast({
+          color: "warning",
+          title: "格式不支援",
+          description: "僅支援 Excel 檔案 (.xlsx, .xls)",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // 上傳檔案至後端 MySQL 資料庫
+      const result = await uploadExcelFile(file, currentDocType);
+        // 創建新的檔案記錄
       const newFile: IDocsFormat = {
-        fileID: newFileID,
-        fileName: file.name,
-        lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+        fileID: result.file_id,
+        fileName: result.file_name,
+        lastUpdate: result.last_update,
+        docType: currentDocType,
+        questionCount: 0  // 初始化為0，後續可根據實際題目數量更新
       };
       
-      // 讀取文件內容並以 base64 格式保存
+      // 讀取文件內容以在本地進行備份 (以支援離線操作)
       const reader = new FileReader();
       reader.onload = (e) => {
-        const fileContent: {
-          name: string;
-          type: string;
-          size: number;
-          lastModified: number;
-          content: string | ArrayBuffer | null | undefined;
-          parsedContent?: IDocContent;
-          originalContent?: any;
-        } = {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          lastModified: file.lastModified,
-          content: e.target?.result,
-          parsedContent: undefined,
-          originalContent: undefined
-        };
-        
-        // 處理 Excel 文件
-        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-          const arrayBuffer = e.target?.result;
-          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-          
-          const questions = parseExcelContent({
-            content: e.target?.result,
+        try {
+          const fileContent: {
+            name: string;
+            type: string;
+            size: number;
+            lastModified: number;
+            content: string | ArrayBuffer | null | undefined;
+            originalContent?: any;
+          } = {
+            name: file.name,
             type: file.type,
-            originalContent: workbook
-          });
-          
-          const docContent: IDocContent = {
-            fileID: newFileID,
-            fileName: file.name,
-            lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
-            questions: questions,
-            originalContent: workbook
+            size: file.size,
+            lastModified: file.lastModified,
+            content: e.target?.result
           };
           
-          fileContent.parsedContent = docContent;
+          // 處理 Excel 文件
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const arrayBuffer = e.target?.result;
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            fileContent.originalContent = workbook;
+          }
+          
+          // 僅在本地備份文件內容
+          saveFileContent(result.file_id, fileContent);
+        } catch (error) {
+          console.error("Error processing file for local backup:", error);
         }
-        
-        // 保存文件內容
-        saveFileContent(newFileID, fileContent);
-        
-        // 更新文件列表
-        const updatedList = [...fileList, newFile];
-        setFileList(updatedList);
-        saveLocalStorageDocsList(currentDocType, updatedList);
-        
-        addToast({
-          color: "success",
-          title: "上傳成功",
-          description: `文件已成功上傳，文件ID: ${newFileID}`,
-        });
-        
-        setIsLoading(false);
-      };
-      
-      reader.onerror = () => {
-        console.error("Error reading file:", reader.error);
-        addToast({
-          color: "danger",
-          title: "上傳失敗",
-          description: "讀取文件時發生錯誤",
-        });
-        setIsLoading(false);
       };
       
       reader.readAsArrayBuffer(file);
+      
+      // 更新文件列表
+      const updatedList = [...fileList, newFile];
+      setFileList(updatedList);
+      
+      // 同時更新本地存儲作為備份
+      saveLocalStorageDocsList(currentDocType, updatedList);
+      
+      addToast({
+        color: "success",
+        title: "上傳成功",
+        description: `文件已成功上傳至資料庫`,
+      });
+      
+      setIsLoading(false);
     } catch (error) {
       console.error("Error uploading file:", error);
-      addToast({
-        color: "danger",
-        title: "上傳失敗",
-        description: "無法上傳文件，請稍後再試",
-      });
-      setIsLoading(false);
+      
+      // 如果上傳到資料庫失敗，嘗試僅儲存到本地端
+      try {        // 創建一個新的文件記錄
+        const newFileID = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const newFile: IDocsFormat = {
+          fileID: newFileID,
+          fileName: file.name,
+          lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+          docType: currentDocType,
+          questionCount: 0  // 本地檔案初始化為0，解析成功後可以更新
+        };
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const fileContent: {
+            name: string;
+            type: string;
+            size: number;
+            lastModified: number;
+            content: string | ArrayBuffer | null | undefined;
+            parsedContent?: IDocContent;
+            originalContent?: any;
+          } = {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            lastModified: file.lastModified,
+            content: e.target?.result,
+            parsedContent: undefined,
+            originalContent: undefined
+          };
+          
+          // 處理 Excel 文件
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const arrayBuffer = e.target?.result;
+            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            
+            const questions = parseExcelContent({
+              content: e.target?.result,
+              type: file.type,
+              originalContent: workbook
+            });
+            
+            const docContent: IDocContent = {
+              fileID: newFileID,
+              fileName: file.name,
+              lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+              questions: questions,
+              originalContent: workbook
+            };
+            
+            fileContent.parsedContent = docContent;
+          }
+          
+          // 保存文件內容
+          saveFileContent(newFileID, fileContent);
+          
+          // 更新文件列表
+          const updatedList = [...fileList, newFile];
+          setFileList(updatedList);
+          saveLocalStorageDocsList(currentDocType, updatedList);
+          
+          addToast({
+            color: "warning",
+            title: "上傳至本地成功",
+            description: `資料庫連接失敗，檔案已暫存在本機`,
+          });
+          
+          setIsLoading(false);
+        };
+        
+        reader.onerror = () => {
+          console.error("Error reading file:", reader.error);
+          addToast({
+            color: "danger",
+            title: "上傳失敗",
+            description: "讀取文件時發生錯誤",
+          });
+          setIsLoading(false);
+        };
+        
+        reader.readAsArrayBuffer(file);
+      } catch (localError) {
+        console.error("Error on local backup:", localError);
+        addToast({
+          color: "danger",
+          title: "上傳失敗",
+          description: "無法上傳文件，請稍後再試",
+        });
+        setIsLoading(false);
+      }
     }
   };
-
   // 處理檔案點擊 - 修改為查看題目列表
   const handleDocClick = async (item: IDocsFormat) => {
     try {
+      // 檢查是否為資料庫文件
+      if (item.fileID.startsWith("db-")) {
+        // 從資料庫獲取題目列表
+        try {
+          setIsLoading(true);
+          const result = await fetchExcelQuestions(item.fileID);
+          
+          const docContent: IDocContent = {
+            fileID: item.fileID,
+            fileName: item.fileName,
+            lastUpdate: item.lastUpdate,
+            questions: result.questions,
+            originalContent: null // 我們不需要在前端保存原始工作簿
+          };
+          
+          setCurrentContent(docContent);
+          setViewMode('questions');
+        } catch (dbError) {
+          console.error("Error fetching questions from database:", dbError);
+          
+          // 嘗試從本地緩存獲取，如果有的話
+          const fileContent = getFileContent(item.fileID);
+          if (fileContent && fileContent.parsedContent) {
+            setCurrentContent(fileContent.parsedContent);
+            setViewMode('questions');
+            
+            addToast({
+              color: "warning",
+              title: "使用本地緩存",
+              description: "資料庫連接失敗，使用本地緩存的題目",
+            });
+          } else {
+            throw dbError; // 重新拋出錯誤以顯示通用錯誤訊息
+          }
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
       // 檢查是否為本地上傳的文件
-      if (item.fileID.startsWith("local-")) {
+      else if (item.fileID.startsWith("local-")) {
         const fileContent = getFileContent(item.fileID);
         
         if (fileContent) {
@@ -964,38 +1111,99 @@ export default function DocsPage() {
     } finally {
       setIsEditing(false);
     }
-  };
-
-  // 處理檔案刪除
+  };  // 處理檔案刪除
   const handleDeleteDoc = async () => {
     if (!editingFile) return;
 
     setIsEditing(true);
 
     try {
-      // 從文件列表中刪除
-      const updatedList = fileList.filter(file => file.fileID !== editingFile.fileID);
-      setFileList(updatedList);
-      saveLocalStorageDocsList(currentDocType, updatedList);
+      let successMessage = "文件已成功從本地存儲中刪除";
       
-      // 刪除文件內容
-      if (editingFile.fileID.startsWith("local-")) {
+      // 檢查檔案是否來自資料庫還是本地
+      if (editingFile.fileID.startsWith("db-")) {
+        // 從資料庫刪除
         try {
-          const storedData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
-          if (storedData) {
-            const parsedData = JSON.parse(storedData);
-            delete parsedData[editingFile.fileID];
-            localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(parsedData));
-          }
-        } catch (error) {
-          console.error("Error removing file content from localStorage:", error);
+          await deleteExcelFile(editingFile.fileID);
+          successMessage = "文件已成功從資料庫和本地存儲中刪除";
+        } catch (dbError) {
+          console.error("Error deleting file from database:", dbError);
+          addToast({
+            color: "warning",
+            title: "資料庫刪除失敗",
+            description: "無法從資料庫刪除，但已從本地存儲中刪除"
+          });
         }
+      }
+      
+      // 無論是資料庫還是本地檔案，都執行徹底的本地清理
+      try {
+        // 1. 刪除文件內容
+        const contentData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
+        if (contentData) {
+          const parsedContent = JSON.parse(contentData);
+          if (parsedContent[editingFile.fileID]) {
+            delete parsedContent[editingFile.fileID];
+            localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(parsedContent));
+            console.log(`已從本地存儲中刪除檔案內容: ${editingFile.fileID}`);
+          }
+        }
+        
+        // 2. 從所有文檔類型的列表中刪除引用
+        const listData = localStorage.getItem(LOCAL_STORAGE_DOCS_KEY);
+        if (listData) {
+          const parsedLists = JSON.parse(listData);
+          
+          // 檢查每個文檔類型列表
+          let updated = false;
+          for (const docType in parsedLists) {
+            if (Array.isArray(parsedLists[docType])) {
+              const initialLength = parsedLists[docType].length;
+              parsedLists[docType] = parsedLists[docType].filter(
+                (file: any) => file.fileID !== editingFile.fileID
+              );
+              
+              if (parsedLists[docType].length < initialLength) {
+                updated = true;
+                console.log(`已從 ${docType} 列表中刪除檔案: ${editingFile.fileID}`);
+              }
+            }
+          }
+          
+          if (updated) {
+            localStorage.setItem(LOCAL_STORAGE_DOCS_KEY, JSON.stringify(parsedLists));
+          }
+        }
+        
+        // 3. 更新當前的顯示列表
+        const updatedList = fileList.filter(file => file.fileID !== editingFile.fileID);
+        setFileList(updatedList);
+        
+        // 如果正在查看被刪除的文件的內容，則回到列表視圖
+        if (currentContent && currentContent.fileID === editingFile.fileID) {
+          setCurrentContent(null);
+          setViewMode('list');
+        }
+      } catch (error) {
+        console.error("Error removing file from localStorage:", error);
+        addToast({
+          color: "warning", 
+          title: "本地清理不完全",
+          description: "無法完全清理本地存儲，建議點擊「清除本地快取」按鈕"
+        });
+      }
+      
+      // 重新載入文件列表以確保 UI 保持同步
+      if (editingFile.docType) {
+        loadFileList(editingFile.docType);
+      } else {
+        loadFileList(currentDocType);
       }
       
       addToast({
         color: "success",
         title: "刪除成功",
-        description: "文件已成功刪除",
+        description: successMessage,
       });
       
       onOpenChange();
@@ -1004,7 +1212,7 @@ export default function DocsPage() {
       addToast({
         color: "danger",
         title: "刪除失敗",
-        description: "無法刪除文件，請稍後再試",
+        description: "無法刪除文件，請稍後再試或使用「清除本地快取」按鈕",
       });
     } finally {
       setIsEditing(false);
@@ -1050,6 +1258,80 @@ export default function DocsPage() {
       });
     }
   };
+  // 清除所有本地存儲的資料
+  const clearAllLocalStorage = () => {
+    try {
+      // 清除所有與文件相關的本地存儲
+      localStorage.removeItem(LOCAL_STORAGE_DOCS_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
+      
+      // 使用正則表達式查找可能相關的其他存儲項
+      const keyPattern = /(docs|files|excel|questions|content)/i;
+      const keysToRemove = [];
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && keyPattern.test(key)) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // 刪除找到的項目
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`已清除本地存儲項: ${key}`);
+      });
+      
+      // 如果當前正在查看文件內容，返回到列表視圖
+      if (viewMode === 'questions' && currentContent) {
+        setCurrentContent(null);
+        setViewMode('list');
+      }
+      
+      addToast({
+        color: "success",
+        title: "清除成功",
+        description: "所有本地存儲的文件資料已清除",
+      });
+      
+      // 重新載入當前文件類型的資料
+      loadFileList(currentDocType);
+    } catch (error) {
+      console.error("Error clearing localStorage:", error);
+      addToast({
+        color: "danger",
+        title: "清除失敗",
+        description: "清除本地存儲時發生錯誤",
+      });
+    }
+  };  // 渲染標題和操作按鈕
+  const renderTitle = () => {
+    return (
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">
+          {currentDocType === "TESTING" 
+            ? LanguageTable.docs.page.testing[language] 
+            : LanguageTable.docs.page.theorem[language]}
+        </h2>
+        <div className="flex gap-2">
+          {isTeacherOrTA && (
+            <>
+              <Button 
+                color="danger" 
+                onPress={clearAllLocalStorage}
+                size="sm"
+                variant="flat"
+                startContent={<span className="material-icons text-sm">delete_sweep</span>}
+                className="font-medium"
+              >
+                清除本地快取
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // 頁面載入時執行
   useEffect(() => {
@@ -1091,65 +1373,68 @@ export default function DocsPage() {
               </Listbox>
             </div>
             
-            <Table isStriped aria-label="Docs page" className="w-full">
-              <TableHeader>
-                <TableColumn key="name">
-                  {LanguageTable.docs.page.lessonName[language]}
-                </TableColumn>
-                <TableColumn key="lastUpdate">
-                  {LanguageTable.docs.page.lastUpdate[language]}
-                </TableColumn>
-                {/* Always include the column but conditionally show content */}
-                <TableColumn 
-                  key="actions" 
-                  align="center" 
-                  width={100}
+            <div className="w-full">
+              {renderTitle()}
+              <Table isStriped aria-label="Docs page" className="w-full">
+                <TableHeader>
+                  <TableColumn key="name">
+                    {LanguageTable.docs.page.lessonName[language]}
+                  </TableColumn>
+                  <TableColumn key="lastUpdate">
+                    {LanguageTable.docs.page.lastUpdate[language]}
+                  </TableColumn>
+                  {/* Always include the column but conditionally show content */}
+                  <TableColumn 
+                    key="actions" 
+                    align="center" 
+                    width={100}
+                  >
+                    {isTeacherOrTA ? "操作" : ""}
+                  </TableColumn>
+                </TableHeader>
+                <TableBody
+                  items={fileList}
+                  isLoading={isLoading}
+                  loadingContent={
+                    <Spinner
+                      color="success"
+                      label={LanguageTable.docs.page.loading[language]}
+                    />
+                  }
                 >
-                  {isTeacherOrTA ? "操作" : ""}
-                </TableColumn>
-              </TableHeader>
-              <TableBody
-                items={fileList}
-                isLoading={isLoading}
-                loadingContent={
-                  <Spinner
-                    color="success"
-                    label={LanguageTable.docs.page.loading[language]}
-                  />
-                }
-              >
-                {(item: IDocsFormat) => (
-                  <TableRow key={item.fileID}>
-                    <TableCell>
-                      <Link
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleDocClick(item);
-                        }}
-                        underline="none"
-                      >
-                        {item.fileName}
-                      </Link>
-                    </TableCell>
-                    <TableCell> {item.lastUpdate} </TableCell>
-                    <TableCell className={isTeacherOrTA ? "" : "hidden"}>
-                      {isTeacherOrTA && (
-                        <Button
-                          size="sm"
-                          variant="light"
-                          color="primary"
-                          onPress={() => handleEditClick(item)}
-                          isDisabled={!item.fileID.startsWith("local-")}
+                  {(item: IDocsFormat) => (
+                    <TableRow key={item.fileID}>
+                      <TableCell>
+                        <Link
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDocClick(item);
+                          }}
+                          underline="none"
                         >
-                          編輯
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                          {item.fileName}
+                        </Link>
+                      </TableCell>
+                      <TableCell> {item.lastUpdate} </TableCell>
+                      <TableCell className={isTeacherOrTA ? "" : "hidden"}>
+                        {isTeacherOrTA && (
+                          <Button
+                            size="sm"
+                            variant="light"
+                            color="primary"
+                            onPress={() => handleEditClick(item)}
+                            isDisabled={!item.fileID.startsWith("local-")}
+                          >
+                            編輯
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         ) : (
           <div className="p-4">

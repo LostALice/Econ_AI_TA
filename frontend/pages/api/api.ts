@@ -80,14 +80,14 @@ export async function fetchDocsList(
     if (!data.docs_list) {
       console.warn("No documentation found for type:", documentationType);
       return [];
-    }
-
-    let docsList = [];
+    }    let docsList = [];
     for (let file of data.docs_list) {
       const docsInfo: IDocsFormat = {
         fileID: file.file_id,
         fileName: file.file_name,
         lastUpdate: file.last_update.toString().replace("T", " "),
+        docType: documentationType,
+        questionCount: file.question_count || 0
       };
       docsList.push(docsInfo);
     }
@@ -108,23 +108,27 @@ export async function fetchDocsList(
       default:
         topicPrefix = "文件";
     }
-    
-    // 返回模擬數據
+      // 返回模擬數據
     const mockData: IDocsFormat[] = [
       {
         fileID: `mock-${documentationType.toLowerCase()}-1`,
         fileName: `${topicPrefix} - 基礎概念介紹`,
         lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
-      },
-      {
+        docType: documentationType,
+        questionCount: 10
+      },      {
         fileID: `mock-${documentationType.toLowerCase()}-2`,
         fileName: `${topicPrefix} - 進階應用`,
         lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+        docType: documentationType,
+        questionCount: 15
       },
       {
         fileID: `mock-${documentationType.toLowerCase()}-3`,
         fileName: `${topicPrefix} - 案例分析`,
         lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
+        docType: documentationType,
+        questionCount: 8
       }
     ];
     return mockData;

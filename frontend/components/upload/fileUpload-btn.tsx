@@ -31,8 +31,7 @@ export const FileUploadButton = ({
   const [isProgressing, setIsProgressing] = useState<boolean>(false)
   const [fileObject, setFileObject] = useState<File | null>()
   const [fileURL, setFileURL] = useState<string>()
-  
-  function renderFilePreview(file: File) {
+    function renderFilePreview(file: File) {
     const fileType = file.type
 
     switch (fileType) {
@@ -63,6 +62,15 @@ export const FileUploadButton = ({
             </span>
           </div>
         )
+      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        return (
+          <div className="w-full flex justify-center">
+            <span className="text-left text-lg">
+              {uploadSuccess ? (uploadSuccess == 200 ? LanguageTable.docs.component.fileUploadButton.uploadSuccess[language] : LanguageTable.docs.component.fileUploadButton.uploadFailed[language]) : ""}
+              {file.name}
+            </span>
+          </div>
+        )
       default:
         return (
           <object
@@ -73,7 +81,6 @@ export const FileUploadButton = ({
         )
     }
   }
-
   async function uploadFile(
     file: File,
     collection: string = "default",
@@ -91,6 +98,37 @@ export const FileUploadButton = ({
         setUploadSuccess(422);
       }
       return;
+    }
+    
+    // Excel檔案特殊處理 - 確保適用於上傳 XLSX 文件
+    if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      try {
+        setIsProgressing(true);
+        const formData = new FormData();
+        formData.append("excel_file", file);
+        formData.append("doc_type", "TESTING");  // 預設為考古題類型
+        
+        const response = await fetch(`${siteConfig.api_url}/excel/upload/`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        const data = await response.json();
+        
+        if (data.status_code === 200) {
+          setUploadSuccess(200);
+        } else {
+          setUploadSuccess(422);
+        }
+        
+        setIsProgressing(false);
+        return;
+      } catch (error) {
+        console.error("Error uploading Excel file:", error);
+        setIsProgressing(false);
+        setUploadSuccess(422);
+        return;
+      }
     }
 
     const apiUploadFileURL = new URL(siteConfig.api_url + "/upload/")

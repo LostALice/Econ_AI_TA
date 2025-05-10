@@ -45,3 +45,13 @@ export interface IDocContent {
   questions: IExcelQuestion[]; // 題目列表
   originalContent?: any;      // 原始檔案內容 (用於保存回檔案)
 }
+
+// Excel 文件列表項目類型定義
+export interface IDocsFormat {
+  fileID: string;      // 檔案 ID
+  fileName: string;    // 檔案名稱
+  docType: string;     // 文件類型
+  lastUpdate: string;  // 最後更新時間
+  uploadTime?: string; // 上傳時間（可選，用於兼容）
+  questionCount: number; // 題目數量
+}
