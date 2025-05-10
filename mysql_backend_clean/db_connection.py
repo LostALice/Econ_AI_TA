@@ -64,17 +64,17 @@ class DBConnection:
         try:
             with self.connection.cursor() as cursor:
                 for question in questions:
-                    # 從字典獲取題目資料
-                    question_no = question.get('QuestionNo.', '')
-                    chapter_no = question.get('ChapterNo', '')
-                    question_text = question.get('QuestionInChinese', '')
-                    option_a = question.get('AnswerAInChinese', '')
-                    option_b = question.get('AnswerBInChinese', '')
-                    option_c = question.get('AnswerCInChinese', '')
-                    option_d = question.get('AnswerDInChinese', '')
-                    correct_answer = question.get('CorrectAnswer', '')
-                    explanation = question.get('AnswerExplainInChinese', '')
-                    picture = question.get('Picture', '')  # 可以為空
+                    # 從字典獲取題目資料（使用轉換後的欄位名稱）
+                    question_no = question.get('question_no', '')
+                    chapter_no = question.get('chapter_no', '')
+                    question_text = question.get('question_text', '')
+                    option_a = question.get('option_a', '')
+                    option_b = question.get('option_b', '')
+                    option_c = question.get('option_c', '')
+                    option_d = question.get('option_d', '')
+                    correct_answer = question.get('correct_answer', '')
+                    explanation = question.get('explanation', '')
+                    picture = question.get('picture', '')  # 可以為空
                     
                     # SQL 插入語句
                     sql = """
@@ -106,6 +106,68 @@ class DBConnection:
                 return successful_inserts
         except Exception as e:
             logger.error(f"插入題目時發生錯誤: {e}")
+            self.connection.rollback()
+            return 0
+    
+    def insert_questions_batch(self, questions: List[Dict[str, Any]], file_id: str, file_name: str, doc_type: str) -> int:
+        """
+        批量插入題目到資料庫
+        
+        參數:
+            questions: 題目列表
+            file_id: 檔案 ID
+            file_name: 檔案名稱
+            doc_type: 文件類型
+        
+        返回:
+            成功插入的題目數量
+        """
+        successful_inserts = 0
+        try:
+            with self.connection.cursor() as cursor:
+                for question in questions:
+                    # 從字典獲取題目資料
+                    question_no = question.get('question_no', '')
+                    chapter_no = question.get('chapter_no', '')
+                    question_text = question.get('question_text', '')
+                    option_a = question.get('option_a', '')
+                    option_b = question.get('option_b', '')
+                    option_c = question.get('option_c', '')
+                    option_d = question.get('option_d', '')
+                    correct_answer = question.get('correct_answer', '')
+                    explanation = question.get('explanation', '')
+                    picture = question.get('picture', None)  # 可以為空
+                    
+                    # SQL 插入語句
+                    sql = """
+                    INSERT INTO questions (question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
+                                          correct_answer, explanation, picture, file_name, doc_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    chapter_no = VALUES(chapter_no),
+                    question_text = VALUES(question_text),
+                    option_a = VALUES(option_a),
+                    option_b = VALUES(option_b),
+                    option_c = VALUES(option_c),
+                    option_d = VALUES(option_d),
+                    correct_answer = VALUES(correct_answer),
+                    explanation = VALUES(explanation),
+                    picture = VALUES(picture),
+                    doc_type = VALUES(doc_type)
+                    """
+                    
+                    # 執行 SQL
+                    cursor.execute(sql, (question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
+                                       correct_answer, explanation, picture, file_name, doc_type))
+                    successful_inserts += 1
+                
+                # 提交事務
+                self.connection.commit()
+                logger.info(f"成功批量插入/更新 {successful_inserts} 個題目")
+                
+                return successful_inserts
+        except Exception as e:
+            logger.error(f"批量插入題目時發生錯誤: {e}")
             self.connection.rollback()
             return 0
     
@@ -179,18 +241,30 @@ class DBConnection:
             logger.error(f"獲取檔案列表時發生錯誤: {e}")
             return []
     
-    def get_questions_by_file(self, file_name: str) -> List[Dict[str, Any]]:
+    def get_questions_by_file(self, file_id: str) -> List[Dict[str, Any]]:
         """
         獲取指定檔案中的所有題目
         
         參數:
-            file_name: 檔案名稱
+            file_id: 檔案 ID
         
         返回:
             題目列表
         """
         try:
+            # 首先獲取檔案名稱
             with self.connection.cursor() as cursor:
+                sql_file = "SELECT file_name FROM uploaded_files WHERE file_id = %s"
+                cursor.execute(sql_file, (file_id,))
+                file_result = cursor.fetchone()
+                
+                if not file_result:
+                    logger.error(f"找不到檔案ID: {file_id}")
+                    return []
+                
+                file_name = file_result['file_name']
+                
+                # 再獲取檔案的題目
                 sql = """
                 SELECT id, question_no, chapter_no, question_text, option_a, option_b, option_c, option_d, 
                        correct_answer, explanation, picture, file_name, upload_time
@@ -206,6 +280,20 @@ class DBConnection:
                 for item in result:
                     if 'upload_time' in item and item['upload_time']:
                         item['upload_time'] = item['upload_time'].strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # 將資料轉換為前端需要的格式
+                    item['id'] = str(item['id'])
+                    item['question'] = item['question_text']
+                    item['options'] = [
+                        item['option_a'],
+                        item['option_b'],
+                        item['option_c'],
+                        item['option_d']
+                    ]
+                    item['answer'] = item['correct_answer']
+                    item['category'] = item['chapter_no']
+                    item['difficulty'] = "普通"  # 預設難度
+                    item['modified'] = False
                 
                 return result
         except Exception as e:
@@ -263,3 +351,39 @@ class DBConnection:
         except Exception as e:
             logger.error(f"獲取題目數量時發生錯誤: {e}")
             return 0
+    
+    def get_file_info(self, file_id: str) -> Dict[str, Any]:
+        """
+        獲取特定檔案的資訊
+        
+        參數:
+            file_id: 檔案ID
+        
+        返回:
+            檔案資訊字典，如果找不到則返回空字典
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                sql = """
+                SELECT file_id, file_name, doc_type, upload_time, last_update, question_count
+                FROM uploaded_files
+                WHERE file_id = %s
+                """
+                cursor.execute(sql, (file_id,))
+                
+                result = cursor.fetchone()
+                
+                if result:
+                    # 轉換日期時間為字串以便 JSON 序列化
+                    if 'upload_time' in result and result['upload_time']:
+                        result['upload_time'] = result['upload_time'].strftime('%Y-%m-%d %H:%M:%S')
+                    if 'last_update' in result and result['last_update']:
+                        result['last_update'] = result['last_update'].strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    return result
+                else:
+                    logger.warning(f"找不到檔案ID: {file_id}")
+                    return {}
+        except Exception as e:
+            logger.error(f"獲取檔案資訊時發生錯誤: {e}")
+            return {}
