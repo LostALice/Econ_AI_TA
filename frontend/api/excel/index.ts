@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site";
 // 取得文件列表
 export async function fetchExcelFileList(docType: string): Promise<IDocsFormat[]> {
   try {
-    const response = await fetch(`${siteConfig.api_url}/excel/${docType}/`, {
+    const response = await fetch(`${siteConfig.api_url}/excel/list/${docType}/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -126,6 +126,45 @@ export async function deleteExcelFile(fileId: string): Promise<{
     };
   } catch (error) {
     console.error("Error deleting Excel file:", error);
+    throw error;
+  }
+}
+
+// 更新題目
+export async function updateExcelQuestions(
+  fileId: string,
+  questions: IExcelQuestion[]
+): Promise<{
+  file_id: string;
+  updated_count: number;
+  deleted_count: number;
+  message: string;
+}> {
+  try {
+    const response = await fetch(`${siteConfig.api_url}/excel/questions/`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        file_id: fileId,
+        questions: questions
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      file_id: data.file_id,
+      updated_count: data.updated_count,
+      deleted_count: data.deleted_count,
+      message: data.message
+    };
+  } catch (error) {
+    console.error("Error updating Excel questions:", error);
     throw error;
   }
 }

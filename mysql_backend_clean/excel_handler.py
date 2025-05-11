@@ -1,9 +1,13 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import base64
 import pandas as pd
 import logging
 import io
 import re
+import zipfile
+import tempfile
+import os
+
 try:
     from .db_connection import DBConnection
 except ImportError:
@@ -13,6 +17,238 @@ logger = logging.getLogger(__name__)
 
 class ExcelHandler:
     """Excel 檔案處理類"""
+    @staticmethod
+    def save_questions_to_db(questions: List[Dict[str, Any]], file_id: str, file_name: str, doc_type: str) -> bool:
+        """將題目保存到資料庫
+        
+        Args:
+            questions: 題目列表
+            file_id: 檔案 ID
+            file_name: 檔案名稱
+            doc_type: 文件類型
+            
+        Returns:
+            bool: 是否成功保存
+        """
+        try:
+            db = DBConnection()
+            # 插入題目到資料庫
+            result = db.insert_questions(questions, file_name, doc_type)
+            
+            if result > 0:
+                # 記錄檔案上傳信息到 uploaded_files 表
+                upload_result = db.record_file_upload(file_id, file_name, doc_type, result)
+                if upload_result:
+                    logger.info(f"成功記錄檔案上傳信息：ID={file_id}, 名稱={file_name}, 類型={doc_type}, 題目數={result}")
+                else:
+                    logger.warning(f"記錄檔案上傳信息失敗：ID={file_id}, 名稱={file_name}")
+            
+            db.close()
+            return result > 0
+        except Exception as e:
+            logger.error(f"保存題目到資料庫時發生錯誤: {str(e)}")
+            return False
+    
+    @staticmethod
+    def get_file_list(doc_type: str = None) -> List[Dict[str, Any]]:
+        """獲取檔案列表
+        
+        Args:
+            doc_type: 文件類型過濾條件，如果為 None 則獲取所有類型
+            
+        Returns:
+            List[Dict[str, Any]]: 檔案列表
+        """
+        try:
+            db = DBConnection()
+            file_list = db.get_file_list(doc_type)
+            db.close()
+            return file_list
+        except Exception as e:
+            logger.error(f"獲取檔案列表時發生錯誤: {str(e)}")
+            return []
+    
+    @staticmethod
+    def get_questions(file_id: str) -> Tuple[List[Dict[str, Any]], str]:
+        """獲取指定檔案 ID 的題目
+        
+        Args:
+            file_id: 檔案 ID
+            
+        Returns:
+            Tuple[List[Dict[str, Any]], str]: (題目列表, 檔案名稱)
+        """
+        try:
+            db = DBConnection()
+            questions, file_name = db.get_questions(file_id)
+            db.close()
+            return questions, file_name
+        except Exception as e:
+            logger.error(f"獲取題目時發生錯誤: {str(e)}")
+            return [], ""
+    
+    @staticmethod
+    def delete_file(file_id: str) -> bool:
+        """刪除檔案及其題目
+        
+        Args:
+            file_id: 檔案 ID
+            
+        Returns:
+            bool: 是否成功刪除
+        """
+        try:
+            db = DBConnection()
+            result = db.delete_file_and_questions(file_id)
+            db.close()
+            return result
+        except Exception as e:
+            logger.error(f"刪除檔案時發生錯誤: {str(e)}")
+            return False
+    
+    @staticmethod
+    def update_questions(file_id: str, questions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """更新題目內容
+        
+        Args:
+            file_id: 檔案 ID
+            questions: 要更新的題目列表
+            
+        Returns:
+            Dict: 包含更新結果的字典
+        """
+        try:
+            db = DBConnection()
+            result = db.update_questions(file_id, questions)
+            db.close()
+            return result
+        except Exception as e:
+            logger.error(f"更新題目時發生錯誤: {str(e)}")
+            return {
+                'success': False,
+                'updated_count': 0, 
+                'deleted_count': 0,
+                'error': str(e)
+            }
+    
+    @staticmethod
+    def extract_images_from_excel_zip(file_path_or_buffer):
+        """Extract images directly from Excel file by treating it as a ZIP archive."""
+        images = []
+        
+        try:
+            # If it's a file-like object, write it to a temporary file first
+            if hasattr(file_path_or_buffer, 'read'):
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+                temp_file_path = temp_file.name
+                temp_file.close()
+                
+                with open(temp_file_path, 'wb') as f:
+                    f.write(file_path_or_buffer.read())
+                
+                file_path = temp_file_path
+            else:
+                file_path = file_path_or_buffer
+                
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                # Find media files
+                files = zip_ref.namelist()
+                media_files = [f for f in files if f.startswith('xl/media/')]
+                logger.info(f"Found {len(media_files)} media files in Excel ZIP structure")
+                
+                for media_file in media_files:
+                    try:
+                        # Extract media file content
+                        image_data = zip_ref.read(media_file)
+                        image_name = os.path.basename(media_file)
+                        
+                        images.append({
+                            'name': image_name,
+                            'data': image_data,
+                            'size': len(image_data)
+                        })
+                        
+                        logger.info(f"Extracted image: {image_name} ({len(image_data)} bytes)")
+                    except Exception as e:
+                        logger.error(f"Error extracting {media_file}: {str(e)}")
+            
+            # Clean up temporary file if created
+            if hasattr(file_path_or_buffer, 'read') and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                        
+        except Exception as e:
+            logger.error(f"Error opening Excel as ZIP: {str(e)}")
+        
+        return images
+
+    @staticmethod
+    def extract_images_with_openpyxl(file_path_or_buffer):
+        """Extract images from Excel file using openpyxl library."""
+        images = []
+        
+        try:
+            # If it's a file-like object, write it to a temporary file first
+            if hasattr(file_path_or_buffer, 'read'):
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
+                temp_file_path = temp_file.name
+                temp_file.close()
+                
+                with open(temp_file_path, 'wb') as f:
+                    f.write(file_path_or_buffer.read())
+                
+                file_path = temp_file_path
+            else:
+                file_path = file_path_or_buffer
+            
+            # Load workbook
+            try:
+                import openpyxl
+                workbook = openpyxl.load_workbook(file_path)
+                logger.info(f"Loaded workbook with {len(workbook.sheetnames)} sheets")
+                
+                for sheet_name in workbook.sheetnames:
+                    sheet = workbook[sheet_name]
+                    logger.info(f"Processing sheet: {sheet_name}")
+                    
+                    # Access images in the sheet
+                    if hasattr(sheet, '_images'):
+                        for image in sheet._images:
+                            try:
+                                img_name = f"img_{len(images) + 1}"
+                                if hasattr(image, 'name') and image.name:
+                                    img_name = image.name
+                                
+                                # Get image data
+                                img_data = None
+                                
+                                # Try different ways to access the image data
+                                if hasattr(image, '_data'):
+                                    img_data = image._data()
+                                    logger.info(f"Got image data from _data method: {len(img_data)} bytes")
+                                elif hasattr(image, 'data'):
+                                    img_data = image.data
+                                    logger.info(f"Got image data from data attribute: {len(img_data)} bytes")
+                                
+                                if img_data:
+                                    images.append({
+                                        'name': img_name,
+                                        'data': img_data,
+                                        'size': len(img_data),
+                                        'sheet': sheet_name
+                                    })
+                            except Exception as e:
+                                logger.error(f"Error processing image in {sheet_name}: {str(e)}")
+            except ImportError:
+                logger.warning("openpyxl library not available, skipping this method")
+            
+            # Clean up temporary file if created
+            if hasattr(file_path_or_buffer, 'read') and os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            
+        except Exception as e:
+            logger.error(f"Error using openpyxl: {str(e)}")
+        
+        return images
     
     @staticmethod
     def parse_excel_to_questions(file_content: str, file_type: str) -> List[Dict[str, Any]]:
@@ -36,7 +272,25 @@ class ExcelHandler:
             
             # 使用 pandas 讀取 Excel
             df = pd.read_excel(buffer)
-              # 檢查必要欄位是否存在
+            
+            # 重置 buffer 以便後續提取圖片
+            buffer.seek(0)
+            
+            # 提取 Excel 中的圖片
+            # 首先嘗試使用 openpyxl 提取
+            images_from_openpyxl = ExcelHandler.extract_images_with_openpyxl(buffer)
+            
+            # 重置 buffer 以便使用 ZIP 方法提取
+            buffer.seek(0)
+            
+            # 然後嘗試使用 ZIP 方法提取
+            images_from_zip = ExcelHandler.extract_images_from_excel_zip(buffer)
+            
+            # 合併所有圖片結果 (優先使用 openpyxl 圖片)
+            all_images = images_from_openpyxl + images_from_zip
+            logger.info(f"從 Excel 檔案中提取了 {len(all_images)} 張圖片")
+            
+            # 檢查必要欄位是否存在
             required_fields = [
                 "QuestionNo.", "ChapterNo", "QuestionInChinese", 
                 "AnswerAInChinese", "AnswerBInChinese", "AnswerCInChinese", "AnswerDInChinese", 
@@ -73,9 +327,11 @@ class ExcelHandler:
                 
             # 重命名欄位以符合標準格式
             df = df.rename(columns=column_mapping)
-              # 檢查是否有 "Picture" 欄位
+            
+            # 檢查是否有 "Picture" 欄位
             has_picture = "Picture" in df.columns
-              # 統計總行數、有效行數和跳過行數
+            
+            # 統計總行數、有效行數和跳過行數
             total_rows = len(df)
             valid_rows = 0
             skipped_rows = 0
@@ -115,7 +371,8 @@ class ExcelHandler:
                     correct_answer_text = row[letter_to_option[correct_answer.upper()]]
                 else:
                     correct_answer_text = correct_answer
-                  # 安全獲取欄位值，對於缺失的欄位使用預設值
+                
+                # 安全獲取欄位值，對於缺失的欄位使用預設值
                 def safe_get(field_name, default=""):
                     if field_name in df.columns and not pd.isna(row.get(field_name)):
                         return str(row.get(field_name))
@@ -131,194 +388,84 @@ class ExcelHandler:
                     "option_c": safe_get("AnswerCInChinese"),
                     "option_d": safe_get("AnswerDInChinese"),
                     "correct_answer": str(correct_answer_text),
-                    "explanation": safe_get("AnswerExplainInChinese", "無解釋")
+                    "explanation": safe_get("AnswerExplainInChinese", "無解釋"),
+                    "picture": None
                 }
-                      # 處理圖片欄位 (如果存在)
-                picture_field = "Picture" if "Picture" in df.columns else ("PIC" if "PIC" in df.columns else None)
-                if picture_field and not pd.isna(row.get(picture_field)):
-                    # 檢查圖片是否是字符串或二進制格式
-                    picture = row[picture_field]
-                    if isinstance(picture, str):
-                        # 如果是 Base64 格式
-                        if picture.startswith("data:image") and ";base64," in picture:
-                            question["picture"] = picture
-                        else:
-                            # 嘗試將其轉換為 Base64 (假設是某種編碼)
-                            try:
-                                picture_bytes = picture.encode("utf-8")
-                                question["picture"] = f"data:image/png;base64,{base64.b64encode(picture_bytes).decode('utf-8')}"
-                            except:
-                                question["picture"] = None
-                                logger.warning(f"無法編碼圖片字串: {picture[:30]}...")
-                    else:
-                        # 嘗試直接編碼為 Base64
-                        try:
-                            question["picture"] = f"data:image/png;base64,{base64.b64encode(picture).decode('utf-8')}"
-                        except:
-                            question["picture"] = None
-                            logger.warning(f"無法編碼非字串圖片")
+                
+                # 從提取的圖片中分配圖片（如果有）
+                if idx < len(all_images):
+                    question["picture"] = all_images[idx]["data"]
+                    logger.info(f"題目 {question['question_no']} 已分配圖片，大小: {len(question['picture'])} 位元組")
                 else:
-                    question["picture"] = None
-                      # 輸出調試信息，檢查每個題目的欄位
+                    # 如果沒有從 Excel 結構中提取到圖片，則檢查單元格中的圖片欄位
+                    picture_field = None
+                    for col in df.columns:
+                        if col.lower() == "picture" or col.lower() == "pic":
+                            picture_field = col
+                            break
+                    
+                    if picture_field and not pd.isna(row.get(picture_field)):
+                        # 處理儲存格中的圖片資料
+                        pic_data = row[picture_field]
+                        logger.info(f"圖片資料類型: {type(pic_data)}")
+                        
+                        if isinstance(pic_data, str):
+                            # 如果是 Base64 格式
+                            if pic_data.startswith("data:image") and ";base64," in pic_data:
+                                try:
+                                    base64_content = pic_data.split(";base64,")[1]
+                                    question["picture"] = base64.b64decode(base64_content)
+                                    logger.info(f"成功從 Base64 提取圖片: {len(question['picture'])} 位元組")
+                                except Exception as e:
+                                    question["picture"] = None
+                                    logger.warning(f"無法解碼 Base64 圖片: {str(e)}")
+                            else:
+                                logger.info(f"字串圖片內容片段: {pic_data[:100] if len(pic_data) > 100 else pic_data}")
+                                try:
+                                    question["picture"] = pic_data.encode("utf-8")
+                                    logger.info(f"將字符串轉換為二進位: {len(question['picture'])} 位元組")
+                                except Exception as e:
+                                    question["picture"] = None
+                                    logger.warning(f"無法編碼圖片字串: {str(e)}")
+                        else:
+                            # 處理非字符串類型的圖片數據
+                            try:
+                                if hasattr(pic_data, 'read'):
+                                    question["picture"] = pic_data.read()
+                                elif hasattr(pic_data, 'tobytes'):
+                                    question["picture"] = pic_data.tobytes()
+                                else:
+                                    try:
+                                        question["picture"] = bytes(pic_data)
+                                    except:
+                                        question["picture"] = None
+                                
+                                if question["picture"] is not None:
+                                    logger.info(f"成功處理非字串圖片，大小: {len(question['picture'])} 位元組")
+                            except Exception as e:
+                                question["picture"] = None
+                                logger.warning(f"無法處理圖片數據: {str(e)}")
+                
+                # 檢查圖片是否成功處理
+                if question["picture"] is not None:
+                    logger.info(f"題目 {question['question_no']} 成功添加圖片，大小: {len(question['picture'])} 位元組")
+                else:
+                    logger.info(f"題目 {question['question_no']} 沒有圖片")
+                
+                # 輸出調試信息，檢查每個題目的欄位
                 logger.info(f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項數: {len([x for x in [question['option_a'], question['option_b'], question['option_c'], question['option_d']] if x])}, 答案: {question['correct_answer'][:30]}...")
                     
                 questions.append(question)
                 valid_rows += 1
-              # 記錄結果統計
-            logger.info(f"Excel檔案處理完成: 總行數={total_rows}, 成功解析={valid_rows}, 跳過={skipped_rows}")
             
-            # 詳細記錄跳過原因
+            # 處理結果統計
+            logger.info(f"Excel 解析結果: 總計 {total_rows} 行, 有效 {valid_rows} 行, 跳過 {skipped_rows} 行")
             if skipped_rows > 0:
-                logger.warning("跳過題目的原因統計:")
                 for reason, count in skipped_reasons.items():
-                    logger.warning(f"- {reason}: {count} 題")
+                    logger.info(f"- 跳過原因 '{reason}': {count} 行")
             
-            if not questions:
-                logger.warning("沒有找到有效的題目資料，所有行都缺少必要欄位或有空值")
-                raise ValueError("Excel 檔案中沒有有效的題目資料，請確保至少包含問題內容和正確答案")
-                
             return questions
             
         except Exception as e:
-            logger.error(f"解析 Excel 檔案錯誤: {e}")
-            raise
-    @staticmethod
-    def save_questions_to_db(questions: List[Dict[str, Any]], file_id: str, file_name: str, doc_type: str) -> bool:
-        """將題目儲存至資料庫
-        
-        Args:
-            questions (List[Dict[str, Any]]): 題目列表
-            file_id (str): 檔案ID
-            file_name (str): 檔案名稱
-            doc_type (str): 文件類型
-            
-        Returns:
-            bool: 操作是否成功
-        """
-        try:
-            db = DBConnection()
-            
-            # 記錄題目數量
-            total_questions = len(questions)
-            logger.info(f"準備存入資料庫: 檔案={file_name}, 總題目數={total_questions}")
-            
-            # 先輕量化記錄檔案上傳，稍後更新正確的題目數量
-            db.record_file_upload(file_id, file_name, doc_type, 0)
-            
-            # 分析題目資料的章節和題號分佈
-            chapter_question_stats = {}
-            for q in questions:
-                chapter = q.get('chapter_no', '未分類')
-                q_no = q.get('question_no', '')
-                if chapter not in chapter_question_stats:
-                    chapter_question_stats[chapter] = set()
-                chapter_question_stats[chapter].add(q_no)
-            
-            # 記錄章節和題目分佈情況
-            for chapter, q_set in chapter_question_stats.items():
-                logger.info(f"章節 '{chapter}' 包含 {len(q_set)} 個不同題號")
-            
-            # 插入題目批次
-            question_count = db.insert_questions(questions, file_name, doc_type)
-            
-            # 記錄實際存入的數量
-            logger.info(f"實際成功存入資料庫: {question_count}/{total_questions} 題")
-            
-            # 如果存入資料庫的數量與解析的數量不符，記錄警告
-            if question_count < total_questions:
-                logger.warning(f"警告: {total_questions - question_count} 題未能成功存入資料庫")
-                
-                # 進一步分析失敗原因
-                db_questions = db.get_questions_by_file_name(file_name)
-                db_chapters = {}
-                for q in db_questions:
-                    ch = q.get('chapter_no', '未分類')
-                    q_no = q.get('question_no', '')
-                    if ch not in db_chapters:
-                        db_chapters[ch] = set()
-                    db_chapters[ch].add(q_no)
-                
-                # 比較解析和實際存儲的差異
-                for chapter, q_set in chapter_question_stats.items():
-                    db_set = db_chapters.get(chapter, set())
-                    if len(q_set) != len(db_set):
-                        missing = q_set - db_set
-                        if missing:
-                            logger.warning(f"章節 '{chapter}' 缺少題號: {', '.join(missing)}")
-            
-            # 更新實際題目數量
-            db.record_file_upload(file_id, file_name, doc_type, question_count)
-            
-            # 驗證實際存儲的題目數量
-            verify_count = db.get_question_count(file_name)
-            if verify_count != question_count:
-                logger.warning(f"題目數量驗證不符：預期={question_count}，實際={verify_count}，重新更新記錄")
-                db.record_file_upload(file_id, file_name, doc_type, verify_count)
-                question_count = verify_count
-            
-            db.close()
-            return question_count > 0
-        except Exception as e:
-            logger.error(f"儲存題目至資料庫錯誤: {e}")
-            return False
-    
-    @staticmethod
-    def get_file_list(doc_type: str) -> List[Dict[str, Any]]:
-        """取得檔案列表
-        
-        Args:
-            doc_type (str): 文件類型
-            
-        Returns:
-            List[Dict[str, Any]]: 檔案列表
-        """
-        try:
-            db = DBConnection()
-            file_list = db.get_file_list(doc_type)
-            db.close()
-            return file_list
-        except Exception as e:
-            logger.error(f"取得檔案列表錯誤: {e}")
-            return []
-    @staticmethod
-    def get_questions_by_file(file_id: str) -> List[Dict[str, Any]]:
-        """取得特定檔案的題目
-        
-        Args:
-            file_id (str): 檔案ID
-            
-        Returns:
-            List[Dict[str, Any]]: 題目列表，格式化為前端需要的格式
-        """
-        try:
-            db = DBConnection()
-            questions = db.get_questions_by_file(file_id)
-            db.close()
-            
-            # 檢查是否成功取得題目
-            if not questions:
-                logger.warning(f"找不到檔案ID {file_id} 的題目")
-                return []
-                
-            return questions
-        except Exception as e:
-            logger.error(f"取得題目錯誤: {e}")
-            return []
-    @staticmethod
-    def delete_file(file_id: str) -> bool:
-        """刪除檔案及其題目
-        
-        Args:
-            file_id (str): 檔案ID
-            
-        Returns:
-            bool: 操作是否成功
-        """
-        try:
-            db = DBConnection()
-            success = db.delete_file_and_questions(file_id)
-            db.close()
-            return success
-        except Exception as e:
-            logger.error(f"刪除檔案錯誤: {e}")
-            return False
+            logger.error(f"解析 Excel 檔案時發生錯誤: {str(e)}", exc_info=True)
+            raise e

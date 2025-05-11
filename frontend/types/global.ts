@@ -35,6 +35,7 @@ export interface IExcelQuestion {
   category: string;  // 題目類別
   difficulty: string; // 難度
   modified: boolean; // 是否被修改過
+  deleted?: boolean; // 是否標記為刪除
 }
 
 // 文件內容類型定義

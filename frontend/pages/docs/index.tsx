@@ -46,7 +46,7 @@ import { IExcelQuestion, IDocContent, IDocsFormat } from "@/types/global";
 import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 
 // 導入 Excel API 函數
-import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFile } from "@/api/excel";
+import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFile, updateExcelQuestions } from "@/api/excel";
 
 // 用於在本地存儲模擬文件列表
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
@@ -824,10 +824,43 @@ export default function DocsPage() {
   const handleEditQuestion = (question: IExcelQuestion) => {
     setEditingQuestion({...question});
     setEditQuestionModal(true);
+  };  // 將修改後的題目保存回資料庫
+  const syncDatabaseQuestions = async (fileId: string, questions: IExcelQuestion[]) => {
+    try {
+      setIsLoading(true);
+      // 發送所有題目到資料庫，包括已修改和未修改的
+      // 只給修改和刪除的題目加上標記，讓後端可以處理部分更新
+      const questionsToSync = questions.map(q => ({
+        ...q,
+        // 只保留明確標記為已刪除的題目的deleted標記，其他都設為undefined
+        deleted: q.deleted === true ? true : undefined
+      }));
+      
+      console.log("同步到資料庫的題目:", questionsToSync);
+      
+      const result = await updateExcelQuestions(fileId, questionsToSync);
+      console.log("資料庫更新結果:", result);
+      
+      addToast({
+        color: "success",
+        title: "資料庫同步成功",
+        description: `已更新 ${result.updated_count} 個題目，刪除 ${result.deleted_count} 個題目`
+      });
+      
+    } catch (error) {
+      console.error("同步資料庫失敗:", error);
+      addToast({
+        color: "danger",
+        title: "同步失敗",
+        description: "無法將修改同步到資料庫，但已保存在本地"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 儲存編輯後的題目
-  const saveEditedQuestion = () => {
+  const saveEditedQuestion = async () => {
     if (!editingQuestion || !currentContent) return;
 
     const updatedQuestions = currentContent.questions.map(q => 
@@ -860,18 +893,43 @@ export default function DocsPage() {
     setEditQuestionModal(false);
     setEditingQuestion(null);
 
+    // 如果是數據庫文件，同步到數據庫
+    if (currentContent.fileID.startsWith('db-')) {
+      await syncDatabaseQuestions(currentContent.fileID, updatedQuestions);
+    }
+
     addToast({
       color: "success",
       title: "更新成功",
       description: "題目已成功更新",
     });
-  };
-
-  // 刪除題目
-  const handleDeleteQuestion = (questionId: string) => {
+  };  // 刪除題目
+  const handleDeleteQuestion = async (questionId: string) => {
     if (!currentContent) return;
 
-    const updatedQuestions = currentContent.questions.filter(q => q.id !== questionId);
+    // 找到要刪除的題目
+    const questionToDelete = currentContent.questions.find(q => q.id === questionId);
+    if (!questionToDelete) return;
+    
+    // 更新所有題目，標記要刪除的題目
+    const updatedQuestions = currentContent.questions.map(q => {
+      if (q.id === questionId) {
+        return {
+          ...q,
+          modified: true,
+          deleted: true // 用於標記刪除操作
+        };
+      }
+      return q;
+    });
+    
+    // 如果是資料庫中的題目，同步到資料庫
+    if (currentContent.fileID.startsWith('db-')) {
+      await syncDatabaseQuestions(currentContent.fileID, updatedQuestions);
+    }
+    
+    // 從本地顯示移除已刪除的題目，保留在數據中用於同步操作
+    const visibleQuestions = updatedQuestions.filter(q => !q.deleted);
 
     const updatedContent: IDocContent = {
       ...currentContent,
@@ -903,7 +961,55 @@ export default function DocsPage() {
       description: "題目已成功刪除",
     });
   };
+  // 保存所有修改到資料庫
+  const saveAllChangesToDatabase = async () => {
+    if (!currentContent || !currentContent.fileID.startsWith('db-')) return;
 
+    try {
+      setIsLoading(true);
+      
+      // 找出所有已修改的題目
+      const modifiedQuestions = currentContent.questions.filter(q => q.modified);
+        if (modifiedQuestions.length === 0) {
+        addToast({
+          color: "primary",
+          title: "無需同步",
+          description: "沒有檢測到任何修改"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // 同步到資料庫
+      await syncDatabaseQuestions(currentContent.fileID, modifiedQuestions);
+      
+      // 成功後清除修改標記
+      const clearedQuestions = currentContent.questions.map(q => {
+        if (q.modified) {
+          return { ...q, modified: false };
+        }
+        return q;
+      });
+      
+      const updatedContent = {
+        ...currentContent,
+        questions: clearedQuestions
+      };
+      
+      setCurrentContent(updatedContent);
+      
+    } catch (error) {
+      console.error("保存所有修改失敗:", error);
+      addToast({
+        color: "danger",
+        title: "保存失敗",
+        description: "無法將所有修改保存到資料庫"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // 新增題目
   const handleAddQuestion = () => {
     if (!currentContent) return;
@@ -921,12 +1027,17 @@ export default function DocsPage() {
     setEditingQuestion(newQuestion);
     setEditQuestionModal(true);
   };
-
   // 儲存新題目
-  const saveNewQuestion = () => {
+  const saveNewQuestion = async () => {
     if (!editingQuestion || !currentContent) return;
 
-    const updatedQuestions = [...currentContent.questions, editingQuestion];
+    // 標記新題目為已修改，以便同步到資料庫
+    const markedQuestion = {
+      ...editingQuestion,
+      modified: true
+    };
+
+    const updatedQuestions = [...currentContent.questions, markedQuestion];
 
     const updatedContent: IDocContent = {
       ...currentContent,
@@ -953,6 +1064,11 @@ export default function DocsPage() {
     saveLocalStorageDocsList(currentDocType, updatedFileList);
     setEditQuestionModal(false);
     setEditingQuestion(null);
+
+    // 如果是數據庫文件，同步到數據庫
+    if (currentContent.fileID.startsWith('db-')) {
+      await syncDatabaseQuestions(currentContent.fileID, updatedQuestions);
+    }
 
     addToast({
       color: "success",
@@ -1442,16 +1558,13 @@ export default function DocsPage() {
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold">{currentContent.fileName}</h2>
-                  <div className="flex gap-2">
-                    <Button color="default" variant="light" onPress={handleBackToList}>
+                  <div className="flex gap-2">                    <Button color="default" variant="light" onPress={handleBackToList}>
                       返回文件列表
                     </Button>
                     {isTeacherOrTA && (
-                      <>
-                        <Button color="primary" onPress={handleAddQuestion}>
+                      <>                        <Button color="primary" onPress={handleAddQuestion}>
                           新增題目
-                        </Button>
-                        <Button color="success" onPress={handleExportFile}>
+                        </Button>                        <Button color="success" onPress={handleExportFile}>
                           匯出檔案
                         </Button>
                       </>
@@ -1471,12 +1584,16 @@ export default function DocsPage() {
                     <TableColumn key="actions" width={150}>{isTeacherOrTA ? "操作" : ""}</TableColumn>
                   </TableHeader>
                   <TableBody
-                    items={currentContent.questions}
+                    items={currentContent.questions.filter(q => !q.deleted)}
                     emptyContent={"這個檔案中沒有找到任何題目"}
                   >
-                    {(question: IExcelQuestion) => (
-                      <TableRow key={question.id} className={question.modified ? "bg-blue-100 dark:bg-blue-900/30" : ""}>
-                        <TableCell>{question.id}</TableCell>
+                    {(question: IExcelQuestion) => (                      <TableRow key={question.id} className={question.modified ? "bg-blue-100 dark:bg-blue-900/30" : ""}>
+                        <TableCell className="relative">
+                          {question.id}
+                          {question.modified && (
+                            <span className="absolute -top-1 -right-1 text-xs px-1 rounded-full bg-warning-400 text-warning-800">已修改</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <span className="line-clamp-2" title={question.question}>
                             {question.question}

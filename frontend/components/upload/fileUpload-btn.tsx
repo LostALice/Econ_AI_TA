@@ -99,8 +99,7 @@ export const FileUploadButton = ({
       }
       return;
     }
-    
-    // Excel檔案特殊處理 - 確保適用於上傳 XLSX 文件
+      // Excel檔案特殊處理 - 確保適用於上傳 XLSX 文件
     if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
       try {
         setIsProgressing(true);
@@ -108,14 +107,23 @@ export const FileUploadButton = ({
         formData.append("excel_file", file);
         formData.append("doc_type", "TESTING");  // 預設為考古題類型
         
+        console.log("上傳中...", file.name);
+        
         const response = await fetch(`${siteConfig.api_url}/excel/upload/`, {
           method: "POST",
           body: formData,
         });
         
-        const data = await response.json();
+        // 先檢查回應狀態
+        if (!response.ok) {
+          console.error("Server responded with error:", response.status, response.statusText);
+          throw new Error(`上傳失敗: ${response.status} ${response.statusText}`);
+        }
         
-        if (data.status_code === 200) {
+        const data = await response.json();
+        console.log("上傳成功，收到回應:", data);
+        
+        if (data.status_code === 200 || (!data.status_code && data.file_id)) {
           setUploadSuccess(200);
         } else {
           setUploadSuccess(422);

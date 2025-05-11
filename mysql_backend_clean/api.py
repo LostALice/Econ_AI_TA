@@ -40,6 +40,17 @@ class QuestionsSuccessModel(BaseModel):
     questions: List[Dict[str, Any]]
     status_code: int = 200
 
+class QuestionsUpdateModel(BaseModel):
+    file_id: str
+    questions: List[Dict[str, Any]]
+
+class QuestionsUpdateSuccessModel(BaseModel):
+    file_id: str
+    updated_count: int
+    deleted_count: int
+    message: str
+    status_code: int = 200
+
 @router.post("/excel/upload/", response_model=FileUploadSuccessModel)
 async def upload_excel_file(
     excel_file: UploadFile = File(...),
@@ -74,9 +85,7 @@ async def upload_excel_file(
         try:
             questions = ExcelHandler.parse_excel_to_questions(content_b64, excel_file.content_type)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        
-        # 儲存題目到資料庫
+            raise HTTPException(status_code=400, detail=str(e))        # 儲存題目到資料庫
         success = ExcelHandler.save_questions_to_db(questions, file_id, file_name, doc_type)
         
         if not success:
@@ -100,7 +109,7 @@ async def upload_excel_file(
         logger.error(f"上傳 Excel 檔案錯誤: {str(e)}")
         raise HTTPException(status_code=500, detail=f"上傳檔案錯誤: {str(e)}")
 
-@router.get("/excel/{doc_type}/", response_model=FileListSuccessModel)
+@router.get("/excel/list/{doc_type}/", response_model=FileListSuccessModel)
 async def get_file_list(doc_type: str):
     """取得檔案列表"""
     try:
@@ -126,28 +135,16 @@ async def get_questions(file_id: str):
         HTTPException: 找不到檔案或發生錯誤時拋出
     """
     try:
-        # 獲取題目列表
-        questions = ExcelHandler.get_questions_by_file(file_id)
+        # 獲取題目列表和檔案名稱
+        questions, file_name = ExcelHandler.get_questions(file_id)
         
         if not questions:
-            # 如果找不到題目，嘗試從 uploaded_files 表獲取檔案信息
-            logger.warning(f"從 questions 表找不到檔案ID: {file_id} 的題目，嘗試從 uploaded_files 表獲取檔案信息")
-            db = DBConnection()
-            file_info = db.get_file_info(file_id)
-            db.close()
+            logger.warning(f"找不到檔案ID: {file_id} 的題目")
+            raise HTTPException(status_code=404, detail=f"找不到檔案ID: {file_id} 的題目")
             
-            if not file_info:
-                raise HTTPException(status_code=404, detail=f"找不到檔案ID: {file_id}")
-            
-            # 返回空題目列表但包含檔案信息
-            return QuestionsSuccessModel(
-                file_id=file_id,
-                file_name=file_info.get("file_name", ""),
-                questions=[]
-            )
-        
-        # 假設第一個題目的 file_name 代表整個檔案名稱
-        file_name = questions[0].get("file_name", "")
+        # 如果檔案名稱為空，使用檔案ID作為檔案名稱
+        if not file_name:
+            file_name = f"未命名檔案-{file_id}"
         
         # 轉換題目資料為前端需要的格式
         formatted_questions = []
@@ -166,6 +163,30 @@ async def get_questions(file_id: str):
             # 如果沒有單獨的選項，檢查是否存在選項陣列
             if not options and isinstance(q.get("options", []), list):
                 options = q.get("options")
+                
+            # 處理圖片資料，確保二進制資料正確轉換為 Base64
+            picture_data = q.get("picture")
+            picture_base64 = None
+            
+            if picture_data and isinstance(picture_data, bytes):
+                try:
+                    # 嘗試識別圖片類型
+                    img_type = "png"  # 預設為 PNG
+                    if picture_data.startswith(b'\xff\xd8'):
+                        img_type = "jpeg"
+                    elif picture_data.startswith(b'\x89\x50\x4E\x47'):
+                        img_type = "png"
+                    elif picture_data.startswith(b'\x47\x49\x46\x38'):
+                        img_type = "gif"
+                    
+                    # 轉換為 Base64
+                    picture_base64 = f"data:image/{img_type};base64,{base64.b64encode(picture_data).decode('utf-8')}"
+                    logger.info(f"成功將題目 {q.get('id')} 的圖片轉換為 Base64，大小: {len(picture_data)} 位元組")
+                except Exception as pic_error:
+                    logger.error(f"圖片轉換錯誤: {str(pic_error)}")
+                    picture_base64 = None
+            elif picture_data:
+                logger.warning(f"題目 {q.get('id')} 的圖片不是二進位格式: {type(picture_data)}")
             
             formatted_questions.append({
                 "id": str(q.get("id", "")),
@@ -175,7 +196,7 @@ async def get_questions(file_id: str):
                 "category": q.get("category", "") or q.get("chapter_no", ""),
                 "difficulty": q.get("difficulty", "普通"),
                 "modified": False,
-                "picture": q.get("picture", None)
+                "picture": picture_base64
             })
         
         return QuestionsSuccessModel(
@@ -188,9 +209,51 @@ async def get_questions(file_id: str):
     except Exception as e:
         logger.error(f"取得題目錯誤: {str(e)}")
         raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}")
+
+@router.put("/excel/questions/", response_model=QuestionsUpdateSuccessModel)
+async def update_questions(request: QuestionsUpdateModel):
+    """更新題目內容
+    
+    Args:
+        request (QuestionsUpdateModel): 包含檔案ID和要更新的題目列表
+        
+    Returns:
+        QuestionsUpdateSuccessModel: 更新成功後的回應
+        
+    Raises:
+        HTTPException: 更新失敗時拋出
+    """
+    try:
+        file_id = request.file_id
+        questions = request.questions
+        
+        if not file_id:
+            raise HTTPException(status_code=400, detail="缺少檔案ID")
+            
+        if not questions:
+            raise HTTPException(status_code=400, detail="沒有提供要更新的題目")
+        
+        # 更新題目
+        result = ExcelHandler.update_questions(file_id, questions)
+        
+        if not result['success']:
+            error_message = result.get('error', '未知錯誤')
+            raise HTTPException(status_code=500, detail=f"更新題目失敗: {error_message}")
+        
+        return QuestionsUpdateSuccessModel(
+            file_id=file_id,
+            updated_count=result['updated_count'],
+            deleted_count=result['deleted_count'],
+            message=f"成功更新題目，已更新 {result['updated_count']} 題，已刪除 {result['deleted_count']} 題"
+        )
+    
+    except HTTPException:
+        # 重新拋出 HTTP 錯誤，保持原始狀態碼和詳情
+        raise
+        
     except Exception as e:
-        logger.error(f"取得題目錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}")
+        logger.error(f"更新題目時發生錯誤: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新題目時發生錯誤: {str(e)}")
 
 @router.delete("/excel/{file_id}/", response_model=FileDeleteSuccessModel)
 async def delete_file(file_id: str):
