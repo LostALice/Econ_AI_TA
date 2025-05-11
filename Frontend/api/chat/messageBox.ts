@@ -11,6 +11,7 @@ export default async function rating_answer(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify({
       question_uuid: questionUUID,
       rating: rating,

@@ -101,7 +101,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = () => {
     // copy from default out function
     deleteCookie("role");
-    deleteCookie("jwt");
+    deleteCookie("token");
     // setUsername("");
     // setPassword("");
     const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
@@ -109,7 +109,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setRoleState(userRole);
     setUserInfo(null);
-    localStorage.removeItem("jwt");
+    localStorage.removeItem("token");
     localStorage.removeItem("role");
     console.log("User logged out");
   };

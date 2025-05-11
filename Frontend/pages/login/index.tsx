@@ -49,7 +49,7 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    if (hasCookie("role") && hasCookie("jwt")) {
+    if (hasCookie("role") && hasCookie("token")) {
       const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
       setRole(userRole);
       setIsLoggedIn(true);
@@ -107,7 +107,7 @@ export default function LoginPage() {
   // 登出功能
   const logout = () => {
     deleteCookie("role");
-    deleteCookie("jwt");
+    deleteCookie("token");
     setIsLoggedIn(false);
     setFormData({
       role: "",
@@ -131,17 +131,15 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      // 使用SHA3-256哈希密碼
-      const hashed_password = sha3_256(formData.password);
-
       const response = await fetch(siteConfig.api_url + "/authorization/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           username: formData.username,  // Using username as username
-          hashed_password: hashed_password,
+          password: formData.password,
           role: formData.role,  // Added role to the request
         }),
       });
@@ -151,7 +149,7 @@ export default function LoginPage() {
 
         if (data.success) {
           // 登入成功
-          setCookie("jwt", data.jwt_token);
+          setCookie("token", data.jwt_token);
           setCookie("role", data.role);
 
           const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];

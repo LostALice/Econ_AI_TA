@@ -2,6 +2,7 @@
 
 import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/chat/types";
 import { siteConfig } from "@/config/site";
+import { fetcher } from "../fetcher";
 
 export async function askQuestion(
   chatUUID: string,
@@ -36,6 +37,7 @@ export async function askQuestion(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: postBody,
   });
   const data = await resp.json();
@@ -50,12 +52,41 @@ export async function askQuestion(
 }
 
 export async function getChatroomUUID(): Promise<string> {
-  const response = await fetch(siteConfig.api_url + "/chatroom/uuid/", {
+  const response = await fetcher(siteConfig.api_url + "/chatroom/uuid/", {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
-
   return await response.json();
+}
+
+export async function fetchDocsList(
+  documentationType: string
+): Promise<IDocsFormat[]> {
+  const resp = await fetch(
+    siteConfig.api_url + "/department/" + documentationType + "/",
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+  const data = await resp.json();
+
+  if (!data.docs_list) {
+    console.error("No documentation found.");
+    return [];
+  }
+
+  let docsList = [];
+  for (let file of data.docs_list) {
+    const docsInfo: IDocsFormat = {
+      fileID: file.file_id,
+      fileName: file.file_name,
+      lastUpdate: file.last_update.toString().replace("T", " "),
+    };
+    docsList.push(docsInfo);
+  }
+  console.debug(docsList);
+  return docsList;
 }

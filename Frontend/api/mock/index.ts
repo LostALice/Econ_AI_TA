@@ -3,6 +3,8 @@
 import { siteConfig } from "@/config/site";
 import { IExamsInfoForStudent } from "@/types/mock/index";
 
+
+
 export async function getTargetedExamTypeList(
   exam_type: string
 ): Promise<IExamsInfoForStudent[]> {
@@ -13,6 +15,7 @@ export async function getTargetedExamTypeList(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     }
   );
 

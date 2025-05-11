@@ -3,6 +3,7 @@
 import { siteConfig } from "@/config/site";
 import { IExamResult } from "@/types/mock/mock";
 
+
 export async function fetchExamResults(
   submissionID: number
 ): Promise<IExamResult | null> {
@@ -13,6 +14,7 @@ export async function fetchExamResults(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     }
   );
 

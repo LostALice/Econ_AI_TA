@@ -9,6 +9,7 @@ import {
 } from "@heroui/react"
 import { useEffect, useState, useContext } from "react"
 
+
 import { getCookie } from "cookies-next"
 import { siteConfig } from "@/config/site"
 import { AuthContext } from "@/contexts/AuthContext"
@@ -87,9 +88,10 @@ export const FileUploadButton = () => {
     apiUploadFileURL.searchParams.append("department", department)
     apiUploadFileURL.searchParams.append("collection", collection)
 
-    const resp = await fetch(apiUploadFileURL, {
+    const resp = await fetch(apiUploadFileURL.toString(), {
       method: "POST",
       body: fileFormData,
+      credentials: "include",
     })
 
     const respJson = await resp.json()

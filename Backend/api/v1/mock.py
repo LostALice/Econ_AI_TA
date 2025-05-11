@@ -18,7 +18,7 @@ from Backend.utils.helper.model.api.v1.mock import (
     SubmittedExamModel,
     TagModel,
 )
-from Backend.utils.helper.api.dependency import require_user, require_root
+from Backend.utils.helper.api.dependency import require_ta, require_student
 from Backend.utils.helper.model.api.dependency import JWTPayload
 
 # development
@@ -39,12 +39,9 @@ if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
 
 
-router = APIRouter(dependencies=[Depends(require_user)])
+router = APIRouter(dependencies=[Depends(require_student)])
 # mysql_client = MySQLHandler()
 
 
@@ -136,7 +133,7 @@ async def get_mock_exams(mock_type: ExamType):
 
 @router.post("/new/exam/")
 async def create_new_exam(
-    exam_prams: CreateNewExamParamsModel, user: JWTPayload = Depends(require_root)
+    exam_prams: CreateNewExamParamsModel, user: JWTPayload = Depends(require_ta)
 ) -> ExamsInfoModel:
     """
     Endpoint to create new exam
@@ -155,7 +152,7 @@ async def create_new_exam(
 
 @router.post("/new/question/")
 async def create_new_question(
-    question: CreateNewQuestionParamsModel, user: JWTPayload = Depends(require_root)
+    question: CreateNewQuestionParamsModel, user: JWTPayload = Depends(require_ta)
 ) -> ExamQuestionModel:
     """
     Endpoint to add new question to an exam.
@@ -174,7 +171,7 @@ async def create_new_question(
 
 @router.post("/new/options/")
 async def create_new_options(
-    options: list[CreateNewOptionParamsModel], user: JWTPayload = Depends(require_root)
+    options: list[CreateNewOptionParamsModel], user: JWTPayload = Depends(require_ta)
 ) -> list[ExamOptionModel]:
     """
     Endpoint to add new question options to an exam.
@@ -195,7 +192,7 @@ async def create_new_options(
 
 @router.put("/modify/exam/")
 async def modify_exam(
-    exam: ExamsInfoModel, user: JWTPayload = Depends(require_root)
+    exam: ExamsInfoModel, user: JWTPayload = Depends(require_ta)
 ) -> None:
     """
     Endpoint to modify exam.
@@ -210,7 +207,7 @@ async def modify_exam(
 
 @router.put("/modify/question/")
 async def modify_question(
-    question: ExamQuestionModel, user: JWTPayload = Depends(require_root)
+    question: ExamQuestionModel, user: JWTPayload = Depends(require_ta)
 ) -> bool:
     """
     Update an exam question along with its associated images.
@@ -258,7 +255,7 @@ async def modify_question(
 
 
 @router.delete("/enable/exam/")
-async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) -> bool:
+async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> bool:
     """
     Endpoint to delete exam.
 
@@ -273,7 +270,7 @@ async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) ->
 
 
 @router.delete("/disable/exam/")
-async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) -> bool:
+async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> bool:
     """
     Endpoint to delete exam.
 
@@ -289,7 +286,7 @@ async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_root)) -
 
 @router.delete("/delete/question/{question_id}")
 async def delete_question(
-    question_id: int, user: JWTPayload = Depends(require_root)
+    question_id: int, user: JWTPayload = Depends(require_ta)
 ) -> bool:
     """
     Endpoint to delete question to an exam.
@@ -305,7 +302,7 @@ async def delete_question(
 
 
 @router.post("/submit/")
-async def submit(submitted_exam: SubmittedExamModel) -> Optional[int]:
+async def submit(submitted_exam: SubmittedExamModel) -> int | None:
     """
     Endpoint to submit exam.
     Args:
@@ -427,12 +424,12 @@ async def create_tag(tag_name: str, tag_description: str) -> bool:
 
 @router.post("/tag/add/{question_id}")
 async def add_tag(tag_id: int, question_id: int) -> bool:
-    return True
+    return mysql_client.add_question_tag(question_id=question_id, tag_id=tag_id)
 
 
 @router.post("/tag/remove/{question_id}")
 async def remove_tag(tag_id: int, question_id: int) -> bool:
-    return True
+    return mysql_client.remove_question_tag(question_id=question_id, tag_id=tag_id)
 
 
 @router.post("/tag/delete/")

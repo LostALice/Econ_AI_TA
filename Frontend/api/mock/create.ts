@@ -1,6 +1,7 @@
 // Code by AkinoAlice@TyrantRey
 
 import { siteConfig } from "@/config/site";
+
 import {
   IExamsInfo,
   IExamOption,
@@ -9,17 +10,17 @@ import {
   ICreateNewQuestionOptionsPrams,
   ICreateNewQuestionPrams,
 } from "@/types/mock/create";
+import { fetcher } from "../fetcher";
 
 export async function fetchExamLists(): Promise<IExamsInfo[]> {
-  return await fetch(siteConfig.api_url + "/mock/exam-lists/").then(
-    (response) => {
-      if (!response.ok) {
-        console.error("Network response was not ok");
-        return [];
-      }
-      return response.json();
+  return await fetcher(siteConfig.api_url + "/mock/exam-lists/", {
+  }).then((response) => {
+    if (!response.ok) {
+      console.error("Network response was not ok");
+      return [];
     }
-  );
+    return response.json();
+  });
 }
 
 export async function createNewExam(
@@ -27,6 +28,7 @@ export async function createNewExam(
 ): Promise<IExamsInfo> {
   const resp = await fetch(siteConfig.api_url + "/mock/new/exam/", {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -42,6 +44,7 @@ export async function updateExam(exam: IExamsInfo) {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(exam),
   });
 
@@ -54,6 +57,7 @@ export async function deleteExam(examId: number) {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify({ exam_id: examId }),
   });
 
@@ -66,6 +70,7 @@ export async function createNewQuestion(question: ICreateNewQuestionPrams) {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(question),
   });
 
@@ -81,6 +86,7 @@ export async function createNewOptions(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(options),
   });
 
@@ -95,6 +101,7 @@ export async function modifyQuestion(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(question),
   });
 
@@ -109,6 +116,7 @@ export async function deleteQuestion(questionId: number) {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     }
   );
 

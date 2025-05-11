@@ -9,7 +9,7 @@ from Backend.utils.RAG.document_handler import docs_client
 from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import mysql_client
-from Backend.utils.helper.api.dependency import require_user, require_root
+from Backend.utils.helper.api.dependency import require_student, require_root
 from Backend.utils.helper.model.api.dependency import JWTPayload
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,7 +24,7 @@ import uuid
 import json
 
 # FastAPI router setup
-router = APIRouter(dependencies=[Depends(require_user)])
+router = APIRouter(dependencies=[Depends(require_student)])
 # mysql_client = MySQLHandler()
 # milvus_client = MilvusHandler()
 # docs_client = DocumentSplitter()

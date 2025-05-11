@@ -12,7 +12,7 @@ from Backend.utils.helper.model.database.database import (
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.model.api.dependency import JWTPayload
-from Backend.utils.helper.api.dependency import require_user
+from Backend.utils.helper.api.dependency import require_student
 
 from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
@@ -34,9 +34,6 @@ logger.debug("| Authorization Loading Finished |")
 
 
 if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
@@ -101,8 +98,12 @@ async def login(
     """
     # /authentication/login added by router
     username = login_form.username
-    hashed_password = login_form.hashed_password
+    password = login_form.password
 
+    hash_function = hashlib.sha3_256()
+    hash_function.update(password.encode())
+    hashed_password = hash_function.hexdigest()
+    
     _status, user_info = mysql_client.get_user_info(username, hashed_password)
 
     if _status != 200 and isinstance(user_info, str):
@@ -205,5 +206,5 @@ async def sign_in(
 
 
 @router.get("/test/", status_code=200, tags=["test", "Authorization"])
-async def test(user: JWTPayload = Depends(require_user)):
+async def test(user: JWTPayload = Depends(require_student)):
     return {"message": f"Hello, {user.username}!"}

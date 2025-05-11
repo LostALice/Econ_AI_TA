@@ -8,6 +8,7 @@ import {
 } from "@/types/mock/mock";
 import { siteConfig } from "@/config/site";
 
+
 export async function fetchMockExamQuestionList(
   mock_id: number
 ): Promise<[IMockExamQuestionList[], IMockExamInformation]> {
@@ -16,6 +17,7 @@ export async function fetchMockExamQuestionList(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
   });
 
   return resp.json();
@@ -29,6 +31,7 @@ export async function submitExam(
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(submitted_exam),
   });
 

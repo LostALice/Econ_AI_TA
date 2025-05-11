@@ -20,9 +20,6 @@ if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
 
 
 class OpenAIResponser:

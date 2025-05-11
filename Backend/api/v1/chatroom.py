@@ -11,7 +11,7 @@ from Backend.utils.RAG.response_handler import response_client
 from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import mysql_client
-from Backend.utils.helper.api.dependency import require_user
+from Backend.utils.helper.api.dependency import require_student
 
 from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
@@ -20,7 +20,7 @@ from uuid import uuid4
 import base64
 import os
 
-router = APIRouter(dependencies=[Depends(require_user)])
+router = APIRouter(dependencies=[Depends(require_student)])
 # mysql_client = MySQLHandler()
 # milvus_client = MilvusHandler()
 # encoder_client = VectorHandler()

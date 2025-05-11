@@ -1,6 +1,6 @@
 # Code by AkinoAlice@TyrantRey
 
-from fastapi import Depends, HTTPException, Header
+from fastapi import Depends, HTTPException, Cookie
 
 import jwt
 import os
@@ -9,6 +9,9 @@ import datetime
 from Backend.utils.database.database import MySQLHandler
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.helper.model.api.dependency import JWTPayload
+
+from time import sleep
+
 
 # Initialize logger and database connection
 logger = CustomLoggerHandler().get_logger()
@@ -22,12 +25,9 @@ if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
-    from dotenv import load_dotenv
-
-    load_dotenv("./.env")
 
 
-# async def get_jwt_token(jwt: str | None = Header(None)) -> str:
+# async def get_jwt_token(jwt: str | None = Cookie(None)) -> str:
 #     """Extract JWT token from the Authorization header"""
 #     logger.info("Token: %s", jwt)
 
@@ -44,12 +44,12 @@ if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
 #     return token_parts[1]
 
 
-async def verify_jwt_token(token: str = Header(None)) -> JWTPayload:
+async def verify_jwt_token(token: str = Cookie(None)) -> JWTPayload:
     """
     Verify the JWT token and extract the payload.
 
     Args:
-        token (str): The JWT token extracted from the Authorization header.
+        token (str): The JWT token extracted from the Authorization Cookie.
 
     Returns:
         JWTPayload: The decoded JWT payload containing user information.
@@ -83,11 +83,14 @@ async def verify_jwt_token(token: str = Header(None)) -> JWTPayload:
 
     try:
         # Decode the JWT token
-        payload = jwt.decode(token, jwt_secret, algorithms=jwt_algorithm)
+        logger.info(token)
 
+        payload = jwt.decode(token, jwt_secret, algorithms=jwt_algorithm)
+        
         # Verify token is in database
-        token_valid = mysql_client.verify_login_token(payload["user_id"], token)
-        if not token_valid:
+        is_token_valid = mysql_client.verify_login_token(payload["user_id"], token)
+        logger.info(is_token_valid)
+        if not is_token_valid:
             raise HTTPException(status_code=401, detail="Token not found in database")
 
         # Check if token is expired
@@ -124,6 +127,7 @@ async def require_role(
         HTTPException: If the user's role is not in the required roles list.
     """
     if payload.role_name.lower() not in required_roles:
+        logger.info(payload.role_name)
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     return payload
@@ -131,9 +135,28 @@ async def require_role(
 
 async def require_root(payload: JWTPayload = Depends(verify_jwt_token)) -> JWTPayload:
     """Require root role to access the endpoint"""
-    return await require_role(["admin"], payload)
+    return await require_role(["root"], payload)
 
 
-async def require_user(payload: JWTPayload = Depends(verify_jwt_token)) -> JWTPayload:
+async def require_admin(payload: JWTPayload = Depends(verify_jwt_token)) -> JWTPayload:
+    """Require admin role to access the endpoint"""
+    return await require_role(["admin", "root"], payload)
+
+
+async def require_student(
+    payload: JWTPayload = Depends(verify_jwt_token),
+) -> JWTPayload:
     """Require user role to access the endpoint"""
-    return await require_role(["user", "root", "admin"], payload)
+    return await require_role(["student", "teacher", "ta", "root", "admin"], payload)
+
+
+async def require_ta(payload: JWTPayload = Depends(verify_jwt_token)) -> JWTPayload:
+    """Require user role to access the endpoint"""
+    return await require_role(["teacher", "ta", "root", "admin"], payload)
+
+
+async def require_teacher(
+    payload: JWTPayload = Depends(verify_jwt_token),
+) -> JWTPayload:
+    """Require user role to access the endpoint"""
+    return await require_role(["ta", "root", "admin"], payload)

@@ -20,7 +20,7 @@ import {
 import { LanguageTable } from "@/i18n";
 import { LangContext } from "@/contexts/LangContext";
 
-import { fetchDocsList } from "@/pages/api/api";
+import { fetchDocsList } from "@/api/chat/index";
 import { IDocsFormat } from "@/types/api/types";
 
 // import { FileUploadButton } from "@/components/upload/fileUpload-btn";

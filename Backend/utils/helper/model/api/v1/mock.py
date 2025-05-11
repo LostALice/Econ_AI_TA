@@ -94,7 +94,7 @@ class ExamQuestionResultModel(BaseModel):
 class ExamResultModel(BaseModel):
     exam_id: int
     submission_id: int
-    user_id: Optional[int] = 0
+    user_id: int | None = 0
     exam_name: str
     exam_type: ExamType
     exam_date: str

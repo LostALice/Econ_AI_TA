@@ -1,6 +1,12 @@
 // Code by AkinoAlice@TyrantRey
 
 export const LanguageTable = {
+  warning: {
+    sessionTimeout: {
+      zh: "會話逾時",
+      en: "Session Timeout, Please re-login"
+    }
+  },
   home: {
     router: {
       docs: {
