@@ -10,8 +10,6 @@ from Backend.utils.database.database import MySQLHandler
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.helper.model.api.dependency import JWTPayload
 
-from time import sleep
-
 
 # Initialize logger and database connection
 logger = CustomLoggerHandler().get_logger()
@@ -86,7 +84,7 @@ async def verify_jwt_token(token: str = Cookie(None)) -> JWTPayload:
         logger.info(token)
 
         payload = jwt.decode(token, jwt_secret, algorithms=jwt_algorithm)
-        
+
         # Verify token is in database
         is_token_valid = mysql_client.verify_login_token(payload["user_id"], token)
         logger.info(is_token_valid)

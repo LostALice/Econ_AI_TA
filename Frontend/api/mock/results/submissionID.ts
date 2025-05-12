@@ -8,7 +8,7 @@ export async function fetchExamResults(
   submissionID: number
 ): Promise<IExamResult | null> {
   const resp = await fetch(
-    siteConfig.api_url + "/mock/results/" + submissionID,
+    siteConfig.api_url + "/result/" + submissionID,
     {
       method: "GET",
       headers: {

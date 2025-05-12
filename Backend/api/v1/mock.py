@@ -14,7 +14,6 @@ from Backend.utils.helper.model.api.v1.mock import (
     CreateNewQuestionParamsModel,
     MockExamQuestionsListModel,
     MockExamInformationModel,
-    ExamResultModel,
     SubmittedExamModel,
     TagModel,
 )
@@ -338,22 +337,6 @@ async def submit(submitted_exam: SubmittedExamModel) -> int | None:
     return submission_id if submission_id else None
 
 
-@router.get("/results/{submission_id}")
-async def query_mock_exam_results(submission_id: int) -> Optional[ExamResultModel]:
-    """
-    Query mock exam results based on submission ID.
-    Args:
-        submission_id: int
-    Returns:
-        ExamResultModel
-    """
-    logger.debug(submission_id)
-    exam_results = mysql_client.query_mock_exam_results(submission_id)
-    logger.debug(exam_results)
-
-    return exam_results if exam_results else None
-
-
 @router.get("/{mock_id}/")
 async def fetch_mock_exam_questions_list(
     mock_id: int,
@@ -427,11 +410,11 @@ async def add_tag(tag_id: int, question_id: int) -> bool:
     return mysql_client.add_question_tag(question_id=question_id, tag_id=tag_id)
 
 
-@router.post("/tag/remove/{question_id}")
+@router.delete("/tag/remove/{question_id}")
 async def remove_tag(tag_id: int, question_id: int) -> bool:
     return mysql_client.remove_question_tag(question_id=question_id, tag_id=tag_id)
 
 
-@router.post("/tag/delete/")
+@router.delete("/tag/delete/")
 async def delete_tag(tag_id: int) -> bool:
     return mysql_client.disable_tag(tag_id=tag_id)

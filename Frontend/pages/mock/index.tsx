@@ -106,15 +106,29 @@ export default function MockPage() {
                     >
                         {LanguageTable.mock.index.cse[language]}
                     </Button>
-                    <Button
-                        isDisabled={!["Teacher", "Ta", "Admin"].includes(role)}
-                        as={Link}
-                        href="/mock/create"
-                        underline="hover"
-                        className="w-full py-3 transition duration-200 text-center border rounded text-xl"
-                    >
-                        {LanguageTable.mock.index.create[language]}
-                    </Button>
+                    {
+
+                        ["Teacher", "Ta", "Admin"].includes(role) ?
+                            <>
+                                <Button
+                                    as={Link}
+                                    href="/mock/create"
+                                    underline="hover"
+                                    className="w-full py-3 transition duration-200 text-center border rounded text-xl"
+                                >
+                                    {LanguageTable.mock.index.create[language]}
+                                </Button>
+                                <Button
+                                    as={Link}
+                                    href="/mock/result"
+                                    underline="hover"
+                                    className="w-full py-3 transition duration-200 text-center border rounded text-xl"
+                                >
+                                    {LanguageTable.mock.index.result[language]}
+                                </Button>
+                            </>
+                            : <></>
+                    }
                 </div>
             </div>
         </DefaultLayout>

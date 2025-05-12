@@ -293,6 +293,10 @@ export const LanguageTable = {
         zh: "新增模擬考試",
         en: "New Examination",
       },
+      result: {
+        zh: "學生成績",
+        en: "Student Result",
+      },
       loginFirst: {
         zh: "請先登入",
         en: "Please Login First",

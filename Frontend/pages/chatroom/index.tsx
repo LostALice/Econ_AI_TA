@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useContext } from "react"
 
-import { askQuestion, getChatroomUUID } from "@/api/chat/index"
+import { askQuestion, getChatroomUUID } from "@/api/chatroom/index"
 import { IMessageInfo, TQuestionMode } from "@/types/chat/types"
 import { MessageBox } from "@/components/chat/messageBox"
 import { ImageBox } from "@/components/chat/imageBox"
