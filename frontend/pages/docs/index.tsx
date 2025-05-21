@@ -52,6 +52,71 @@ import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFi
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
 const LOCAL_STORAGE_DOCS_CONTENT_KEY = "mock_docs_content";
 
+// 新增顯示題目圖片的組件
+const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
+  return (
+    <div className="bg-content1 shadow-md p-4 rounded-lg mb-4">
+      <div className="mb-4">
+        <div className="font-semibold mb-2">題目：</div>
+        <div>{question.question}</div>
+      </div>
+      
+      {/* 支援多圖片顯示，優先使用新的 pictures 屬性 */}
+      {((question.pictures?.length ?? 0) > 0 || question.picture) && (
+        <div className="mb-4">
+          <div className="font-semibold mb-2">圖片：</div>
+          
+          {/* 有多張圖片的情況 */}
+          {question.pictures && question.pictures.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {question.pictures.map((picSrc, index) => (
+                <div key={index} className="flex justify-center">
+                  <img 
+                    src={picSrc} 
+                    alt={`題目圖片 ${index+1}`} 
+                    className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* 僅有單張圖片 - 向後兼容 */
+            question.picture && (
+              <img 
+                src={question.picture} 
+                alt="題目圖片" 
+                className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+              />
+            )
+          )}
+        </div>
+      )}
+      
+      <div className="mb-4">
+        <div className="font-semibold mb-2">選項：</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {question.options.map((option, index) => (
+            <div key={index} className="flex items-start">
+              <div className="font-semibold mr-2">{String.fromCharCode(65 + index)}.</div>
+              <div>{option}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <div className="font-semibold mb-2">答案：</div>
+        <div>{question.answer}</div>
+      </div>
+      
+      <div>
+        <div className="font-semibold mb-2">類別：</div>
+        <div>{question.category}</div>
+      </div>
+    </div>
+  );
+};
+
 export default function DocsPage() {
   const { language } = useContext(LangContext);
   const { role, userInfo, isLoggedIn } = useContext(AuthContext);
@@ -546,9 +611,16 @@ export default function DocsPage() {
         return;
       }
       
+      // 提供更詳細的上傳狀態提示
+      addToast({
+        color: "primary",
+        title: "處理中",
+        description: `正在上傳並處理 Excel 檔案，其中的圖片將被自動提取...`,
+      });
+      
       // 上傳檔案至後端 MySQL 資料庫
       const result = await uploadExcelFile(file, currentDocType);
-        // 創建新的檔案記錄
+      // 創建新的檔案記錄
       const newFile: IDocsFormat = {
         fileID: result.file_id,
         fileName: result.file_name,
@@ -592,6 +664,26 @@ export default function DocsPage() {
       
       reader.readAsArrayBuffer(file);
       
+      // 獲取上傳後的題目，包含圖片信息
+      try {
+        const questionsResult = await fetchExcelQuestions(result.file_id);
+        
+        // 更新題目數量
+        newFile.questionCount = questionsResult.questions.length;
+        
+        // 檢查是否有圖片
+        const hasImages = questionsResult.questions.some(q => q.picture);
+        if (hasImages) {
+          addToast({
+            color: "success",
+            title: "圖片處理成功",
+            description: `檔案中的圖片已成功提取並與題目關聯`,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch questions after upload:", error);
+      }
+      
       // 更新文件列表
       const updatedList = [...fileList, newFile];
       setFileList(updatedList);
@@ -602,7 +694,7 @@ export default function DocsPage() {
       addToast({
         color: "success",
         title: "上傳成功",
-        description: `文件已成功上傳至資料庫`,
+        description: `文件已成功上傳至資料庫，包含 ${newFile.questionCount} 個題目`,
       });
       
       setIsLoading(false);
@@ -610,7 +702,8 @@ export default function DocsPage() {
       console.error("Error uploading file:", error);
       
       // 如果上傳到資料庫失敗，嘗試僅儲存到本地端
-      try {        // 創建一個新的文件記錄
+      try {
+        // 創建一個新的文件記錄
         const newFileID = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const newFile: IDocsFormat = {
           fileID: newFileID,
@@ -660,6 +753,9 @@ export default function DocsPage() {
             };
             
             fileContent.parsedContent = docContent;
+            
+            // 更新題目數量
+            newFile.questionCount = questions.length;
           }
           
           // 保存文件內容
@@ -673,7 +769,7 @@ export default function DocsPage() {
           addToast({
             color: "warning",
             title: "上傳至本地成功",
-            description: `資料庫連接失敗，檔案已暫存在本機`,
+            description: `資料庫連接失敗，檔案已暫存在本機，包含 ${newFile.questionCount} 個題目`,
           });
           
           setIsLoading(false);
@@ -1454,6 +1550,82 @@ export default function DocsPage() {
     loadFileList("TESTING");
   }, []);
 
+  // 新增渲染題目列表的函數，支援圖片顯示
+  const renderQuestionList = () => {
+    if (!currentContent) return null;
+    
+    // 按照題號和類別排序
+    const sortedQuestions = [...currentContent.questions]
+      .filter(q => !q.deleted)
+      .sort((a, b) => {
+        // 先按照類別排序
+        if (a.category !== b.category) {
+          return a.category.localeCompare(b.category);
+        }
+        // 再按照題號的數字部分排序（如果可以轉為數字）
+        const aNum = parseInt(a.id.replace(/\D/g, ''));
+        const bNum = parseInt(b.id.replace(/\D/g, ''));
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        // 如果無法轉為數字，則按照原始ID排序
+        return a.id.localeCompare(b.id);
+      });
+    
+    // 計算有圖片的題目數量
+    const questionsWithImages = sortedQuestions.filter(q => q.picture).length;
+    
+    return (
+      <div>
+        <div className="mb-4 p-3 bg-content2 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
+          <div className="text-sm">
+            <p>檔案: {currentContent.fileName}</p>
+            <p>總題數: {sortedQuestions.length} 題</p>
+            <p>包含圖片: {questionsWithImages} 題</p>
+            <p>最後更新: {currentContent.lastUpdate}</p>
+          </div>
+        </div>
+        
+        {sortedQuestions.length === 0 ? (
+          <div className="text-center p-8">
+            <p className="text-xl font-medium mb-2">沒有題目</p>
+            <p className="text-default-500">此文件不包含可顯示的題目</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {sortedQuestions.map(question => (
+              <div key={question.id} className="relative">
+                {isTeacherOrTA && (
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <Button 
+                      size="sm" 
+                      color="primary" 
+                      variant="light"
+                      onPress={() => handleEditQuestion(question)}
+                    >
+                      編輯
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      color="danger" 
+                      variant="light"
+                      onPress={() => handleDeleteQuestion(question.id)}
+                    >
+                      刪除
+                    </Button>
+                  </div>
+                )}
+                
+                <QuestionCard question={question} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <DefaultLayout>
       <div className="flex flex-col">
@@ -1572,53 +1744,7 @@ export default function DocsPage() {
                   </div>
                 </div>
                 
-                <Table isStriped aria-label="Questions table">
-                  <TableHeader>
-                    <TableColumn key="id" width={80}>ID</TableColumn>
-                    <TableColumn key="question">題目</TableColumn>
-                    <TableColumn key="options" width={200}>選項數</TableColumn>
-                    <TableColumn key="answer" width={100}>答案</TableColumn>
-                    <TableColumn key="category" width={150}>類別</TableColumn>
-                    <TableColumn key="difficulty" width={100}>難度</TableColumn>
-                    {/* Always include the actions column but conditionally render content */}
-                    <TableColumn key="actions" width={150}>{isTeacherOrTA ? "操作" : ""}</TableColumn>
-                  </TableHeader>
-                  <TableBody
-                    items={currentContent.questions.filter(q => !q.deleted)}
-                    emptyContent={"這個檔案中沒有找到任何題目"}
-                  >
-                    {(question: IExcelQuestion) => (                      <TableRow key={question.id} className={question.modified ? "bg-blue-100 dark:bg-blue-900/30" : ""}>
-                        <TableCell className="relative">
-                          {question.id}
-                          {question.modified && (
-                            <span className="absolute -top-1 -right-1 text-xs px-1 rounded-full bg-warning-400 text-warning-800">已修改</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="line-clamp-2" title={question.question}>
-                            {question.question}
-                          </span>
-                        </TableCell>
-                        <TableCell>{question.options.length}</TableCell>
-                        <TableCell>{question.answer}</TableCell>
-                        <TableCell>{question.category}</TableCell>
-                        <TableCell>{question.difficulty}</TableCell>
-                        <TableCell>
-                          {isTeacherOrTA && (
-                            <div className="flex gap-2">
-                              <Button size="sm" color="primary" onPress={() => handleEditQuestion(question)}>
-                                編輯
-                              </Button>
-                              <Button size="sm" color="danger" onPress={() => handleDeleteQuestion(question.id)}>
-                                刪除
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                {renderQuestionList()}
               </>
             )}
           </div>

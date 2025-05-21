@@ -40,29 +40,45 @@ export const MessageBox: FC<IMessageInfo> = ({
         }
       });
   }
+  
+  // 格式化圖片來源，自動檢測是否為Base64格式
+  const formatImageSrc = (imgData: string) => {
+    // 檢查是否已經是完整的data URL格式
+    if (imgData.startsWith('data:image/')) {
+      return imgData;
+    }
+    // 如果是純Base64，添加適當的前綴
+    return `data:image/png;base64,${imgData}`;
+  };
+  
   return (
-
     <div className="border rounded-lg border-emerald-600 m-3">
       <div className="justify-around p-4">
         <span className="italic">{question}</span>
-        <div className="flex gap-3 pt-1">
-          {images?.map((base64Image, index) => (
-            <Image
-              key={index}
-              src={`data:image/png;base64,${base64Image}`}
-              alt="Image"
-              width={128}
-              height={128}
-              className="rounded shadow-md object-fill"
-            />
-          ))}
-        </div>
+        
+        {/* 顯示用戶上傳的圖片 */}
+        {images && images.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+            {images.map((base64Image, index) => (
+              <div key={index} className="flex justify-center">
+                <Image
+                  src={formatImageSrc(base64Image)}
+                  alt={`用戶圖片 ${index + 1}`}
+                  width={128}
+                  height={128}
+                  className="rounded shadow-md object-contain"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        
         <Divider className="my-2" />
         <ReactMarkdown>{answer}</ReactMarkdown>
         {/* <span className="">{answer}</span> */}
         <Divider className="my-2" />
         <div className="flex justify-between">
-          <div className="flex text-left gap-3">
+          <div className="flex flex-wrap text-left gap-3">
             {files?.map((file) => (
               <Tooltip
                 content={<span className="text-left">{file.file_name}</span>}

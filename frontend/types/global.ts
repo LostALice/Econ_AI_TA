@@ -26,7 +26,7 @@ export interface ILoginPermission {
   loggedInState: TPermission;
 }
 
-// 新增題目相關的類型定義
+// 更新題目相關的類型定義
 export interface IExcelQuestion {
   id: string;        // 題目ID
   question: string;  // 題目內容
@@ -36,6 +36,8 @@ export interface IExcelQuestion {
   difficulty: string; // 難度
   modified: boolean; // 是否被修改過
   deleted?: boolean; // 是否標記為刪除
+  picture?: string;  // 主圖片（Base64格式）- 向後兼容
+  pictures?: string[]; // 所有圖片列表（包含主圖片）- 新增支援
 }
 
 // 文件內容類型定義

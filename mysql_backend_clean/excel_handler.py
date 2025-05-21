@@ -7,6 +7,9 @@ import re
 import zipfile
 import tempfile
 import os
+import shutil
+from pathlib import Path
+from xml.etree import ElementTree as ET
 
 try:
     from .db_connection import DBConnection
@@ -14,6 +17,393 @@ except ImportError:
     from db_connection import DBConnection
 
 logger = logging.getLogger(__name__)
+
+class XlsxImageExtractor:
+    def __init__(self, xlsx_path):
+        self.xlsx_path = xlsx_path
+        self.temp_dir = Path("temp_extraction")
+        self.output_dir = Path("extracted_images")
+        self.question_numbers = {}
+        self.namespace = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+        
+    def setup_directories(self):
+        """設置必要的目錄"""
+        for directory in [self.temp_dir, self.output_dir]:
+            if directory.exists():
+                shutil.rmtree(directory)
+            directory.mkdir(parents=True)
+
+    def extract_xlsx(self):
+        """使用 zipfile 解壓縮 xlsx 檔案"""
+        try:
+            logger.info("解壓縮 Excel 檔案...")
+            
+            # 建立臨時目錄
+            self.setup_directories()
+            
+            # 使用 zipfile 解壓縮
+            with zipfile.ZipFile(self.xlsx_path, 'r') as zip_ref:
+                # 檢查 ZIP 檔案的完整性
+                if zip_ref.testzip() is not None:
+                    logger.error("Excel 檔案已損壞")
+                    return False
+                
+                # 顯示 ZIP 檔案內容
+                logger.info("Excel 檔案包含以下檔案:")
+                for item in zip_ref.namelist():
+                    logger.info(f"  {item}")
+                    
+                # 解壓縮所有檔案
+                zip_ref.extractall(self.temp_dir)
+                
+                # 驗證必要檔案是否存在
+                required_files = [
+                    "xl/worksheets/sheet1.xml",
+                    "xl/media"
+                ]
+                
+                for file_path in required_files:
+                    full_path = self.temp_dir / file_path
+                    if not full_path.exists():
+                        logger.warning(f"找不到必要的檔案: {file_path}")
+                
+                return True
+                
+        except zipfile.BadZipFile:
+            logger.error("無法解壓縮 Excel 檔案，檔案可能已損壞")
+            return False
+        except Exception as e:
+            logger.error(f"解壓縮過程發生錯誤: {str(e)}")
+            return False
+
+    def read_worksheet_xml(self):
+        """從 XML 直接讀取工作表內容"""
+        logger.info("開始讀取工作表 XML...")
+        
+        try:
+            worksheet_path = self.temp_dir / "xl" / "worksheets" / "sheet1.xml"
+            if not worksheet_path.exists():
+                logger.error("找不到工作表 XML 檔案")
+                return
+            
+            # 讀取 sharedStrings.xml 以獲取字串內容
+            shared_strings = self._load_shared_strings()
+            
+            tree = ET.parse(worksheet_path)
+            root = tree.getroot()
+            
+            # 修正命名空間
+            ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+            
+            # 讀取所有儲存格
+            for row in root.findall(".//w:row", ns):
+                row_num = int(row.get("r", "0"))
+                cells = row.findall(".//w:c", ns)
+                
+                # 取得 A、B、C 欄的儲存格
+                a_cell = next((c for c in cells if c.get("r", "").startswith(f"A{row_num}")), None)
+                b_cell = next((c for c in cells if c.get("r", "").startswith(f"B{row_num}")), None)
+                c_cell = next((c for c in cells if c.get("r", "").startswith(f"C{row_num}")), None)
+                
+                if all([a_cell, b_cell, c_cell]):
+                    # 取得儲存格值
+                    def get_cell_value(cell):
+                        if cell.get("t") == "s":  # 字串類型，需要查詢 sharedStrings
+                            v = cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                index = int(v.text.strip())
+                                return shared_strings.get(index, f"未知字串 {index}")
+                        else:  # 數值類型
+                            v = cell.find(".//w:v", ns)
+                            return v.text.strip() if v is not None and v.text else None
+                    
+                    question_no = get_cell_value(a_cell)
+                    chapter_no = get_cell_value(b_cell)
+                    question_text = get_cell_value(c_cell)
+                    
+                    if all([question_no, chapter_no, question_text]):
+                        # 使用 QuestionNo 和 ChapterNo 組合作為唯一識別碼
+                        unique_id = f"{chapter_no}_{question_no}"
+                        
+                        self.question_numbers[unique_id] = {
+                            'question_no': question_no,
+                            'chapter_no': chapter_no,
+                            'number': f"{chapter_no}.{question_no}",
+                            'row': row_num,
+                            'col': 3,
+                            'full_text': question_text
+                        }
+                        logger.info(f"找到題號: {chapter_no}.{question_no}")
+            
+            logger.info(f"總共找到 {len(self.question_numbers)} 個題號")
+            
+        except ET.ParseError as e:
+            logger.error(f"解析 XML 時發生錯誤: {str(e)}")
+        except Exception as e:
+            logger.error(f"讀取工作表時發生錯誤: {str(e)}")
+            logger.error(str(e))
+
+    def _load_shared_strings(self):
+        """載入 sharedStrings.xml 檔案中的字串資料"""
+        shared_strings = {}
+        try:
+            shared_strings_path = self.temp_dir / "xl" / "sharedStrings.xml"
+            if not shared_strings_path.exists():
+                logger.warning("找不到 sharedStrings.xml 檔案")
+                return shared_strings
+            
+            tree = ET.parse(shared_strings_path)
+            root = tree.getroot()
+            
+            # 命名空間
+            ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+            
+            # 讀取所有字串
+            for i, si in enumerate(root.findall(".//si", ns)):
+                t = si.find(".//t", ns)
+                if t is not None:
+                    shared_strings[i] = t.text
+                else:
+                    shared_strings[i] = f"空字串 {i}"
+            
+            logger.info(f"從 sharedStrings.xml 載入了 {len(shared_strings)} 個字串")
+            return shared_strings
+            
+        except Exception as e:
+            logger.error(f"載入 sharedStrings.xml 時發生錯誤: {str(e)}")
+            return shared_strings
+
+    def analyze_worksheet_for_images(self):
+        """從 sheet1.xml 中分析圖片與題號的關聯"""
+        logger.info("從 sheet1.xml 分析圖片與題號關聯...")
+        
+        image_mappings = {}
+        try:
+            worksheet_path = self.temp_dir / "xl" / "worksheets" / "sheet1.xml"
+            if not worksheet_path.exists():
+                logger.error("找不到 sheet1.xml 檔案")
+                return image_mappings
+            
+            # 讀取 sharedStrings.xml 以獲取字串內容
+            shared_strings = self._load_shared_strings()
+            
+            # 解析 XML
+            tree = ET.parse(worksheet_path)
+            root = tree.getroot()
+            ns = {'w': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+            
+            # 尋找所有含有 #VALUE! 的儲存格（這些是圖片）
+            image_cells = []
+            for row in root.findall(".//w:row", ns):
+                row_num = int(row.get("r", "0"))
+                for cell in row.findall(".//w:c", ns):
+                    if cell.get("t") == "e":
+                        v_element = cell.find(".//w:v", ns)
+                        if v_element is not None and v_element.text == "#VALUE!":
+                            vm_value = cell.get("vm", "")
+                            if not vm_value:
+                                continue
+                            cell_ref = cell.get("r", "")
+                            image_cells.append({
+                                "row_num": row_num,
+                                "cell_ref": cell_ref,
+                                "vm_value": vm_value
+                            })
+                            logger.info(f"在第 {row_num} 行找到圖片 (vm={vm_value})")
+            
+            # 建立圖片與題號的關係
+            for img_cell in image_cells:
+                row_num = img_cell["row_num"]
+                vm_value = img_cell["vm_value"]
+                
+                # 從該行取得題號和章節資訊
+                for row in root.findall(f".//w:row[@r='{row_num}']", ns):
+                    # 取得 A、B 欄的儲存格（題號和章節）
+                    cells = row.findall(".//w:c", ns)
+                    a_cell = next((c for c in cells if c.get("r", "").startswith(f"A{row_num}")), None)
+                    b_cell = next((c for c in cells if c.get("r", "").startswith(f"B{row_num}")), None)
+                    c_cell = next((c for c in cells if c.get("r", "").startswith(f"C{row_num}")), None)
+                    
+                    # 取得儲存格值
+                    question_no = None
+                    chapter_no = None
+                    question_text = None
+                    
+                    # 處理 A 欄（題號）
+                    if a_cell is not None:
+                        if a_cell.get("t") == "s":  # 字串類型
+                            v = a_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                index = int(v.text.strip())
+                                question_no = shared_strings.get(index, "")
+                        else:  # 數值類型
+                            v = a_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                question_no = v.text.strip()
+                    
+                    # 處理 B 欄（章節）
+                    if b_cell is not None:
+                        if b_cell.get("t") == "s":  # 字串類型
+                            v = b_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                index = int(v.text.strip())
+                                chapter_no = shared_strings.get(index, "")
+                        else:  # 數值類型
+                            v = b_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                chapter_no = v.text.strip()
+                    
+                    # 處理 C 欄（問題文字）
+                    if c_cell is not None:
+                        if c_cell.get("t") == "s":  # 字串類型
+                            v = c_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                index = int(v.text.strip())
+                                question_text = shared_strings.get(index, "")
+                        else:  # 數值類型
+                            v = c_cell.find(".//w:v", ns)
+                            if v is not None and v.text:
+                                question_text = v.text.strip()
+                    
+                    # 為圖片建立映射，使用行號+VM值作為唯一鍵
+                    mapping_key = f"{row_num}_{vm_value}"
+                    image_mappings[mapping_key] = {
+                        "row": row_num,
+                        "question_no": question_no,
+                        "chapter_no": chapter_no,
+                        "question_text": question_text,
+                        "vm_value": vm_value
+                    }
+                    
+                    logger.info(f"圖片 (行={row_num}, vm={vm_value}) 對應題號 {chapter_no}.{question_no}")
+            
+            return image_mappings
+            
+        except ET.ParseError as e:
+            logger.error(f"解析 XML 時發生錯誤: {str(e)}")
+            return image_mappings
+        except Exception as e:
+            logger.error(f"分析 worksheet 時發生錯誤: {str(e)}")
+            logger.error(str(e))
+            return image_mappings
+
+    def process(self, keep_temp=False):
+        """處理整個提取和對應過程"""
+        try:
+            # 使用 zipfile 解壓縮
+            if not self.extract_xlsx():
+                return None
+            
+            # 讀取工作表 XML
+            self.read_worksheet_xml()
+            
+            # 分析 sheet1.xml 獲取圖片與題號關聯
+            image_info = self.analyze_worksheet_for_images()
+            
+            # 從 Excel 中提取所有圖片
+            logger.info("從 Excel 提取圖片...")
+            extracted_images = []
+            media_dir = self.temp_dir / "xl" / "media"
+            if media_dir.exists():
+                # 先統計媒體檔案總數
+                media_files = [file for file in media_dir.glob("*") 
+                              if file.is_file() and file.suffix.lower() in ['.png', '.jpg', '.jpeg', '.gif']]
+                
+                # 複製圖片並建立對應關係
+                result = {}
+                
+                # 按照行號_VM值的對應關係建立映射
+                image_mappings = list(image_info.keys())
+                logger.info(f"找到 {len(image_mappings)} 個圖片映射: {', '.join(image_mappings)}")
+                
+                # 確保 media_files 和 image_mappings 有合適數量的元素
+                if len(media_files) < len(image_mappings):
+                    logger.warning(f"警告: 圖片文件數量 ({len(media_files)}) 少於映射數量 ({len(image_mappings)})")
+                
+                # 為每個映射分配圖片
+                sorted_mappings = sorted(image_mappings, key=lambda k: (int(k.split('_')[0]), int(k.split('_')[1])))
+                
+                # 按 VM 值分組收集映射
+                vm_to_mappings = {}
+                for mapping_key in sorted_mappings:
+                    row, vm = mapping_key.split('_')
+                    if vm not in vm_to_mappings:
+                        vm_to_mappings[vm] = []
+                    vm_to_mappings[vm].append(mapping_key)
+                
+                # 遍歷所有 VM 組
+                for vm_value, vm_mappings in sorted(vm_to_mappings.items(), key=lambda x: int(x[0])):
+                    # 查找對應的圖片文件
+                    vm_index = list(sorted(vm_to_mappings.keys())).index(vm_value)
+                    
+                    if vm_index < len(media_files):
+                        image_file = sorted(media_files, key=lambda x: x.name)[vm_index]
+                        base_name, ext = os.path.splitext(image_file.name)
+                        
+                        # 為該 VM 值下的每個映射複製圖片
+                        for i, mapping_key in enumerate(vm_mappings):
+                            # 如果同一 VM 有多個映射，添加後綴
+                            if len(vm_mappings) > 1:
+                                image_name = f"{base_name}_{i+1}{ext}"
+                            else:
+                                image_name = image_file.name
+                                
+                            dest_path = self.output_dir / image_name
+                            shutil.copy2(image_file, dest_path)
+                            extracted_images.append(image_name)
+                            
+                            # 使用映射鍵來查找相關信息
+                            info = image_info[mapping_key]
+                            result[image_name] = {
+                                'cell_position': f"行 {info['row']}",
+                                'question_no': info['question_no'],
+                                'chapter_no': info['chapter_no'],
+                                'unique_id': f"{info['chapter_no']}_{info['question_no']}",
+                                'question': f"{info['chapter_no']}.{info['question_no']}",
+                                'question_text': info['question_text'],
+                                'vm_value': info['vm_value'],
+                                'mapping_key': mapping_key,
+                                'original_image': image_file.name
+                            }
+                            logger.info(f"圖片 {image_name} (行={info['row']}, VM={info['vm_value']}) 對應到題號 {info['chapter_no']}.{info['question_no']}")
+                    else:
+                        for mapping_key in vm_mappings:
+                            logger.warning(f"映射 {mapping_key} 沒有對應的圖片文件")
+            
+            # 生成報告
+            report = {
+                'total_questions': len(self.question_numbers),
+                'total_images': len(extracted_images),
+                'total_mappings': len(image_info),
+                'question_details': {
+                    unique_id: {
+                        'question_no': info['question_no'],
+                        'chapter_no': info['chapter_no'],
+                        'number': info['number'],
+                        'full_text': info['full_text']
+                    }
+                    for unique_id, info in self.question_numbers.items()
+                },
+                'image_mappings': result,
+                'extracted_images': extracted_images
+            }
+            
+            logger.info(f"處理完成！找到 {len(self.question_numbers)} 個題號和 {len(extracted_images)} 張圖片，共 {len(image_info)} 個映射關係")
+            return report
+            
+        except Exception as e:
+            logger.error(f"處理過程中發生錯誤: {str(e)}")
+            return None
+        finally:
+            # 如果不保留臨時檔案，則清理
+            if not keep_temp:
+                try:
+                    if self.temp_dir.exists():
+                        shutil.rmtree(self.temp_dir)
+                        logger.info("已清理臨時檔案")
+                except Exception as e:
+                    logger.error(f"清理臨時檔案時發生錯誤: {str(e)}")
+
 
 class ExcelHandler:
     """Excel 檔案處理類"""
@@ -132,125 +522,6 @@ class ExcelHandler:
             }
     
     @staticmethod
-    def extract_images_from_excel_zip(file_path_or_buffer):
-        """Extract images directly from Excel file by treating it as a ZIP archive."""
-        images = []
-        
-        try:
-            # If it's a file-like object, write it to a temporary file first
-            if hasattr(file_path_or_buffer, 'read'):
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-                temp_file_path = temp_file.name
-                temp_file.close()
-                
-                with open(temp_file_path, 'wb') as f:
-                    f.write(file_path_or_buffer.read())
-                
-                file_path = temp_file_path
-            else:
-                file_path = file_path_or_buffer
-                
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                # Find media files
-                files = zip_ref.namelist()
-                media_files = [f for f in files if f.startswith('xl/media/')]
-                logger.info(f"Found {len(media_files)} media files in Excel ZIP structure")
-                
-                for media_file in media_files:
-                    try:
-                        # Extract media file content
-                        image_data = zip_ref.read(media_file)
-                        image_name = os.path.basename(media_file)
-                        
-                        images.append({
-                            'name': image_name,
-                            'data': image_data,
-                            'size': len(image_data)
-                        })
-                        
-                        logger.info(f"Extracted image: {image_name} ({len(image_data)} bytes)")
-                    except Exception as e:
-                        logger.error(f"Error extracting {media_file}: {str(e)}")
-            
-            # Clean up temporary file if created
-            if hasattr(file_path_or_buffer, 'read') and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-                        
-        except Exception as e:
-            logger.error(f"Error opening Excel as ZIP: {str(e)}")
-        
-        return images
-
-    @staticmethod
-    def extract_images_with_openpyxl(file_path_or_buffer):
-        """Extract images from Excel file using openpyxl library."""
-        images = []
-        
-        try:
-            # If it's a file-like object, write it to a temporary file first
-            if hasattr(file_path_or_buffer, 'read'):
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx')
-                temp_file_path = temp_file.name
-                temp_file.close()
-                
-                with open(temp_file_path, 'wb') as f:
-                    f.write(file_path_or_buffer.read())
-                
-                file_path = temp_file_path
-            else:
-                file_path = file_path_or_buffer
-            
-            # Load workbook
-            try:
-                import openpyxl
-                workbook = openpyxl.load_workbook(file_path)
-                logger.info(f"Loaded workbook with {len(workbook.sheetnames)} sheets")
-                
-                for sheet_name in workbook.sheetnames:
-                    sheet = workbook[sheet_name]
-                    logger.info(f"Processing sheet: {sheet_name}")
-                    
-                    # Access images in the sheet
-                    if hasattr(sheet, '_images'):
-                        for image in sheet._images:
-                            try:
-                                img_name = f"img_{len(images) + 1}"
-                                if hasattr(image, 'name') and image.name:
-                                    img_name = image.name
-                                
-                                # Get image data
-                                img_data = None
-                                
-                                # Try different ways to access the image data
-                                if hasattr(image, '_data'):
-                                    img_data = image._data()
-                                    logger.info(f"Got image data from _data method: {len(img_data)} bytes")
-                                elif hasattr(image, 'data'):
-                                    img_data = image.data
-                                    logger.info(f"Got image data from data attribute: {len(img_data)} bytes")
-                                
-                                if img_data:
-                                    images.append({
-                                        'name': img_name,
-                                        'data': img_data,
-                                        'size': len(img_data),
-                                        'sheet': sheet_name
-                                    })
-                            except Exception as e:
-                                logger.error(f"Error processing image in {sheet_name}: {str(e)}")
-            except ImportError:
-                logger.warning("openpyxl library not available, skipping this method")
-            
-            # Clean up temporary file if created
-            if hasattr(file_path_or_buffer, 'read') and os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-            
-        except Exception as e:
-            logger.error(f"Error using openpyxl: {str(e)}")
-        
-        return images
-    
-    @staticmethod
     def parse_excel_to_questions(file_content: str, file_type: str) -> List[Dict[str, Any]]:
         """解析 Excel 檔案內容為題目列表
         
@@ -270,25 +541,23 @@ class ExcelHandler:
             binary_data = base64.b64decode(content)
             buffer = io.BytesIO(binary_data)
             
-            # 使用 pandas 讀取 Excel
+            # 使用臨時文件保存Excel內容
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+                temp_file_path = temp_file.name
+                temp_file.write(binary_data)
+            
+            # 使用新的 XlsxImageExtractor 處理 Excel 檔案
+            extractor = XlsxImageExtractor(temp_file_path)
+            report = extractor.process(keep_temp=False)
+            
+            if not report:
+                raise ValueError("無法從 Excel 檔案提取數據")
+            
+            # 使用 pandas 讀取 Excel 以獲取題目內容
             df = pd.read_excel(buffer)
             
-            # 重置 buffer 以便後續提取圖片
-            buffer.seek(0)
-            
-            # 提取 Excel 中的圖片
-            # 首先嘗試使用 openpyxl 提取
-            images_from_openpyxl = ExcelHandler.extract_images_with_openpyxl(buffer)
-            
-            # 重置 buffer 以便使用 ZIP 方法提取
-            buffer.seek(0)
-            
-            # 然後嘗試使用 ZIP 方法提取
-            images_from_zip = ExcelHandler.extract_images_from_excel_zip(buffer)
-            
-            # 合併所有圖片結果 (優先使用 openpyxl 圖片)
-            all_images = images_from_openpyxl + images_from_zip
-            logger.info(f"從 Excel 檔案中提取了 {len(all_images)} 張圖片")
+            # 調整欄位名稱，處理可能的空格或大小寫差異
+            df.columns = [col.strip() for col in df.columns]
             
             # 檢查必要欄位是否存在
             required_fields = [
@@ -300,8 +569,6 @@ class ExcelHandler:
             # 添加可選欄位
             optional_fields = ["Picture", "PIC"]
             
-            # 調整欄位名稱，處理可能的空格或大小寫差異
-            df.columns = [col.strip() for col in df.columns]
             column_mapping = {}
             
             # 輸出檢查
@@ -327,9 +594,6 @@ class ExcelHandler:
                 
             # 重命名欄位以符合標準格式
             df = df.rename(columns=column_mapping)
-            
-            # 檢查是否有 "Picture" 欄位
-            has_picture = "Picture" in df.columns
             
             # 統計總行數、有效行數和跳過行數
             total_rows = len(df)
@@ -392,59 +656,21 @@ class ExcelHandler:
                     "picture": None
                 }
                 
-                # 從提取的圖片中分配圖片（如果有）
-                if idx < len(all_images):
-                    question["picture"] = all_images[idx]["data"]
-                    logger.info(f"題目 {question['question_no']} 已分配圖片，大小: {len(question['picture'])} 位元組")
-                else:
-                    # 如果沒有從 Excel 結構中提取到圖片，則檢查單元格中的圖片欄位
-                    picture_field = None
-                    for col in df.columns:
-                        if col.lower() == "picture" or col.lower() == "pic":
-                            picture_field = col
+                # 從提取的圖片中關聯題目與圖片
+                chapter_no = question["chapter_no"]
+                question_no = question["question_no"]
+                unique_id = f"{chapter_no}_{question_no}"
+                
+                # 查找對應的圖片
+                for image_name, info in report.get('image_mappings', {}).items():
+                    if info.get('unique_id') == unique_id:
+                        # 從輸出目錄讀取圖片數據
+                        image_path = extractor.output_dir / image_name
+                        if image_path.exists():
+                            with open(image_path, 'rb') as img_file:
+                                question["picture"] = img_file.read()
+                            logger.info(f"題目 {chapter_no}.{question_no} 已關聯圖片 {image_name}, 大小: {len(question['picture'])} 位元組")
                             break
-                    
-                    if picture_field and not pd.isna(row.get(picture_field)):
-                        # 處理儲存格中的圖片資料
-                        pic_data = row[picture_field]
-                        logger.info(f"圖片資料類型: {type(pic_data)}")
-                        
-                        if isinstance(pic_data, str):
-                            # 如果是 Base64 格式
-                            if pic_data.startswith("data:image") and ";base64," in pic_data:
-                                try:
-                                    base64_content = pic_data.split(";base64,")[1]
-                                    question["picture"] = base64.b64decode(base64_content)
-                                    logger.info(f"成功從 Base64 提取圖片: {len(question['picture'])} 位元組")
-                                except Exception as e:
-                                    question["picture"] = None
-                                    logger.warning(f"無法解碼 Base64 圖片: {str(e)}")
-                            else:
-                                logger.info(f"字串圖片內容片段: {pic_data[:100] if len(pic_data) > 100 else pic_data}")
-                                try:
-                                    question["picture"] = pic_data.encode("utf-8")
-                                    logger.info(f"將字符串轉換為二進位: {len(question['picture'])} 位元組")
-                                except Exception as e:
-                                    question["picture"] = None
-                                    logger.warning(f"無法編碼圖片字串: {str(e)}")
-                        else:
-                            # 處理非字符串類型的圖片數據
-                            try:
-                                if hasattr(pic_data, 'read'):
-                                    question["picture"] = pic_data.read()
-                                elif hasattr(pic_data, 'tobytes'):
-                                    question["picture"] = pic_data.tobytes()
-                                else:
-                                    try:
-                                        question["picture"] = bytes(pic_data)
-                                    except:
-                                        question["picture"] = None
-                                
-                                if question["picture"] is not None:
-                                    logger.info(f"成功處理非字串圖片，大小: {len(question['picture'])} 位元組")
-                            except Exception as e:
-                                question["picture"] = None
-                                logger.warning(f"無法處理圖片數據: {str(e)}")
                 
                 # 檢查圖片是否成功處理
                 if question["picture"] is not None:
@@ -457,6 +683,14 @@ class ExcelHandler:
                     
                 questions.append(question)
                 valid_rows += 1
+            
+            # 清理臨時目錄
+            try:
+                if extractor.output_dir.exists():
+                    shutil.rmtree(extractor.output_dir)
+                os.unlink(temp_file_path)
+            except Exception as e:
+                logger.warning(f"清理臨時文件時發生錯誤: {str(e)}")
             
             # 處理結果統計
             logger.info(f"Excel 解析結果: 總計 {total_rows} 行, 有效 {valid_rows} 行, 跳過 {skipped_rows} 行")

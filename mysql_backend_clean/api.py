@@ -6,11 +6,15 @@ import uuid
 import json
 import logging
 import base64
+import io
+import tempfile
+import os
+from pathlib import Path
 try:
-    from .excel_handler import ExcelHandler
+    from .excel_handler import ExcelHandler, XlsxImageExtractor
     from .db_connection import DBConnection
 except ImportError:
-    from excel_handler import ExcelHandler
+    from excel_handler import ExcelHandler, XlsxImageExtractor
     from db_connection import DBConnection
 import datetime
 
@@ -85,7 +89,13 @@ async def upload_excel_file(
         try:
             questions = ExcelHandler.parse_excel_to_questions(content_b64, excel_file.content_type)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))        # 儲存題目到資料庫
+            logger.error(f"Excel 解析錯誤: {str(e)}")
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Excel 處理時發生意外錯誤: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Excel 解析錯誤: {str(e)}")
+        
+        # 儲存題目到資料庫
         success = ExcelHandler.save_questions_to_db(questions, file_id, file_name, doc_type)
         
         if not success:

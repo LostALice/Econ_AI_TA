@@ -1,108 +1,97 @@
-# 經濟腦TA 後端服務
+# 經濟腦 TA 後端服務
 
-這是經濟腦TA專案的後端服務，提供Excel題目檔案上傳、查詢和管理功能。
+這是經濟腦 TA 後端服務，用於處理 Excel 檔案上傳、題目管理等功能。
 
-## 功能特色
+## 功能特點
 
-- Excel檔案上傳與解析
-- 題目資料存儲至MySQL資料庫
-- RESTful API提供前端調用
-- 完整的錯誤處理與日誌記錄
-- 支援不同章節中相同題號的題目
+- Excel 檔案上傳與解析
+- 題目管理（查詢、更新、刪除）
+- 支援 Excel 檔案中的圖片提取與關聯
+- RESTful API 接口
 
-## 需求
+## 環境要求
 
 - Python 3.8+
-- MySQL 5.7+ 或 8.0+
-- 安裝 requirements.txt 中列出的Python套件
+- MySQL 資料庫
 
-## 快速開始
+## 安裝
 
-1. 確保已安裝Python和MySQL
-2. 配置 `.env` 文件中的資料庫連接參數
-3. 運行以下命令安裝依賴套件：
+1. 複製專案
+2. 安裝依賴套件
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
-4. 初始化資料庫結構（包含資料庫修正）：
+3. 設定環境變數（`.env` 檔案）
 
 ```
-python migrate.py
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=econ_afs
+API_HOST=0.0.0.0
+API_PORT=8000
+CORS_ORIGINS=*
 ```
 
-5. 啟動服務：
+## 啟動服務
 
+Windows:
+```bash
+start_server.bat
 ```
-python app.py
+
+Linux/macOS:
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-或者，直接執行 `start_server.bat` 一鍵完成上述步驟。
+## API 文檔
 
-## 資料庫結構說明
+啟動服務後，可以訪問 Swagger UI 文檔：
 
-本系統使用MySQL資料庫存儲題目和上傳檔案的資訊，主要包含兩個資料表：
+http://localhost:8000/docs
 
-1. **questions** - 存儲解析自Excel的題目
-   - 支援不同章節中的相同題號（索引結構為 `question_no`, `chapter_no`, `file_name`）
-   - 每個題目包含題號、章節、選項、答案等完整信息
-   - 已優化索引結構，以支援相同題號的題目
+## Excel 圖片處理功能
 
-2. **uploaded_files** - 記錄已上傳的檔案
-   - 存儲檔案ID、名稱、類型和包含的題目數量
-   - 支援檔案狀態管理和題目數量統計
+本系統採用增強的 Excel 圖片處理功能，使用 `XlsxImageExtractor` 類來提取 Excel 文件中的圖片並與題目進行關聯。主要特點：
 
-## API說明
+1. 直接從 Excel 檔案結構中提取圖片
+2. 透過 XML 分析自動關聯圖片與對應題目
+3. 支援辨識 Excel 中 "QuestionNo." 和 "ChapterNo" 欄位來建立題目唯一識別碼
+4. 準確處理各種格式的圖片（PNG、JPEG、GIF）
+5. 支援處理一個題目有多張圖片的情況
+6. 使用行號和VM值雙重識別機制，確保圖片與題目的準確對應
+7. 完整的日誌記錄和錯誤處理機制
 
-服務啟動後，API可通過 http://localhost:8000/api/v1 訪問。
+### Excel 檔案要求
 
-### 主要端點：
+為了正確提取圖片，Excel 檔案應符合以下格式：
 
-- **上傳Excel文件**：`POST /api/v1/excel/upload/`
-  - 參數：excel_file (文件), doc_type (文件類型)
-  - 返回：上傳成功信息與文件ID
+- A 欄：QuestionNo.（題號）
+- B 欄：ChapterNo（章節號）
+- C 欄：QuestionInChinese（題目文字）
+- 圖片應嵌入到 Excel 中，而不是透過連結引用
 
-- **獲取文件列表**：`GET /api/v1/excel/{doc_type}/`
-  - 返回：指定類型的所有文件列表
+### 圖片對應機制
 
-- **獲取題目**：`GET /api/v1/questions/{file_id}/`
-  - 返回：特定文件的所有題目
+系統採用以下策略來確保圖片正確對應到題目：
 
-- **健康檢查**：`GET /health`
-  - 返回：服務健康狀態
+1. 分析Excel文件結構，提取所有嵌入的圖片
+2. 識別每個圖片所在的行號和VM值（Excel內部的圖片ID）
+3. 將圖片與相同行的題號和章節建立關聯
+4. 處理多對一映射（一個題目有多張圖片）的情況
+5. 在前端UI中顯示對應的圖片和題目
 
-## Excel檔案格式
+## 資料庫
 
-上傳的Excel檔案必須包含以下欄位：
+系統使用 MySQL 資料庫，資料庫結構包含以下主要表：
 
-1. QuestionNo. (題號)
-2. ChapterNo (章節號)
-3. QuestionInChinese (中文題目)
-4. AnswerAInChinese (選項A)
-5. AnswerBInChinese (選項B)
-6. AnswerCInChinese (選項C)
-7. AnswerDInChinese (選項D)
-8. CorrectAnswer (正確答案)
-9. AnswerExplainInChinese (解析)
-10. Picture (圖片，可選)
+- `questions`：儲存題目資訊
+- `uploaded_files`：儲存已上傳檔案的記錄
 
-除了Picture欄位外，其餘欄位均為必填。
+## 故障排除
 
-## 測試
-
-測試上傳功能建議使用以下方式：
-
-1. 使用Postman或類似工具發送文件上傳請求
-2. 使用前端應用通過文件上傳組件提交Excel文件
-
-## 錯誤處理
-
-服務將返回適當的HTTP狀態碼和詳細錯誤信息：
-
-- 400：請求參數錯誤
-- 404：資源不存在
-- 422：參數驗證失敗
-- 500：服務器內部錯誤
-
-所有錯誤和警告將記錄在app.log文件中。
+如果遇到問題，可以查看日誌文件 (`app.log`) 獲取詳細錯誤信息。
