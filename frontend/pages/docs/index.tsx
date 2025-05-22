@@ -1431,45 +1431,7 @@ export default function DocsPage() {
     }
   };
 
-  // 導出檔案
-  const handleExportFile = () => {
-    if (!currentContent) return;
-
-    try {
-      // 從儲存的內容中獲取工作簿
-      const fileContent = getFileContent(currentContent.fileID);
-      if (!fileContent || !fileContent.originalContent) {
-        throw new Error("找不到原始檔案內容");
-      }
-
-      // 使用 xlsx 生成檔案並下載
-      const workbook = fileContent.originalContent;
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = currentContent.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      addToast({
-        color: "success",
-        title: "匯出成功",
-        description: "檔案已成功匯出",
-      });
-    } catch (error) {
-      console.error("Error exporting file:", error);
-      addToast({
-        color: "danger",
-        title: "匯出失敗",
-        description: "無法匯出檔案，請稍後再試",
-      });
-    }
-  };
+    // 清除所有本地存儲的資料
   // 清除所有本地存儲的資料
   const clearAllLocalStorage = () => {
     try {
@@ -1730,14 +1692,14 @@ export default function DocsPage() {
               <>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold">{currentContent.fileName}</h2>
-                  <div className="flex gap-2">                    <Button color="default" variant="light" onPress={handleBackToList}>
+                  <div className="flex gap-2">
+                    <Button color="default" variant="light" onPress={handleBackToList}>
                       返回文件列表
                     </Button>
                     {isTeacherOrTA && (
-                      <>                        <Button color="primary" onPress={handleAddQuestion}>
+                      <>
+                        <Button color="primary" onPress={handleAddQuestion}>
                           新增題目
-                        </Button>                        <Button color="success" onPress={handleExportFile}>
-                          匯出檔案
                         </Button>
                       </>
                     )}
