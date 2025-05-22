@@ -1827,16 +1827,25 @@ export default function DocsPage() {
       </Modal>
 
       {/* 題目編輯對話框 */}
-      <Modal isOpen={editQuestionModal} onOpenChange={(open) => {
-        if (!open) setEditQuestionModal(false);
-      }} size="3xl">
+      <Modal 
+        isOpen={editQuestionModal} 
+        onOpenChange={(open) => {
+          if (!open) setEditQuestionModal(false);
+        }} 
+        size="3xl"
+        scrollBehavior="inside"
+        classNames={{
+          base: "max-h-[90vh]",
+          body: "max-h-[70vh] overflow-y-auto"
+        }}
+      >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">
+              <ModalHeader className="flex flex-col gap-1 sticky top-0 z-10 bg-background">
                 {editingQuestion?.id.startsWith('new-') ? '新增題目' : '編輯題目'}
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="overflow-y-auto">
                 {editingQuestion && (
                   <div className="flex flex-col gap-4">
                     <div>
@@ -1935,6 +1944,39 @@ export default function DocsPage() {
                         ))}
                       </Select>
                     </div>
+
+                    {/* 新增圖片顯示區域 */}
+                    {((editingQuestion.pictures?.length ?? 0) > 0 || editingQuestion.picture) && (
+                      <div className="mb-4 p-2 border border-divider rounded-md">
+                        <div className="font-semibold mb-2">題目圖片：</div>
+                        
+                        {/* 有多張圖片的情況 */}
+                        {editingQuestion.pictures && editingQuestion.pictures.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {editingQuestion.pictures.map((picSrc, index) => (
+                              <div key={index} className="flex justify-center">
+                                <img 
+                                  src={picSrc} 
+                                  alt={`題目圖片 ${index+1}`} 
+                                  className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          /* 僅有單張圖片 - 向後兼容 */
+                          editingQuestion.picture && (
+                            <div className="flex justify-center">
+                              <img 
+                                src={editingQuestion.picture} 
+                                alt="題目圖片" 
+                                className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                              />
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex gap-4">
                       <div className="flex-1">
