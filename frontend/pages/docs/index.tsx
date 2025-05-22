@@ -110,7 +110,7 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
       </div>
       
       <div>
-        <div className="font-semibold mb-2">類別：</div>
+        <div className="font-semibold mb-2">章節：</div>
         <div>{question.category}</div>
       </div>
     </div>
@@ -1516,11 +1516,11 @@ export default function DocsPage() {
   const renderQuestionList = () => {
     if (!currentContent) return null;
     
-    // 按照題號和類別排序
+    // 按照題號和章節排序
     const sortedQuestions = [...currentContent.questions]
       .filter(q => !q.deleted)
       .sort((a, b) => {
-        // 先按照類別排序
+        // 先按照章節排序
         if (a.category !== b.category) {
           return a.category.localeCompare(b.category);
         }
@@ -1943,11 +1943,11 @@ export default function DocsPage() {
                     <div className="flex gap-4">
                       <div className="flex-1">
                         <label className="block text-small font-medium mb-1">
-                          類別
+                          章節
                         </label>
                         <Input
-                          label="類別"
-                          placeholder="輸入題目類別"
+                          label="章節"
+                          placeholder="輸入題目章節"
                           value={editingQuestion.category}
                           onChange={(e) => setEditingQuestion({
                             ...editingQuestion,
