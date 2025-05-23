@@ -12,7 +12,7 @@ export const siteConfig = {
     },
     {
       label: "chat",
-      href: "/chat",
+      href: "/chatroom",
     },
     {
       label: "mock",

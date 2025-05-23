@@ -12,10 +12,12 @@ from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.api.dependency import require_student
+from Backend.utils.helper.model.api.dependency import JWTPayload
 
 from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
 from uuid import uuid4
+from typing import Annotated
 
 import base64
 import os
@@ -90,17 +92,17 @@ async def answer_rating(
 @router.post("/{chat_id}/", status_code=200)
 async def questioning(
     question_model: QuestioningModel,
+    payload: Annotated[JWTPayload, Depends(require_student)],
 ) -> QuestionResponseModel:
     """Ask the question and return the answer from RAG
 
     Args:
-        Args:
         chat_id (str): chatroom uuid
         question (list[str]): question content
-        sent_by_username (str): user name
         collection (str, optional): collection of docs database. Defaults to "default".
         language (str): language for the response
         images: (optional: list[str] | None): list of base64 encoded images
+        payload: (Annotated, JWTPayload(Depends(require_student))) decoded jwt
 
     Returns:
         status_code: int
@@ -110,19 +112,18 @@ async def questioning(
     """
     chat_id = question_model.chat_id
     question = question_model.question
-    sent_by_username = question_model.sent_by_username
     collection = question_model.collection
     language = question_model.language
     question_type = question_model.question_type
     question_uuid = str(uuid4())
     images = question_model.images
+    user_id = payload.user_id
 
     logger.debug(
         pformat(
             {
                 "chat_id": chat_id,
                 "question": question,
-                "sent_by_username": sent_by_username,
                 "collection": collection,
                 "question_uuid": question_uuid,
             }
@@ -189,7 +190,7 @@ async def questioning(
         answer=answer,
         question=question[-1],
         token_size=token_size,
-        sent_by_username=sent_by_username,
+        user_id=user_id,
         file_ids=document_file_uuid,
     )
 

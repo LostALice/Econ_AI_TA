@@ -18,9 +18,9 @@ class ExamQuestionModel(BaseModel):
     exam_id: int
     question_id: int
     question_text: str
-    question_options: Optional[List[ExamOptionModel]]
+    question_options: List[ExamOptionModel] | None
     # None or a list of image base64
-    question_images: Optional[List[str]]
+    question_images: List[str] | None
 
 
 class ExamsInfoModel(BaseModel):
@@ -30,7 +30,7 @@ class ExamsInfoModel(BaseModel):
     exam_date: str
     # Duration in minutes
     exam_duration: int
-    exam_questions: Optional[List[ExamQuestionModel]]
+    exam_questions: List[ExamQuestionModel] | None
 
 
 class CreateNewExamParamsModel(BaseModel):
@@ -80,7 +80,7 @@ class SubmittedQuestionModel(BaseModel):
 
 class SubmittedExamModel(BaseModel):
     exam_id: int
-    user_id: Optional[int]
+    user_id: int | None
     submitted_questions: list[SubmittedQuestionModel]
 
 

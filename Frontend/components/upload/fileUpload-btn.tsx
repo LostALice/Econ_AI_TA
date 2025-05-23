@@ -15,6 +15,7 @@ import { siteConfig } from "@/config/site"
 import { AuthContext } from "@/contexts/AuthContext"
 import { LangContext } from "@/contexts/LangContext"
 import { LanguageTable } from "@/i18n";
+import { fetcher } from "@/api/fetcher"
 
 export const FileUploadButton = () => {
   const { role, setRole } = useContext(AuthContext)
@@ -88,13 +89,13 @@ export const FileUploadButton = () => {
     apiUploadFileURL.searchParams.append("department", department)
     apiUploadFileURL.searchParams.append("collection", collection)
 
-    const resp = await fetch(apiUploadFileURL.toString(), {
+    const resp = await fetcher(apiUploadFileURL.toString(), {
       method: "POST",
       body: fileFormData,
       credentials: "include",
     })
 
-    const respJson = await resp.json()
+    const respJson = await resp
     console.log(respJson)
     if (respJson.status_code === 200) {
       console.log("File uploaded successfully")

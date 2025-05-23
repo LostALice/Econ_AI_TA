@@ -30,9 +30,6 @@ const PasswordChangeForm = () => {
       <Card className="w-full">
         <CardHeader className="flex flex-col items-start gap-2">
           <h1 className="text-2xl font-bold">{LanguageTable.password.changePassword[language]}</h1>
-          <p className="text-sm">
-            {LanguageTable.password.changePassword[language]}
-          </p>
         </CardHeader>
         <Divider />
         <CardBody>

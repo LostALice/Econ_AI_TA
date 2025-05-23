@@ -120,7 +120,7 @@ export default function MockPage() {
                                 </Button>
                                 <Button
                                     as={Link}
-                                    href="/mock/result"
+                                    href="/mock/performance"
                                     underline="hover"
                                     className="w-full py-3 transition duration-200 text-center border rounded text-xl"
                                 >

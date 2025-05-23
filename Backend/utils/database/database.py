@@ -132,8 +132,8 @@ class SetupMYSQL:
 
         # ROLE table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`role` (
+            """
+            CREATE TABLE role (
                 `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`role_id`),
@@ -145,8 +145,8 @@ class SetupMYSQL:
 
         # USER table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`user` (
+            """
+            CREATE TABLE `user` (
                 `user_id` INT NOT NULL AUTO_INCREMENT,
                 `username` VARCHAR(45) NOT NULL,
                 `role_id` INT UNSIGNED NOT NULL,
@@ -159,8 +159,8 @@ class SetupMYSQL:
 
         # LOGIN table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`login` (
+            """
+            CREATE TABLE login (
                 `user_id` INT NOT NULL,
                 `password` VARCHAR(64) NOT NULL,
                 `jwt` VARCHAR(255) NOT NULL DEFAULT "",
@@ -174,8 +174,8 @@ class SetupMYSQL:
 
         # CHAT table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`chat` (
+            """
+            CREATE TABLE chat (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `user_id` INT NOT NULL,
                 `chat_name` VARCHAR(45) NOT NULL,
@@ -188,8 +188,8 @@ class SetupMYSQL:
 
         # FILE table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`file` (
+            """
+            CREATE TABLE file (
                 `file_id` VARCHAR(45) NOT NULL,
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
@@ -204,8 +204,8 @@ class SetupMYSQL:
 
         # QA table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`qa` (
+            """
+            CREATE TABLE qa (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `question` LONGTEXT NOT NULL,
@@ -224,8 +224,8 @@ class SetupMYSQL:
 
         # ATTACHMENT table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`attachment` (
+            """
+            CREATE TABLE attachment (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `file_id` VARCHAR(45) NOT NULL,
@@ -239,8 +239,8 @@ class SetupMYSQL:
 
         # IMAGES table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`images` (
+            """
+            CREATE TABLE images (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `images_file_id` VARCHAR(45) NOT NULL,
@@ -340,22 +340,30 @@ class SetupMYSQL:
             """
             CREATE TABLE class (
                 class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                is_teacher TINYINT(1) NOT NULL DEFAULT False,
-                FOREIGN KEY (user_id) REFERENCES `user`(user_id)
+                classname VARCHAR(15) NOT NULL DEFAULT "New Class"
             );
             """
         )
 
-        # exam_teacher table
         self.cursor.execute(
             """
-            CREATE TABLE exam_class (
-                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                classname VARCHAR(15) NOT NULL DEFAULT "New Class",
-                exam_id INT NOT NULL,
+            CREATE TABLE class_user (
                 class_id INT NOT NULL,
-                FOREIGN KEY (class_id) REFERENCES `user`(user_id),
+                user_id INT NOT NULL,
+                role_id INT UNSIGNED NOT NULL,
+                FOREIGN KEY (class_id) REFERENCES class(class_id),
+                FOREIGN KEY (user_id) REFERENCES `user`(user_id),
+                FOREIGN KEY (role_id) REFERENCES role(role_id)
+            );
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE TABLE class_exam (
+                class_id INT NOT NULL,
+                exam_id INT NOT NULL,
+                FOREIGN KEY (class_id) REFERENCES class(class_id),
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
             );
             """
@@ -512,8 +520,7 @@ class MySQLHandler(SetupMYSQL):
     def verify_login_token(self, user_id: int, token: str) -> bool:
         self.connection.commit()
         self.cursor.execute(
-            """SELECT jwt FROM login WHERE user_id = %s LIMIT 1;""",
-            (user_id,)
+            """SELECT jwt FROM login WHERE user_id = %s LIMIT 1;""", (user_id,)
         )
         self.sql_query_logger()
         result = self.cursor.fetchall()[0]
@@ -751,7 +758,7 @@ class MySQLHandler(SetupMYSQL):
         question: str,
         answer: str,
         token_size: int,
-        sent_by_username: str,
+        user_id: int,
         file_ids: list[str],
     ) -> bool:
         """
@@ -782,18 +789,11 @@ class MySQLHandler(SetupMYSQL):
                     "question": question,
                     "answer": answer,
                     "token_size": token_size,
-                    "sent_by_username": sent_by_username,
+                    "user_id": user_id,
                     "file_ids": file_ids,
                 }
             )
         )
-
-        self.cursor.execute(
-            """SELECT user_id FROM user WHERE username = %s""", (sent_by_username,)
-        )
-        user_id = self.cursor.fetchone()["user_id"]
-
-        self.logger.debug(f"Fetched user: {sent_by_username}, user_id: {user_id}")
 
         self.cursor.execute(
             f"""
@@ -814,7 +814,7 @@ class MySQLHandler(SetupMYSQL):
                 %s, %s, %s, %s, %s, %s
             );
         """,
-            (chat_id, qa_id, question, answer, token_size, sent_by_username),
+            (chat_id, qa_id, question, answer, token_size, user_id),
         )
 
         success = self.commit()

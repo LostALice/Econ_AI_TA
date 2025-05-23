@@ -93,6 +93,7 @@ async def get_documentation_list(
     Raises:
         HTTPException: If no documents are found for the given documentation type.
     """
+    logger.info(documentation_type)
     docs_list = mysql_client.query_documentation_type_list(documentation_type)
 
     if not docs_list:

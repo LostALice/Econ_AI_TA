@@ -7,12 +7,12 @@ import {
   IExamResult,
 } from "@/types/mock/mock";
 import { siteConfig } from "@/config/site";
-
+import { fetcher } from "../fetcher";
 
 export async function fetchMockExamQuestionList(
   mock_id: number
 ): Promise<[IMockExamQuestionList[], IMockExamInformation]> {
-  const resp = await fetch(siteConfig.api_url + "/mock/" + mock_id + "/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/" + mock_id + "/", {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -20,13 +20,13 @@ export async function fetchMockExamQuestionList(
     credentials: "include",
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function submitExam(
   submitted_exam: ISubmittedExam
 ): Promise<number> {
-  const resp = await fetch(siteConfig.api_url + "/mock/submit/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/submit/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -35,13 +35,13 @@ export async function submitExam(
     body: JSON.stringify(submitted_exam),
   });
 
-  return resp.json();
+  return resp;
 }
 
 // export async function fetchExamResult(
 //   submission_id: number
 // ): Promise<IExamResult> {
-//   const resp = await fetch(
+//   const resp = await fetcher(
 //     siteConfig.api_url + "/mock/result/" + submission_id + "/",
 //     {
 //       method: "GET",
@@ -53,5 +53,5 @@ export async function submitExam(
 //     console.error("Error:", error);
 //   });
 
-//   return resp.json();
+//   return resp;
 // }

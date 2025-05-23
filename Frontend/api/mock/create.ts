@@ -13,20 +13,13 @@ import {
 import { fetcher } from "../fetcher";
 
 export async function fetchExamLists(): Promise<IExamsInfo[]> {
-  return await fetcher(siteConfig.api_url + "/mock/exam-lists/", {
-  }).then((response) => {
-    if (!response.ok) {
-      console.error("Network response was not ok");
-      return [];
-    }
-    return response.json();
-  });
+  return await fetcher(siteConfig.api_url + "/mock/exam-lists/");
 }
 
 export async function createNewExam(
   exam: ICreateNewExamPrams
 ): Promise<IExamsInfo> {
-  const resp = await fetch(siteConfig.api_url + "/mock/new/exam/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/new/exam/", {
     method: "POST",
     credentials: "include",
     headers: {
@@ -35,11 +28,11 @@ export async function createNewExam(
     body: JSON.stringify(exam),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function updateExam(exam: IExamsInfo) {
-  const resp = await fetch(siteConfig.api_url + "/mock/modify/exam/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/modify/exam/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -48,11 +41,11 @@ export async function updateExam(exam: IExamsInfo) {
     body: JSON.stringify(exam),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function deleteExam(examId: number) {
-  const resp = await fetch(siteConfig.api_url + "/mock/delete/exam/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/delete/exam/", {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -61,11 +54,11 @@ export async function deleteExam(examId: number) {
     body: JSON.stringify({ exam_id: examId }),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function createNewQuestion(question: ICreateNewQuestionPrams) {
-  const resp = await fetch(siteConfig.api_url + "/mock/new/question/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/new/question/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -74,14 +67,14 @@ export async function createNewQuestion(question: ICreateNewQuestionPrams) {
     body: JSON.stringify(question),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function createNewOptions(
   options: ICreateNewQuestionOptionsPrams[]
 ): Promise<IExamOption[]> {
   console.log(options);
-  const resp = await fetch(siteConfig.api_url + "/mock/new/options/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/new/options/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -90,13 +83,13 @@ export async function createNewOptions(
     body: JSON.stringify(options),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function modifyQuestion(
   question: IExamQuestion
 ): Promise<boolean> {
-  const resp = await fetch(siteConfig.api_url + "/mock/modify/question/", {
+  const resp = await fetcher(siteConfig.api_url + "/mock/modify/question/", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -105,11 +98,11 @@ export async function modifyQuestion(
     body: JSON.stringify(question),
   });
 
-  return resp.json();
+  return resp;
 }
 
 export async function deleteQuestion(questionId: number) {
-  const resp = await fetch(
+  const resp = await fetcher(
     siteConfig.api_url + "/mock/delete/question/" + questionId,
     {
       method: "DELETE",
@@ -120,5 +113,5 @@ export async function deleteQuestion(questionId: number) {
     }
   );
 
-  return resp.json();
+  return resp;
 }

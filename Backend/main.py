@@ -1,6 +1,6 @@
 # Code by AkinoAlice@TyrantRey
 
-from Backend.api.v1 import authorization, chatroom, documentation, mock, admin, result
+from Backend.api.v1 import authorization, chatroom, documentation, mock, admin, result, management
 from Backend.utils.helper.logger import CustomLoggerHandler
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -98,6 +98,13 @@ app.include_router(
     tags=["Result", "v1"],
 )
 logger.debug("| Result Loading Finished |")
+
+app.include_router(
+    management.router,
+    prefix="/api/v1/result",
+    tags=["Management", "v1"],
+)
+logger.debug("| Management Loading Finished |")
 
 logger.debug("| Backend Loading Finished |")
 

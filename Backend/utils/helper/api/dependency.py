@@ -10,6 +10,7 @@ from Backend.utils.database.database import MySQLHandler
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.helper.model.api.dependency import JWTPayload
 
+from typing import Annotated
 
 # Initialize logger and database connection
 logger = CustomLoggerHandler().get_logger()
@@ -158,3 +159,8 @@ async def require_teacher(
 ) -> JWTPayload:
     """Require user role to access the endpoint"""
     return await require_role(["ta", "root", "admin"], payload)
+
+
+UserPayload = Annotated[JWTPayload, Depends(require_student)]
+TAPayload = Annotated[JWTPayload, Depends(require_ta)]
+TeacherPayload = Annotated[JWTPayload, Depends(require_teacher)]

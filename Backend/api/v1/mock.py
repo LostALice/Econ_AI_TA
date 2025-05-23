@@ -17,14 +17,17 @@ from Backend.utils.helper.model.api.v1.mock import (
     SubmittedExamModel,
     TagModel,
 )
-from Backend.utils.helper.api.dependency import require_ta, require_student
-from Backend.utils.helper.model.api.dependency import JWTPayload
+from Backend.utils.helper.api.dependency import (
+    require_student,
+    UserPayload,
+    TAPayload,
+)
 
 # development
 from dotenv import load_dotenv
 from pprint import pformat
 from uuid import uuid4
-from typing import Optional, Union
+from typing import Union
 
 import base64
 import os
@@ -83,7 +86,7 @@ def question_images_uuid_to_base64(
 
 
 @router.get("/exam-lists/", status_code=200)
-async def get_mock_info() -> list[ExamsInfoModel]:
+async def get_mock_info(payload: TAPayload) -> list[ExamsInfoModel]:
     """
     Endpoint to get mock exam lists
 
@@ -116,7 +119,7 @@ async def get_mock_info() -> list[ExamsInfoModel]:
 
 
 @router.get("/exam/{mock_type}/", status_code=200)
-async def get_mock_exams(mock_type: ExamType):
+async def get_mock_exams(mock_type: ExamType, payload: UserPayload):
     """
     Endpoint to get mock exam according to mock type
 
@@ -132,7 +135,7 @@ async def get_mock_exams(mock_type: ExamType):
 
 @router.post("/new/exam/")
 async def create_new_exam(
-    exam_prams: CreateNewExamParamsModel, user: JWTPayload = Depends(require_ta)
+    exam_prams: CreateNewExamParamsModel, payload: TAPayload
 ) -> ExamsInfoModel:
     """
     Endpoint to create new exam
@@ -151,7 +154,7 @@ async def create_new_exam(
 
 @router.post("/new/question/")
 async def create_new_question(
-    question: CreateNewQuestionParamsModel, user: JWTPayload = Depends(require_ta)
+    question: CreateNewQuestionParamsModel, payload: TAPayload
 ) -> ExamQuestionModel:
     """
     Endpoint to add new question to an exam.
@@ -170,7 +173,7 @@ async def create_new_question(
 
 @router.post("/new/options/")
 async def create_new_options(
-    options: list[CreateNewOptionParamsModel], user: JWTPayload = Depends(require_ta)
+    options: list[CreateNewOptionParamsModel], payload: TAPayload
 ) -> list[ExamOptionModel]:
     """
     Endpoint to add new question options to an exam.
@@ -190,9 +193,7 @@ async def create_new_options(
 
 
 @router.put("/modify/exam/")
-async def modify_exam(
-    exam: ExamsInfoModel, user: JWTPayload = Depends(require_ta)
-) -> None:
+async def modify_exam(exam: ExamsInfoModel, payload: TAPayload) -> None:
     """
     Endpoint to modify exam.
 
@@ -205,9 +206,7 @@ async def modify_exam(
 
 
 @router.put("/modify/question/")
-async def modify_question(
-    question: ExamQuestionModel, user: JWTPayload = Depends(require_ta)
-) -> bool:
+async def modify_question(question: ExamQuestionModel, payload: TAPayload) -> bool:
     """
     Update an exam question along with its associated images.
 
@@ -254,7 +253,7 @@ async def modify_question(
 
 
 @router.delete("/enable/exam/")
-async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> bool:
+async def enable_exam(exam_id: int, payload: TAPayload) -> bool:
     """
     Endpoint to delete exam.
 
@@ -269,7 +268,7 @@ async def enable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> b
 
 
 @router.delete("/disable/exam/")
-async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> bool:
+async def disable_exam(exam_id: int, payload: TAPayload) -> bool:
     """
     Endpoint to delete exam.
 
@@ -284,9 +283,7 @@ async def disable_exam(exam_id: int, user: JWTPayload = Depends(require_ta)) -> 
 
 
 @router.delete("/delete/question/{question_id}")
-async def delete_question(
-    question_id: int, user: JWTPayload = Depends(require_ta)
-) -> bool:
+async def delete_question(question_id: int, payload: TAPayload) -> bool:
     """
     Endpoint to delete question to an exam.
 
@@ -307,7 +304,7 @@ async def submit(submitted_exam: SubmittedExamModel) -> int | None:
     Args:
         class SubmittedExamModel(BaseModel):
             exam_id: int
-            user_id: Optional[int]
+            user_id: int | None
             submit_time: str
             submitted_questions: list[SubmittedQuestionModel]
 
@@ -318,7 +315,7 @@ async def submit(submitted_exam: SubmittedExamModel) -> int | None:
     Returns:
         class ExamResultModel(BaseModel):
             exam_id: int
-            user_id: Optional[int] = 0
+            user_id: int | None = 0
             exam_name: str
             exam_type: ExamType
             exam_date: str
@@ -340,7 +337,7 @@ async def submit(submitted_exam: SubmittedExamModel) -> int | None:
 @router.get("/{mock_id}/")
 async def fetch_mock_exam_questions_list(
     mock_id: int,
-) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
+) -> tuple[list[MockExamQuestionsListModel], MockExamInformationModel | None]:
     """
     Fetch mock exam questions and their images.
     Args:

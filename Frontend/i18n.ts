@@ -4,8 +4,8 @@ export const LanguageTable = {
   warning: {
     sessionTimeout: {
       zh: "會話逾時",
-      en: "Session Timeout, Please re-login"
-    }
+      en: "Session Timeout, Please re-login",
+    },
   },
   home: {
     router: {
@@ -71,7 +71,7 @@ export const LanguageTable = {
     role: {
       unsigned: {
         zh: "未登入",
-        en: "Not signed in",
+        en: "unsigned",
       },
       admin: {
         zh: "管理員",
@@ -83,7 +83,7 @@ export const LanguageTable = {
       },
       ta: {
         zh: "助教",
-        en: "Teacher Assistant",
+        en: "Ta",
       },
       teacher: {
         zh: "教師",
@@ -115,6 +115,10 @@ export const LanguageTable = {
         settings: {
           zh: "變更密碼",
           en: "Settings",
+        },
+        management: {
+          zh: "班級管理",
+          en: "Class management",
         },
       },
       username: {
@@ -647,8 +651,8 @@ export const LanguageTable = {
   },
   password: {
     changePassword: {
-      zh: "請輸入您當前的密碼和新密碼",
-      en: "Please enter your current password and new password",
+      zh: "更改密碼",
+      en: "Change password",
     },
     currentPassword: {
       zh: "請輸入目前密碼",

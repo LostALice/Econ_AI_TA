@@ -2,13 +2,12 @@
 
 import { siteConfig } from "@/config/site";
 import { IExamsInfoForStudent } from "@/types/mock/index";
-
-
+import { fetcher } from "../fetcher";
 
 export async function getTargetedExamTypeList(
   exam_type: string
 ): Promise<IExamsInfoForStudent[]> {
-  const resp = await fetch(
+  const resp = await fetcher(
     siteConfig.api_url + "/mock/exam/" + exam_type + "/",
     {
       method: "GET",
@@ -19,5 +18,5 @@ export async function getTargetedExamTypeList(
     }
   );
 
-  return resp.json();
+  return resp;
 }
