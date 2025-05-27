@@ -77,12 +77,12 @@ async def verify_jwt_token(token: str = Cookie(None)) -> JWTPayload:
         "EdDSA",
     ], "Missing JWT_ALGORITHM environment variable"
 
+    logger.debug(token)
     if not jwt_secret:
         raise HTTPException(status_code=500, detail="JWT secret not configured")
 
     try:
         # Decode the JWT token
-        logger.info(token)
 
         payload = jwt.decode(token, jwt_secret, algorithms=jwt_algorithm)
 
@@ -125,8 +125,8 @@ async def require_role(
     Raises:
         HTTPException: If the user's role is not in the required roles list.
     """
+    logger.info(payload.role_name)
     if payload.role_name.lower() not in required_roles:
-        logger.info(payload.role_name)
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     return payload
@@ -158,7 +158,7 @@ async def require_teacher(
     payload: JWTPayload = Depends(verify_jwt_token),
 ) -> JWTPayload:
     """Require user role to access the endpoint"""
-    return await require_role(["ta", "root", "admin"], payload)
+    return await require_role(["root", "admin", "teacher"], payload)
 
 
 UserPayload = Annotated[JWTPayload, Depends(require_student)]

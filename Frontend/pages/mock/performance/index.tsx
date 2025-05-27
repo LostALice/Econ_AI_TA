@@ -38,6 +38,15 @@ export default function PerformancePage() {
         },
     ]
 
+    const student = [
+        { studentId: 1, studentName: "123" },
+        { studentId: 2, studentName: "234" },
+        { studentId: 3, studentName: "345" },
+        { studentId: 4, studentName: "456" },
+        { studentId: 5, studentName: "567" },
+        { studentId: 6, studentName: "678" },
+    ]
+
     return (
         <DefaultLayout>
             <Card className="h-[90vh] w-full flex flex-col shadow-md rounded-lg border my-3">
@@ -60,15 +69,15 @@ export default function PerformancePage() {
                     </Select>
                     <Select
                         className="max-w-xs"
-                        items={examList}
-                        label="Exam List"
+                        items={student}
+                        label="Student List"
                         placeholder="Exam List"
                     >
-                        {(exam) => <SelectItem key={exam.examId}>{exam.examName}</SelectItem>}
+                        {(exam) => <SelectItem key={exam.studentId}>{exam.studentName}</SelectItem>}
                     </Select>
                 </CardHeader>
                 <CardFooter>
-                    <Button>submit</Button>
+                    <Button>Download Excel</Button>
                 </CardFooter>
             </Card>
         </DefaultLayout>

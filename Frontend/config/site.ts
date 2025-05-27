@@ -38,7 +38,7 @@ export const siteConfig = {
       alt: "docs",
     },
     {
-      href: "/chat",
+      href: "/chatroom",
       title: {
         zh: "問答",
         en: "Chat",

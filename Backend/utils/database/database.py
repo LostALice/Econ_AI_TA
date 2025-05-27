@@ -345,6 +345,7 @@ class SetupMYSQL:
             """
         )
 
+        # class user table
         self.cursor.execute(
             """
             CREATE TABLE class_user (
@@ -358,6 +359,7 @@ class SetupMYSQL:
             """
         )
 
+        # class Exam table
         self.cursor.execute(
             """
             CREATE TABLE class_exam (
@@ -487,7 +489,29 @@ class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
         super().__init__()
 
-    def query_role_id(self, role_name: str) -> int | None:
+    def query_role_id_by_user_id(self, user_id: int) -> int | None:
+        """query the role id using user id
+
+        Args:
+            user_id: (int): role id
+
+        Returns:
+            int: role name
+            None: not found
+        """
+        self.connection.ping(attempts=3)
+
+        self.cursor.execute(
+            """SELECT role_id FROM `role` WHERE user_id = %s""", (user_id,)
+        )
+        self.sql_query_logger()
+        role_id = self.cursor.fetchone()
+
+        self.logger.info(pformat(role_id))
+
+        return int(role_id) if role_id else None
+
+    def query_role_id_by_role_name(self, role_name: str) -> int | None:
         """query the role name using role id
 
         Args:
@@ -605,7 +629,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: True if the token was successfully inserted/updated, False otherwise.
         """
-        self.logger.info(f"insert_login_token {user_id} {jwt_token}")
+        self.logger.info(f"insert_login_token {user_id}")
 
         self.cursor.execute(
             """

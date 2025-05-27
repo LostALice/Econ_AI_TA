@@ -80,7 +80,7 @@ class ManagementDatabaseController:
             for class_ in data
         ]
 
-    def create_class(self, classname: str) -> int:
+    def new_class(self, classname: str) -> int:
         self.database.cursor.execute(
             """
             INSERT INTO class (classname)
@@ -93,5 +93,55 @@ class ManagementDatabaseController:
 
         class_id = self.database.cursor.lastrowid
         self.logger.debug(class_id)
-        
+
         return class_id
+
+    def delete_class(self, class_id: int) -> int:
+        self.database.cursor.execute(
+            """
+            DELETE FROM class WHERE class_id=%s;
+            """,
+            (class_id,),
+        )
+
+        self.database.sql_query_logger()
+        self.database.commit()
+
+        deleted_class_id = self.database.cursor.lastrowid
+        self.logger.debug(deleted_class_id)
+
+        return deleted_class_id
+
+    def new_user(self, class_id: int, user_id: int, role_id: int) -> int:
+        self.database.cursor.execute(
+            """
+            INSERT INTO class_user (class_id, user_id, role_id)
+            VALUES (%s, %s)
+            """,
+            (class_id, user_id, role_id),
+        )
+
+        self.database.sql_query_logger()
+        self.database.commit()
+
+        added_user_id = self.database.cursor.lastrowid
+        self.logger.debug(added_user_id)
+
+        return added_user_id
+
+    def delete_user(self, class_id, user_id: int) -> int:
+        self.database.cursor.execute(
+            """
+            DELETE FROM class_user 
+            WHERE class_id=%s AND user_id=%s 
+            """,
+            (class_id, user_id),
+        )
+
+        self.database.sql_query_logger()
+        self.database.commit()
+
+        deleted_user_id = self.database.cursor.lastrowid
+        self.logger.debug(deleted_user_id)
+
+        return deleted_user_id

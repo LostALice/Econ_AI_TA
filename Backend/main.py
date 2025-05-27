@@ -101,7 +101,7 @@ logger.debug("| Result Loading Finished |")
 
 app.include_router(
     management.router,
-    prefix="/api/v1/result",
+    prefix="/api/v1/management",
     tags=["Management", "v1"],
 )
 logger.debug("| Management Loading Finished |")

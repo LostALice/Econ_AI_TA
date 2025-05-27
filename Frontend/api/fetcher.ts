@@ -1,11 +1,8 @@
 // Code by AkinoAlice@TyrantRey
 
-import { useContext } from "react";
 import { deleteCookie } from "cookies-next";
 import { addToast } from "@heroui/react";
 import Router from "next/router";
-import { LangContext } from "@/contexts/LangContext";
-import { LanguageTable } from "@/i18n";
 
 export interface FetchOptions extends RequestInit {
   headers?: HeadersInit;
@@ -26,7 +23,7 @@ export async function fetcher(
   const data = response.json();
 
   if (response.status >= 400) {
-    deleteCookie("jwt");
+    deleteCookie("token");
     deleteCookie("role");
 
     Router.replace("/login");

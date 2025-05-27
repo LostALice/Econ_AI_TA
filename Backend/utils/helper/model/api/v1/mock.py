@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel
 
-from typing import List, Optional, Literal
+from typing import List, Literal
 
 ExamType = Literal["basic", "cse"]
 
