@@ -599,6 +599,17 @@ class ExcelHandler:
             # 調整欄位名稱，處理可能的空格或大小寫差異
             df.columns = [col.strip() for col in df.columns]
             
+            # 輸出詳細的檔案結構調試信息
+            logger.info(f"=== Excel 檔案結構分析 ===")
+            logger.info(f"Excel 檔案的欄位名稱: {list(df.columns)}")
+            logger.info(f"總行數: {len(df)}")
+            
+            # 輸出前幾行的資料樣本
+            if len(df) > 0:
+                logger.info(f"第一行資料: {dict(df.iloc[0])}")
+            if len(df) > 1:
+                logger.info(f"第二行資料: {dict(df.iloc[1])}")
+            
             # 檢查必要欄位是否存在
             required_fields = [
                 "QuestionNo.", "ChapterNo", "QuestionInChinese", 
@@ -611,20 +622,21 @@ class ExcelHandler:
             
             column_mapping = {}
             
-            # 輸出檢查
-            logger.info(f"Excel 檔案的欄位名稱: {list(df.columns)}")
-            
+            # 首先嘗試精確匹配標準欄位
             for col in df.columns:
                 # 處理必要欄位
                 for req in required_fields:
                     if col.lower() == req.lower() or col.lower().replace(" ", "") == req.lower().replace(".", ""):
                         column_mapping[col] = req
+                        logger.info(f"精確匹配: {col} -> {req}")
                 
                 # 特別處理 PIC 欄位映射到 Picture
                 if col.lower() == "pic":
                     column_mapping[col] = "Picture"
+                    logger.info(f"精確匹配: {col} -> Picture")
                 elif col.lower() == "picture":
                     column_mapping[col] = "Picture"
+                    logger.info(f"精確匹配: {col} -> Picture")
             
             # 檢查是否有基本的題目欄位（放寬要求，只要有題目欄位即可）
             has_question_field = any(field in column_mapping.values() for field in ["QuestionInChinese"])
@@ -633,49 +645,95 @@ class ExcelHandler:
                 # 嘗試智能匹配欄位
                 logger.warning("未找到標準欄位格式，嘗試智能匹配...")
                 
-                # 智能匹配題目欄位
+                # 更詳細的智能匹配邏輯
+                # 1. 智能匹配題目欄位
+                question_keywords = ['question', '題目', '問題', 'chinese', '內容', 'text']
                 for col in df.columns:
-                    if any(keyword in col.lower() for keyword in ['question', '題目', '問題', 'chinese']):
-                        column_mapping[col] = "QuestionInChinese"
-                        break
+                    col_lower = col.lower()
+                    if any(keyword in col_lower for keyword in question_keywords):
+                        if "QuestionInChinese" not in column_mapping.values():
+                            column_mapping[col] = "QuestionInChinese"
+                            logger.info(f"智能匹配題目欄位: {col} -> QuestionInChinese")
+                            break
                 
-                # 智能匹配選項欄位
-                option_keywords = [
-                    (['option', 'answer', 'a'], "AnswerAInChinese"),
-                    (['option', 'answer', 'b'], "AnswerBInChinese"),
-                    (['option', 'answer', 'c'], "AnswerCInChinese"),
-                    (['option', 'answer', 'd'], "AnswerDInChinese")
+                # 2. 智能匹配選項欄位 - 更精確的匹配
+                option_patterns = [
+                    # 匹配 A 選項的各種可能格式
+                    (['a)', '(a)', 'a.', 'option a', 'answer a', 'a選項', '選項a', 'answera'], "AnswerAInChinese"),
+                    # 匹配 B 選項的各種可能格式  
+                    (['b)', '(b)', 'b.', 'option b', 'answer b', 'b選項', '選項b', 'answerb'], "AnswerBInChinese"),
+                    # 匹配 C 選項的各種可能格式
+                    (['c)', '(c)', 'c.', 'option c', 'answer c', 'c選項', '選項c', 'answerc'], "AnswerCInChinese"),
+                    # 匹配 D 選項的各種可能格式
+                    (['d)', '(d)', 'd.', 'option d', 'answer d', 'd選項', '選項d', 'answerd'], "AnswerDInChinese")
                 ]
                 
                 for col in df.columns:
-                    col_lower = col.lower()
-                    for keywords, target_field in option_keywords:
-                        if any(keyword in col_lower for keyword in keywords):
+                    col_lower = col.lower().replace(" ", "").replace("_", "")
+                    for patterns, target_field in option_patterns:
+                        if any(pattern in col_lower for pattern in patterns):
                             if target_field not in column_mapping.values():
                                 column_mapping[col] = target_field
+                                logger.info(f"智能匹配選項欄位: {col} -> {target_field}")
                                 break
                 
-                # 智能匹配其他欄位
+                # 3. 智能匹配其他欄位
                 for col in df.columns:
                     col_lower = col.lower()
-                    if 'correct' in col_lower or '正確' in col_lower or 'answer' in col_lower:
+                    
+                    # 匹配正確答案欄位
+                    if any(keyword in col_lower for keyword in ['correct', '正確', '答案', 'answer']) and 'option' not in col_lower:
                         if "CorrectAnswer" not in column_mapping.values():
                             column_mapping[col] = "CorrectAnswer"
-                    elif 'chapter' in col_lower or '章節' in col_lower:
+                            logger.info(f"智能匹配答案欄位: {col} -> CorrectAnswer")
+                    
+                    # 匹配章節欄位
+                    elif any(keyword in col_lower for keyword in ['chapter', '章節', '章', '單元']):
                         if "ChapterNo" not in column_mapping.values():
                             column_mapping[col] = "ChapterNo"
-                    elif 'explain' in col_lower or '解釋' in col_lower:
+                            logger.info(f"智能匹配章節欄位: {col} -> ChapterNo")
+                    
+                    # 匹配題號欄位
+                    elif any(keyword in col_lower for keyword in ['questionno', '題號', '編號', 'no.', 'number']):
+                        if "QuestionNo." not in column_mapping.values():
+                            column_mapping[col] = "QuestionNo."
+                            logger.info(f"智能匹配題號欄位: {col} -> QuestionNo.")
+                    
+                    # 匹配解釋欄位
+                    elif any(keyword in col_lower for keyword in ['explain', '解釋', '說明', 'explanation']):
                         if "AnswerExplainInChinese" not in column_mapping.values():
                             column_mapping[col] = "AnswerExplainInChinese"
+                            logger.info(f"智能匹配解釋欄位: {col} -> AnswerExplainInChinese")
                 
                 logger.info(f"智能匹配結果: {column_mapping}")
             
-            # 如果仍然沒有找到題目欄位，拋出錯誤
+            # 如果仍然沒有找到題目欄位，嘗試使用第一個非數字欄位作為題目
+            if "QuestionInChinese" not in column_mapping.values():
+                logger.warning("仍未找到題目欄位，嘗試使用啟發式方法...")
+                
+                # 檢查每個欄位的內容，找到最可能是題目的欄位
+                for col in df.columns:
+                    if col not in column_mapping:
+                        # 檢查該欄位的內容長度，題目通常比較長
+                        sample_values = df[col].dropna().head(3)
+                        if len(sample_values) > 0:
+                            avg_length = sum(len(str(val)) for val in sample_values) / len(sample_values)
+                            logger.info(f"欄位 {col} 的平均內容長度: {avg_length}")
+                            
+                            # 如果平均長度超過10個字符，可能是題目
+                            if avg_length > 10:
+                                column_mapping[col] = "QuestionInChinese"
+                                logger.info(f"啟發式匹配題目欄位: {col} -> QuestionInChinese (平均長度: {avg_length})")
+                                break
+            
+            # 如果還是沒有找到題目欄位，拋出錯誤
             if "QuestionInChinese" not in column_mapping.values():
                 logger.error(f"Excel 檔案格式不正確，無法找到題目欄位。可用欄位: {list(df.columns)}")
+                logger.error(f"欄位映射結果: {column_mapping}")
                 raise ValueError(f"Excel 檔案格式不正確，請確保包含題目欄位")
                 
             # 重命名欄位以符合標準格式
+            logger.info(f"應用欄位映射: {column_mapping}")
             df = df.rename(columns=column_mapping)
             
             # 統計總行數、有效行數和跳過行數

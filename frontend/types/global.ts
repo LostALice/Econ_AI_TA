@@ -38,6 +38,8 @@ export interface IExcelQuestion {
   deleted?: boolean; // 是否標記為刪除
   picture?: string;  // 主圖片（Base64格式）- 向後兼容
   pictures?: string[]; // 所有圖片列表（包含主圖片）- 新增支援
+  sourceFile?: string; // 來源檔案名稱 - 用於合併題庫時顯示題目來源
+  sourceFileId?: string; // 來源檔案ID - 用於追蹤題目來源
 }
 
 // 文件內容類型定義

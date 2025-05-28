@@ -159,21 +159,31 @@ async def get_questions(file_id: str):
         # 轉換題目資料為前端需要的格式
         formatted_questions = []
         for q in questions:
-            # 準備選項數據
-            options = []
-            if q.get("option_a"):
-                options.append(q.get("option_a"))
-            if q.get("option_b"):
-                options.append(q.get("option_b"))
-            if q.get("option_c"):
-                options.append(q.get("option_c"))
-            if q.get("option_d"):
-                options.append(q.get("option_d"))
+            # 調試輸出：檢查原始資料庫資料
+            logger.info(f"處理題目 ID {q.get('id')}:")
+            logger.info(f"  question_text: {q.get('question_text')}")
+            logger.info(f"  option_a: {q.get('option_a')}")
+            logger.info(f"  option_b: {q.get('option_b')}")
+            logger.info(f"  option_c: {q.get('option_c')}")
+            logger.info(f"  option_d: {q.get('option_d')}")
+            logger.info(f"  correct_answer: {q.get('correct_answer')}")
+            logger.info(f"  chapter_no: {q.get('chapter_no')}")
             
-            # 如果沒有單獨的選項，檢查是否存在選項陣列
-            if not options and isinstance(q.get("options", []), list):
-                options = q.get("options")
-                
+            # 準備選項數據 - 確保按正確順序獲取
+            options = []
+            
+            # 從資料庫欄位獲取選項，確保順序正確
+            option_a = q.get("option_a", "").strip() if q.get("option_a") else ""
+            option_b = q.get("option_b", "").strip() if q.get("option_b") else ""
+            option_c = q.get("option_c", "").strip() if q.get("option_c") else ""
+            option_d = q.get("option_d", "").strip() if q.get("option_d") else ""
+            
+            # 按順序添加選項，即使某個選項為空也要保持位置
+            options = [option_a, option_b, option_c, option_d]
+            
+            # 調試輸出：檢查選項處理結果
+            logger.info(f"  處理後的選項: {options}")
+            
             # 處理圖片資料，確保二進制資料正確轉換為 Base64
             picture_data = q.get("picture")
             picture_base64 = None
@@ -198,16 +208,28 @@ async def get_questions(file_id: str):
             elif picture_data:
                 logger.warning(f"題目 {q.get('id')} 的圖片不是二進位格式: {type(picture_data)}")
             
-            formatted_questions.append({
+            # 構建格式化的題目資料
+            formatted_question = {
                 "id": str(q.get("id", "")),
-                "question": q.get("question", "") or q.get("question_text", ""),
-                "options": options,
-                "answer": q.get("answer", "") or q.get("correct_answer", ""),
-                "category": q.get("category", "") or q.get("chapter_no", ""),
+                "question": q.get("question_text", "").strip() if q.get("question_text") else "",
+                "options": options,  # 使用處理後的選項陣列
+                "answer": q.get("correct_answer", "").strip() if q.get("correct_answer") else "",
+                "category": q.get("chapter_no", "").strip() if q.get("chapter_no") else "",
                 "difficulty": q.get("difficulty", "普通"),
                 "modified": False,
                 "picture": picture_base64
-            })
+            }
+            
+            # 調試輸出：檢查最終格式化結果
+            logger.info(f"  最終格式化結果:")
+            logger.info(f"    question: {formatted_question['question']}")
+            logger.info(f"    options: {formatted_question['options']}")
+            logger.info(f"    answer: {formatted_question['answer']}")
+            logger.info(f"    category: {formatted_question['category']}")
+            
+            formatted_questions.append(formatted_question)
+        
+        logger.info(f"成功格式化 {len(formatted_questions)} 個題目")
         
         return QuestionsSuccessModel(
             file_id=file_id,
