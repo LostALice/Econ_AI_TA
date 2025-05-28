@@ -30,8 +30,8 @@ import { LangContext } from "@/contexts/LangContext"
 import { LanguageTable } from "@/i18n"
 
 export default function ChatPage() {
-  const { role, setRole } = useContext(AuthContext)
-  const { language, setLang } = useContext(LangContext)
+  const { role } = useContext(AuthContext)
+  const { language } = useContext(LangContext)
 
   const mode: TQuestionMode = "CHATTING"
   const [selectTarget, setSelectTarget] = useState<TQuestionMode>(mode)
@@ -97,10 +97,7 @@ export default function ChatPage() {
       console.log("get chatroom UUID success", data)
       setChatroomUUID(data)
     })
-
-    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language]
-    setRole(userRole)
-  }, [setRole, language])
+  }, [])
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {

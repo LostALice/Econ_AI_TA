@@ -137,6 +137,10 @@ export default function DocsPage() {
   const [editingQuestion, setEditingQuestion] = useState<IExcelQuestion | null>(null);
   const [editQuestionModal, setEditQuestionModal] = useState<boolean>(false);
 
+  // 新增章節篩選相關狀態
+  const [selectedChapter, setSelectedChapter] = useState<string>("all");
+  const [availableChapters, setAvailableChapters] = useState<string[]>([]);
+
   // 根據 userInfo.role 判斷是否為教師或助教，注意使用原始角色值而非轉換後的顯示名稱
   // 修改為使用顯示角色判斷，因為原始角色值可能不正確
   const isTeacherOrTA = userInfo?.role === 'teacher' || userInfo?.role === 'ta' || userInfo?.role === 'admin' || 
@@ -161,11 +165,133 @@ export default function DocsPage() {
     console.log("==========================");
   }, [role, userInfo, isTeacherOrTA, isLoggedIn]);
   
-  // 頁面載入時自動載入文件列表
+  // 自動清理過期快取
+  const clearExpiredCache = () => {
+    try {
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000; // 24小時
+      
+      // 檢查文件列表快取
+      const docsData = localStorage.getItem(LOCAL_STORAGE_DOCS_KEY);
+      if (docsData) {
+        const parsedDocs = JSON.parse(docsData);
+        let hasExpired = false;
+        
+        // 檢查每個文件類型的快取時間
+        for (const docType in parsedDocs) {
+          if (Array.isArray(parsedDocs[docType])) {
+            parsedDocs[docType] = parsedDocs[docType].filter((file: any) => {
+              const fileTime = new Date(file.lastUpdate || file.uploadTime || 0).getTime();
+              const isExpired = (now - fileTime) > oneDay;
+              if (isExpired) hasExpired = true;
+              return !isExpired;
+            });
+          }
+        }
+        
+        if (hasExpired) {
+          localStorage.setItem(LOCAL_STORAGE_DOCS_KEY, JSON.stringify(parsedDocs));
+          console.log("已清理過期的文件列表快取");
+        }
+      }
+      
+      // 檢查文件內容快取
+      const contentData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
+      if (contentData) {
+        const parsedContent = JSON.parse(contentData);
+        const validContent: any = {};
+        
+        for (const fileId in parsedContent) {
+          const content = parsedContent[fileId];
+          const contentTime = content.lastModified || content.uploadTime || 0;
+          const isExpired = (now - contentTime) > oneDay;
+          
+          if (!isExpired) {
+            validContent[fileId] = content;
+          }
+        }
+        
+        localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(validContent));
+        console.log("已清理過期的文件內容快取");
+      }
+      
+    } catch (error) {
+      console.error("清理過期快取時發生錯誤:", error);
+    }
+  };
+
+  // 檢查快取有效性並自動管理
+  const manageCacheAutomatically = () => {
+    try {
+      const lastSync = localStorage.getItem('last_cache_sync');
+      const now = Date.now();
+      const twoHours = 2 * 60 * 60 * 1000; // 2小時檢查一次
+      
+      if (!lastSync || (now - parseInt(lastSync)) > twoHours) {
+        // 自動清理過期快取
+        clearExpiredCache();
+        localStorage.setItem('last_cache_sync', now.toString());
+        
+        // 檢查本地存儲使用量
+        const storageUsage = JSON.stringify(localStorage).length;
+        const maxStorage = 5 * 1024 * 1024; // 5MB限制
+        
+        if (storageUsage > maxStorage) {
+          console.warn("本地存儲使用量過大，執行清理");
+          // 清理最舊的快取項目
+          clearOldestCache();
+        }
+      }
+    } catch (error) {
+      console.error("自動快取管理失敗:", error);
+    }
+  };
+
+  // 清理最舊的快取項目
+  const clearOldestCache = () => {
+    try {
+      const contentData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
+      if (contentData) {
+        const parsedContent = JSON.parse(contentData);
+        const contentEntries = Object.entries(parsedContent);
+        
+        // 按時間排序，保留最新的50%
+        contentEntries.sort((a: any, b: any) => {
+          const timeA = a[1].lastModified || a[1].uploadTime || 0;
+          const timeB = b[1].lastModified || b[1].uploadTime || 0;
+          return timeB - timeA;
+        });
+        
+        const keepCount = Math.floor(contentEntries.length * 0.5);
+        const keptEntries = contentEntries.slice(0, keepCount);
+        
+        const newContent = Object.fromEntries(keptEntries);
+        localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(newContent));
+        
+        console.log(`已清理 ${contentEntries.length - keepCount} 個舊的快取項目`);
+      }
+    } catch (error) {
+      console.error("清理舊快取失敗:", error);
+    }
+  };
+
+  // 頁面載入時自動載入文件列表和管理快取
   useEffect(() => {
+    // 自動管理快取
+    manageCacheAutomatically();
+    
     // 確保組件掛載後立即載入檔案列表
     loadFileList(currentDocType);
     console.log("頁面載入，自動載入文件列表:", currentDocType);
+  }, []);
+
+  // 定期檢查快取（每30分鐘）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      manageCacheAutomatically();
+    }, 30 * 60 * 1000); // 30分鐘
+
+    return () => clearInterval(interval);
   }, []);
 
   const documentationTypeList = [
@@ -900,6 +1026,9 @@ export default function DocsPage() {
   const handleBackToList = () => {
     setViewMode('list');
     setCurrentContent(null);
+    // 重置章節篩選狀態
+    setSelectedChapter("all");
+    setAvailableChapters([]);
   };
 
   // 將 dataURL 轉換為 Blob
@@ -1401,7 +1530,7 @@ export default function DocsPage() {
         addToast({
           color: "warning", 
           title: "本地清理不完全",
-          description: "無法完全清理本地存儲，建議點擊「清除本地快取」按鈕"
+          description: "無法完全清理本地存儲，系統將自動處理"
         });
       }
       
@@ -1424,61 +1553,14 @@ export default function DocsPage() {
       addToast({
         color: "danger",
         title: "刪除失敗",
-        description: "無法刪除文件，請稍後再試或使用「清除本地快取」按鈕",
+        description: "無法刪除文件，請稍後再試",
       });
     } finally {
       setIsEditing(false);
     }
   };
 
-    // 清除所有本地存儲的資料
-  // 清除所有本地存儲的資料
-  const clearAllLocalStorage = () => {
-    try {
-      // 清除所有與文件相關的本地存儲
-      localStorage.removeItem(LOCAL_STORAGE_DOCS_KEY);
-      localStorage.removeItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
-      
-      // 使用正則表達式查找可能相關的其他存儲項
-      const keyPattern = /(docs|files|excel|questions|content)/i;
-      const keysToRemove = [];
-      
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && keyPattern.test(key)) {
-          keysToRemove.push(key);
-        }
-      }
-      
-      // 刪除找到的項目
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-        console.log(`已清除本地存儲項: ${key}`);
-      });
-      
-      // 如果當前正在查看文件內容，返回到列表視圖
-      if (viewMode === 'questions' && currentContent) {
-        setCurrentContent(null);
-        setViewMode('list');
-      }
-      
-      addToast({
-        color: "success",
-        title: "清除成功",
-        description: "所有本地存儲的文件資料已清除",
-      });
-      
-      // 重新載入當前文件類型的資料
-      loadFileList(currentDocType);
-    } catch (error) {
-      console.error("Error clearing localStorage:", error);
-      addToast({
-        color: "danger",
-        title: "清除失敗",
-        description: "清除本地存儲時發生錯誤",
-      });
-    }
-  };  // 渲染標題和操作按鈕
+  // 渲染標題（移除清除快取按鈕）
   const renderTitle = () => {
     return (
       <div className="flex justify-between items-center mb-4">
@@ -1487,22 +1569,6 @@ export default function DocsPage() {
             ? LanguageTable.docs.page.testing[language] 
             : LanguageTable.docs.page.theorem[language]}
         </h2>
-        <div className="flex gap-2">
-          {isTeacherOrTA && (
-            <>
-              <Button 
-                color="danger" 
-                onPress={clearAllLocalStorage}
-                size="sm"
-                variant="flat"
-                startContent={<span className="material-icons text-sm">delete_sweep</span>}
-                className="font-medium"
-              >
-                清除本地快取
-              </Button>
-            </>
-          )}
-        </div>
       </div>
     );
   };
@@ -1516,9 +1582,33 @@ export default function DocsPage() {
   const renderQuestionList = () => {
     if (!currentContent) return null;
     
-    // 按照題號和章節排序
-    const sortedQuestions = [...currentContent.questions]
+    // 獲取所有可用的章節
+    const allChapters = [...new Set(currentContent.questions
       .filter(q => !q.deleted)
+      .map(q => q.category)
+      .filter(category => category && category.trim() !== "")
+    )].sort((a, b) => {
+      // 嘗試按數字排序，如果無法轉換則按字串排序
+      const aNum = parseInt(a);
+      const bNum = parseInt(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      return a.localeCompare(b);
+    });
+
+    // 更新可用章節列表
+    if (JSON.stringify(allChapters) !== JSON.stringify(availableChapters)) {
+      setAvailableChapters(allChapters);
+    }
+    
+    // 根據選擇的章節篩選題目
+    const filteredQuestions = currentContent.questions
+      .filter(q => !q.deleted)
+      .filter(q => selectedChapter === "all" || q.category === selectedChapter);
+    
+    // 按照題號和章節排序
+    const sortedQuestions = [...filteredQuestions]
       .sort((a, b) => {
         // 先按照章節排序
         if (a.category !== b.category) {
@@ -1539,20 +1629,57 @@ export default function DocsPage() {
     
     return (
       <div>
+        {/* 章節篩選器 */}
         <div className="mb-4 p-3 bg-content2 rounded-lg">
-          <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
-          <div className="text-sm">
-            <p>檔案: {currentContent.fileName}</p>
-            <p>總題數: {sortedQuestions.length} 題</p>
-            <p>包含圖片: {questionsWithImages} 題</p>
-            <p>最後更新: {currentContent.lastUpdate}</p>
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
+              <div className="text-sm">
+                <p>檔案: {currentContent.fileName}</p>
+                <p>總題數: {currentContent.questions.filter(q => !q.deleted).length} 題</p>
+                <p>顯示題數: {sortedQuestions.length} 題</p>
+                <p>包含圖片: {questionsWithImages} 題</p>
+                <p>最後更新: {currentContent.lastUpdate}</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">篩選章節：</label>
+              <Select
+                size="sm"
+                placeholder="選擇章節"
+                selectedKeys={[selectedChapter]}
+                onSelectionChange={(keys) => {
+                  const selected = Array.from(keys)[0] as string;
+                  setSelectedChapter(selected || "all");
+                }}
+                className="w-48"
+                items={[
+                  { key: "all", label: "全部章節" },
+                  ...allChapters.map(chapter => ({ key: chapter, label: `第 ${chapter} 章` }))
+                ]}
+              >
+                {(item) => (
+                  <SelectItem key={item.key}>
+                    {item.label}
+                  </SelectItem>
+                )}
+              </Select>
+            </div>
           </div>
         </div>
         
         {sortedQuestions.length === 0 ? (
           <div className="text-center p-8">
-            <p className="text-xl font-medium mb-2">沒有題目</p>
-            <p className="text-default-500">此文件不包含可顯示的題目</p>
+            <p className="text-xl font-medium mb-2">
+              {selectedChapter === "all" ? "沒有題目" : `第 ${selectedChapter} 章沒有題目`}
+            </p>
+            <p className="text-default-500">
+              {selectedChapter === "all" 
+                ? "此文件不包含可顯示的題目" 
+                : "請選擇其他章節或查看全部章節"
+              }
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -1891,10 +2018,11 @@ export default function DocsPage() {
                         label="選擇正確答案"
                         placeholder="選擇正確答案"
                         selectedKeys={[editingQuestion.answer]}
-                        onChange={(e) => {
+                        onSelectionChange={(keys) => {
+                          const selected = Array.from(keys)[0] as string;
                           setEditingQuestion({
                             ...editingQuestion,
-                            answer: e.target.value
+                            answer: selected
                           });
                         }}
                         className="max-w-xs"
@@ -1964,10 +2092,11 @@ export default function DocsPage() {
                           label="選擇難度"
                           placeholder="選擇難度"
                           selectedKeys={[editingQuestion.difficulty]}
-                          onChange={(e) => {
+                          onSelectionChange={(keys) => {
+                            const selected = Array.from(keys)[0] as string;
                             setEditingQuestion({
                               ...editingQuestion,
-                              difficulty: e.target.value
+                              difficulty: selected
                             });
                           }}
                         >
