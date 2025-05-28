@@ -132,10 +132,6 @@ export default function LoginPage() {
     try {
       const response = await fetcher(siteConfig.api_url + "/authorization/login/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({
           username: formData.username,  // Using username as username
           password: formData.password,
@@ -144,6 +140,7 @@ export default function LoginPage() {
       });
 
       if (response) {
+        console.log(response);
         const data = await response;
 
         if (data.success) {

@@ -1,6 +1,14 @@
 # Code by AkinoAlice@TyrantRey
 
-from Backend.api.v1 import authorization, chatroom, documentation, mock, admin, result, management
+from Backend.api.v1 import (
+    authorization,
+    chatroom,
+    documentation,
+    mock,
+    admin,
+    result,
+    management,
+)
 from Backend.utils.helper.logger import CustomLoggerHandler
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,8 +61,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_allow_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
 )
 
 app.include_router(

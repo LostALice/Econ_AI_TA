@@ -14,7 +14,7 @@ from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.model.api.dependency import JWTPayload
 from Backend.utils.helper.api.dependency import require_student
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pprint import pformat
 from typing import Union
 from datetime import timedelta
@@ -65,7 +65,7 @@ def parse_duration(duration_str: str) -> timedelta:
 
 @router.post("/login/", status_code=200)
 async def login(
-    login_form: LoginFormModel,
+    login_form: LoginFormModel, response: Response
 ) -> Union[LoginFormSuccessModel, LoginFormUnsuccessModel]:
     """
     Authenticate a user and generate a JWT token upon successful login.
@@ -103,7 +103,7 @@ async def login(
     hash_function = hashlib.sha3_256()
     hash_function.update(password.encode())
     hashed_password = hash_function.hexdigest()
-    
+
     _status, user_info = mysql_client.get_user_info(username, hashed_password)
 
     if _status != 200 and isinstance(user_info, str):
@@ -155,6 +155,9 @@ async def login(
         _success = mysql_client.insert_login_token(user_info.user_id, jwt_token)
 
         if _success:
+            response.set_cookie(key="token", value=jwt_token)
+            response.set_cookie(key="role", value=str(login_info["role_name"]))
+
             return LoginFormSuccessModel(
                 status_code=200,
                 success=True,

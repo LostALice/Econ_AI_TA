@@ -50,6 +50,13 @@ def get_class_list() -> list[ClassModel]:
     return data if data else []
 
 
+@router.get("/class-user-list/")
+def get_class_user_list(class_id: int) -> list[UserModel]:
+    data = management_database_controller.query_class_user_list(class_id)
+    logger.debug(data)
+    return data if data else []
+
+
 @router.post("/new-class/")
 def new_class(classname: str) -> int:
     data = management_database_controller.new_class(classname)

@@ -60,13 +60,47 @@ class ManagementDatabaseController:
             for user in data
         ]
 
+    def query_class_user_list(self, class_id: int) -> list[UserModel]:
+        self.database.cursor.execute(
+            """
+            SELECT
+                cu.user_id,
+                u.username,
+                r.role_name
+            FROM
+                class_user AS cu
+            JOIN 
+                `role` AS r ON cu.role_id = r.role_id
+            JOIN 
+                `user` AS u ON u.user_id = cu.user_id
+            WHERE
+                cu.class_id = %s;""",
+            (class_id,),
+        )
+
+        self.database.sql_query_logger()
+        data = self.database.cursor.fetchall()
+
+        self.logger.debug(data)
+
+        return [
+            UserModel(
+                user_id=user["user_id"],
+                username=user["username"],
+                role_name=user["role_name"],
+            )
+            for user in data
+        ]
+
     def get_class_list(self) -> list[ClassModel]:
         self.database.cursor.execute("""
             SELECT
                 class_id,
                 classname
             FROM
-                class;""")
+                class
+            WHERE
+                enabled = 1;""")
         self.database.sql_query_logger()
         data = self.database.cursor.fetchall()
 
@@ -99,7 +133,9 @@ class ManagementDatabaseController:
     def delete_class(self, class_id: int) -> int:
         self.database.cursor.execute(
             """
-            DELETE FROM class WHERE class_id=%s;
+            UPDATE class
+            SET enable = 0
+            WHERE class_id=%s;
             """,
             (class_id,),
         )
@@ -116,7 +152,7 @@ class ManagementDatabaseController:
         self.database.cursor.execute(
             """
             INSERT INTO class_user (class_id, user_id, role_id)
-            VALUES (%s, %s)
+            VALUES (%s, %s, %s)
             """,
             (class_id, user_id, role_id),
         )

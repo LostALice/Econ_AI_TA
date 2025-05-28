@@ -260,7 +260,7 @@ class SetupMYSQL:
                 exam_type VARCHAR(50) NOT NULL,
                 exam_date DATETIME NOT NULL,
                 exam_duration INT NOT NULL,
-               is_enabled TINYINT(1) NOT NULL DEFAULT 1
+                enabled TINYINT(1) NOT NULL DEFAULT 1
             );
             """
         )
@@ -272,7 +272,7 @@ class SetupMYSQL:
                 question_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
                 question_text TEXT NOT NULL,
-                is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+                enabled TINYINT(1) NOT NULL DEFAULT 1,
                 -- question_images VARCHAR(36) DEFAULT NULL,
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
             );
@@ -285,7 +285,7 @@ class SetupMYSQL:
             CREATE TABLE exam_images (
                 question_id INT NOT NULL,
                 question_images CHAR(36) NOT NULL,
-                is_enabled TINYINT(1) NOT NULL DEFAULT 1,
+                enabled TINYINT(1) NOT NULL DEFAULT 1,
                 PRIMARY KEY (question_id, question_images),
                 FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
             );
@@ -340,7 +340,8 @@ class SetupMYSQL:
             """
             CREATE TABLE class (
                 class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                classname VARCHAR(15) NOT NULL DEFAULT "New Class"
+                classname VARCHAR(15) NOT NULL DEFAULT "New Class",
+                enabled TINYINT(1) NOT NULL DEFAULT 1
             );
             """
         )
@@ -378,7 +379,7 @@ class SetupMYSQL:
                 tag_id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(15) NOT NULL UNIQUE,
                 description VARCHAR(255) NOT NULL UNIQUE,
-                enable TINYINT(1) NOT NULL DEFAULT TRUE
+                enabled TINYINT(1) NOT NULL DEFAULT TRUE
             );
             """
         )
@@ -390,7 +391,7 @@ class SetupMYSQL:
                 question_tag_id INT AUTO_INCREMENT PRIMARY KEY,
                 question_id INT NOT NULL,
                 tag_id INT NOT NULL,
-                enable TINYINT(1) NOT NULL DEFAULT TRUE,
+                enabled TINYINT(1) NOT NULL DEFAULT TRUE,
                 FOREIGN KEY (question_id) REFERENCES exam_questions(question_id) ON DELETE CASCADE,
                 FOREIGN KEY (tag_id) REFERENCES tag(tag_id) ON DELETE CASCADE
             );
@@ -502,14 +503,14 @@ class MySQLHandler(SetupMYSQL):
         self.connection.ping(attempts=3)
 
         self.cursor.execute(
-            """SELECT role_id FROM `role` WHERE user_id = %s""", (user_id,)
+            """SELECT role_id FROM `user` WHERE user_id = %s""", (user_id,)
         )
         self.sql_query_logger()
         role_id = self.cursor.fetchone()
 
         self.logger.info(pformat(role_id))
 
-        return int(role_id) if role_id else None
+        return role_id["role_id"] if role_id else None
 
     def query_role_id_by_role_name(self, role_name: str) -> int | None:
         """query the role name using role id
@@ -993,7 +994,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -1009,12 +1010,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -1038,7 +1039,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -1054,12 +1055,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "basic"
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1 AND e.exam_type = "basic"
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -1083,7 +1084,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -1099,12 +1100,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "cse"
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1 AND e.exam_type = "cse"
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -1231,7 +1232,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             """
             SELECT exam_id, exam_name, exam_type, exam_duration FROM exams
-            WHERE exam_type = %s AND is_enabled = True;
+            WHERE exam_type = %s AND enabled = True;
         """,
             (mock_type,),
         )
@@ -1480,7 +1481,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_images
-            SET is_enabled=0
+            SET enabled=0
             WHERE question_id=%s;
             """,
             (question.question_id,),
@@ -1517,7 +1518,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
-            SET is_enabled=0
+            SET enabled=0
             WHERE exam_id=%s
             """,
             (exam_id,),
@@ -1543,7 +1544,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
-            SET is_enabled=1
+            SET enabled=1
             WHERE exam_id=%s
             """,
             (exam_id,),
@@ -1592,7 +1593,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
-            SET is_enabled=1
+            SET enabled=1
             WHERE question_id=%s
             """,
             (question_id,),
@@ -1671,7 +1672,7 @@ class MySQLHandler(SetupMYSQL):
                 FROM exam_questions AS q
                 LEFT JOIN exam_options AS o
                         ON q.question_id = o.question_id
-                WHERE q.exam_id = %s AND q.is_enabled = 0
+                WHERE q.exam_id = %s AND q.enabled = 0
                 GROUP BY q.exam_id, q.question_id, q.question_text
                 ) AS s;
             """,

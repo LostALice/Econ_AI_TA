@@ -717,4 +717,132 @@ export const LanguageTable = {
       en: "Password have been changed",
     },
   },
+  "management": {
+    "toast": {
+      "fetchInitDataFailed": {
+        "zh": "無法取得初始資料",
+        "en": "Failed to fetch initial data"
+      },
+      "classNameEmpty": {
+        "zh": "班級名稱不能為空。",
+        "en": "Class name cannot be empty."
+      },
+      "classCreated": {
+        "zh": "已建立新班級",
+        "en": "Created new Class"
+      },
+      "classCreateFailedRetry": {
+        "zh": "建立新班級失敗。請再試一次。",
+        "en": "Failed to create new Class. Please try again."
+      },
+      "classCreateUnexpectedError": {
+        "zh": "建立班級時發生意外錯誤",
+        "en": "An unexpected error occurred while creating class"
+      },
+      "noUserSelectedToAdd": {
+        "zh": "沒有選擇要新增的使用者。",
+        "en": "No users selected to add."
+      },
+      "noClassSelected": {
+        "zh": "未選擇班級。",
+        "en": "No class selected."
+      },
+      "usersAddedSuccess": {
+        "zh": "成功新增 {count} 位使用者。",
+        "en": "Successfully added {count} user(s)."
+      },
+      "addUsersFailed": {
+        "zh": "新增使用者失敗。",
+        "en": "Failed to add users."
+      },
+      "usersRemovedSuccess": {
+        "zh": "成功移除 {count} 位使用者。",
+        "en": "Successfully removed {count} user(s)."
+      },
+      "removeUsersFailed": {
+        "zh": "移除使用者失敗，發生意外錯誤。",
+        "en": "Failed to remove users. An unexpected error occurred."
+      },
+      "classDeletedSuccess": {
+        "zh": "班級已成功刪除。",
+        "en": "Deleted class successfully."
+      },
+      "classDeleteFailedApiError": {
+        "zh": "刪除班級失敗。API 返回非預期結果。",
+        "en": "Failed to delete class. The API returned an unexpected result."
+      },
+      "classDeleteUnexpectedError": {
+        "zh": "刪除班級時發生意外錯誤。",
+        "en": "An unexpected error occurred while deleting the class."
+      },
+      "removeUserCountZero": {
+        "zh": "使用者數量不能為零。",
+        "en": "Number of users cannot be 0."
+      },
+      "fetchClassUsersFailed": {
+        "zh": "無法載入所選班級的使用者。",
+        "en": "Failed to load users for the selected class."
+      }
+    },
+    "controls": {
+      "selectClassLabel": {
+        "zh": "選擇班級",
+        "en": "Select a class"
+      },
+      "newClassNameLabel": {
+        "zh": "新班級名稱",
+        "en": "New class name"
+      },
+      "classNamePlaceholder": {
+        "zh": "班級名稱",
+        "en": "Class Name"
+      },
+      "newClassButton": {
+        "zh": "新班級",
+        "en": "New class"
+      },
+      "deleteClassButton": {
+        "zh": "刪除班級",
+        "en": "Delete class"
+      }
+    },
+    "display": {
+      "noClassSelectedStatus": {
+        "zh": "未選擇班級",
+        "en": "No class selected"
+      },
+      "currentClassStatus": {
+        "zh": "當前班級",
+        "en": "Current class"
+      }
+    },
+    "listbox": {
+      "userNotInClassLabel": {
+        "zh": "不在班級中的使用者",
+        "en": "User not in class"
+      },
+      "userSelectedChip": {
+        "zh": "位使用者已選擇",
+        "en": "user selected"
+      },
+      "userTotalChip": {
+        "zh": "位使用者總數",
+        "en": "user in total"
+      },
+      "userInClassLabel": {
+        "zh": "班級中的使用者",
+        "en": "User in class"
+      }
+    },
+    "buttons": {
+      "addButton": {
+        "zh": "新增",
+        "en": "Add"
+      },
+      "removeButton": {
+        "zh": "移除",
+        "en": "Remove"
+      }
+    }
+  }
 };
