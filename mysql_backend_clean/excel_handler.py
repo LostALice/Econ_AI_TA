@@ -532,6 +532,45 @@ class ExcelHandler:
         Returns:
             List[Dict[str, Any]]: 題目列表
         """
+        def validate_and_fix_question(question_data: Dict[str, Any], row_index: int) -> Dict[str, Any]:
+            """驗證並修正題目資料"""
+            # 確保所有必要欄位都存在
+            validated_question = {
+                "question_no": str(question_data.get("question_no", row_index + 1)),
+                "chapter_no": str(question_data.get("chapter_no", "未分類")),
+                "question_text": str(question_data.get("question_text", "未定義題目")),
+                "option_a": "",
+                "option_b": "",
+                "option_c": "",
+                "option_d": "",
+                "correct_answer": str(question_data.get("correct_answer", "")),
+                "explanation": str(question_data.get("explanation", "無解釋")),
+                "picture": question_data.get("picture")
+            }
+            
+            # 驗證並修正選項
+            options = [
+                question_data.get("option_a", ""),
+                question_data.get("option_b", ""),
+                question_data.get("option_c", ""),
+                question_data.get("option_d", "")
+            ]
+            
+            # 確保每個選項都是有效字串
+            for i, option in enumerate(options):
+                if not option or not isinstance(option, str) or option.strip() == "":
+                    options[i] = f"選項 {chr(65 + i)}"
+                    logger.warning(f"題目 {validated_question['question_no']} 的選項 {chr(65 + i)} 為空，使用預設值")
+                else:
+                    options[i] = str(option).strip()
+            
+            validated_question["option_a"] = options[0]
+            validated_question["option_b"] = options[1]
+            validated_question["option_c"] = options[2]
+            validated_question["option_d"] = options[3]
+            
+            return validated_question
+        
         try:
             # 解碼 Base64 內容
             content = file_content
@@ -551,7 +590,8 @@ class ExcelHandler:
             report = extractor.process(keep_temp=False)
             
             if not report:
-                raise ValueError("無法從 Excel 檔案提取數據")
+                logger.warning("無法從 Excel 檔案提取圖片數據，但繼續處理文字內容")
+                report = {'image_mappings': {}}
             
             # 使用 pandas 讀取 Excel 以獲取題目內容
             df = pd.read_excel(buffer)
@@ -586,11 +626,54 @@ class ExcelHandler:
                 elif col.lower() == "picture":
                     column_mapping[col] = "Picture"
             
-            # 檢查是否所有必要欄位都存在 (除了Picture欄位可選外)
-            if len(column_mapping) < len(required_fields):
-                missing_fields = [field for field in required_fields if field not in column_mapping.values()]
-                logger.error(f"Excel 檔案欄位不符合要求，缺少必要欄位: {missing_fields}，目前找到 {list(df.columns)}")
-                raise ValueError(f"Excel 檔案格式不正確，請確保包含所有必要欄位")
+            # 檢查是否有基本的題目欄位（放寬要求，只要有題目欄位即可）
+            has_question_field = any(field in column_mapping.values() for field in ["QuestionInChinese"])
+            
+            if not has_question_field:
+                # 嘗試智能匹配欄位
+                logger.warning("未找到標準欄位格式，嘗試智能匹配...")
+                
+                # 智能匹配題目欄位
+                for col in df.columns:
+                    if any(keyword in col.lower() for keyword in ['question', '題目', '問題', 'chinese']):
+                        column_mapping[col] = "QuestionInChinese"
+                        break
+                
+                # 智能匹配選項欄位
+                option_keywords = [
+                    (['option', 'answer', 'a'], "AnswerAInChinese"),
+                    (['option', 'answer', 'b'], "AnswerBInChinese"),
+                    (['option', 'answer', 'c'], "AnswerCInChinese"),
+                    (['option', 'answer', 'd'], "AnswerDInChinese")
+                ]
+                
+                for col in df.columns:
+                    col_lower = col.lower()
+                    for keywords, target_field in option_keywords:
+                        if any(keyword in col_lower for keyword in keywords):
+                            if target_field not in column_mapping.values():
+                                column_mapping[col] = target_field
+                                break
+                
+                # 智能匹配其他欄位
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if 'correct' in col_lower or '正確' in col_lower or 'answer' in col_lower:
+                        if "CorrectAnswer" not in column_mapping.values():
+                            column_mapping[col] = "CorrectAnswer"
+                    elif 'chapter' in col_lower or '章節' in col_lower:
+                        if "ChapterNo" not in column_mapping.values():
+                            column_mapping[col] = "ChapterNo"
+                    elif 'explain' in col_lower or '解釋' in col_lower:
+                        if "AnswerExplainInChinese" not in column_mapping.values():
+                            column_mapping[col] = "AnswerExplainInChinese"
+                
+                logger.info(f"智能匹配結果: {column_mapping}")
+            
+            # 如果仍然沒有找到題目欄位，拋出錯誤
+            if "QuestionInChinese" not in column_mapping.values():
+                logger.error(f"Excel 檔案格式不正確，無法找到題目欄位。可用欄位: {list(df.columns)}")
+                raise ValueError(f"Excel 檔案格式不正確，請確保包含題目欄位")
                 
             # 重命名欄位以符合標準格式
             df = df.rename(columns=column_mapping)
@@ -606,7 +689,7 @@ class ExcelHandler:
             questions = []
             for idx, row in df.iterrows():
                 # 檢查題目欄位 - 這是唯一必須的欄位
-                if "QuestionInChinese" not in df.columns or pd.isna(row.get("QuestionInChinese")):
+                if "QuestionInChinese" not in df.columns or pd.isna(row.get("QuestionInChinese")) or str(row.get("QuestionInChinese")).strip() == "":
                     reason = "缺少題目內容"
                     skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
                     logger.warning(f"第 {idx+1} 行跳過: {reason}")
@@ -624,7 +707,7 @@ class ExcelHandler:
                     logger.warning(f"第 {idx+1} 行警告: 欄位 {', '.join(warning_fields)} 為空，使用預設值處理")
                 
                 # 識別正確答案
-                correct_answer = row["CorrectAnswer"]
+                correct_answer = row.get("CorrectAnswer", "")
                 if isinstance(correct_answer, str) and correct_answer.upper() in ["A", "B", "C", "D"]:
                     letter_to_option = {
                         "A": "AnswerAInChinese",
@@ -632,29 +715,36 @@ class ExcelHandler:
                         "C": "AnswerCInChinese",
                         "D": "AnswerDInChinese"
                     }
-                    correct_answer_text = row[letter_to_option[correct_answer.upper()]]
+                    option_field = letter_to_option[correct_answer.upper()]
+                    if option_field in df.columns and not pd.isna(row.get(option_field)):
+                        correct_answer_text = str(row[option_field])
+                    else:
+                        correct_answer_text = f"選項 {correct_answer.upper()}"
                 else:
-                    correct_answer_text = correct_answer
+                    correct_answer_text = str(correct_answer) if correct_answer else ""
                 
                 # 安全獲取欄位值，對於缺失的欄位使用預設值
-                def safe_get(field_name, default=""):
+                def safe_get(field_name: str, default: str = "") -> str:
                     if field_name in df.columns and not pd.isna(row.get(field_name)):
-                        return str(row.get(field_name))
+                        return str(row.get(field_name)).strip()
                     return default
                 
                 # 構建題目資料
                 question = {
                     "question_no": safe_get("QuestionNo.", str(idx+1)),
                     "chapter_no": safe_get("ChapterNo", "未分類"),
-                    "question_text": str(row["QuestionInChinese"]),
-                    "option_a": safe_get("AnswerAInChinese"),
-                    "option_b": safe_get("AnswerBInChinese"),
-                    "option_c": safe_get("AnswerCInChinese"),
-                    "option_d": safe_get("AnswerDInChinese"),
-                    "correct_answer": str(correct_answer_text),
+                    "question_text": str(row["QuestionInChinese"]).strip(),
+                    "option_a": safe_get("AnswerAInChinese", "選項 A"),
+                    "option_b": safe_get("AnswerBInChinese", "選項 B"),
+                    "option_c": safe_get("AnswerCInChinese", "選項 C"),
+                    "option_d": safe_get("AnswerDInChinese", "選項 D"),
+                    "correct_answer": correct_answer_text,
                     "explanation": safe_get("AnswerExplainInChinese", "無解釋"),
                     "picture": None
                 }
+                
+                # 驗證並修正題目資料
+                question = validate_and_fix_question(question, idx)
                 
                 # 從提取的圖片中關聯題目與圖片
                 chapter_no = question["chapter_no"]
@@ -679,7 +769,7 @@ class ExcelHandler:
                     logger.info(f"題目 {question['question_no']} 沒有圖片")
                 
                 # 輸出調試信息，檢查每個題目的欄位
-                logger.info(f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項數: {len([x for x in [question['option_a'], question['option_b'], question['option_c'], question['option_d']] if x])}, 答案: {question['correct_answer'][:30]}...")
+                logger.info(f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項: A={question['option_a'][:10]}..., B={question['option_b'][:10]}..., C={question['option_c'][:10]}..., D={question['option_d'][:10]}..., 答案: {question['correct_answer'][:30]}...")
                     
                 questions.append(question)
                 valid_rows += 1

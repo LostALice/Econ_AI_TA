@@ -48,44 +48,57 @@ import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 // 導入 Excel API 函數
 import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFile, updateExcelQuestions } from "@/api/excel";
 
+import { validateQuestion, validateQuestions, repairQuestions } from "@/utils/dataValidation";
+
 // 用於在本地存儲模擬文件列表
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
 const LOCAL_STORAGE_DOCS_CONTENT_KEY = "mock_docs_content";
 
-// 新增顯示題目圖片的組件
+// 新增顯示題目圖片的組件 - 加入防護檢查
 const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
+  // 確保 question 資料安全性
+  const safeQuestion = validateQuestion(question);
+  
   return (
     <div className="bg-content1 shadow-md p-4 rounded-lg mb-4">
       <div className="mb-4">
         <div className="font-semibold mb-2">題目：</div>
-        <div>{question.question}</div>
+        <div>{safeQuestion.question}</div>
       </div>
       
       {/* 支援多圖片顯示，優先使用新的 pictures 屬性 */}
-      {((question.pictures?.length ?? 0) > 0 || question.picture) && (
+      {((safeQuestion.pictures?.length ?? 0) > 0 || safeQuestion.picture) && (
         <div className="mb-4">
           <div className="font-semibold mb-2">圖片：</div>
           
           {/* 有多張圖片的情況 */}
-          {question.pictures && question.pictures.length > 0 ? (
+          {safeQuestion.pictures && safeQuestion.pictures.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {question.pictures.map((picSrc, index) => (
+              {safeQuestion.pictures.map((picSrc, index) => (
                 <div key={index} className="flex justify-center">
                   <img 
                     src={picSrc} 
                     alt={`題目圖片 ${index+1}`} 
                     className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                    onError={(e) => {
+                      console.warn(`圖片載入失敗: ${picSrc}`);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
               ))}
             </div>
           ) : (
             /* 僅有單張圖片 - 向後兼容 */
-            question.picture && (
+            safeQuestion.picture && (
               <img 
-                src={question.picture} 
+                src={safeQuestion.picture} 
                 alt="題目圖片" 
                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                onError={(e) => {
+                  console.warn(`圖片載入失敗: ${safeQuestion.picture}`);
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             )
           )}
@@ -95,23 +108,27 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
       <div className="mb-4">
         <div className="font-semibold mb-2">選項：</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-start">
-              <div className="font-semibold mr-2">{String.fromCharCode(65 + index)}.</div>
-              <div>{option}</div>
-            </div>
-          ))}
+          {safeQuestion.options.length > 0 ? (
+            safeQuestion.options.map((option, index) => (
+              <div key={index} className="flex items-start">
+                <div className="font-semibold mr-2">{String.fromCharCode(65 + index)}.</div>
+                <div>{option || `選項 ${String.fromCharCode(65 + index)}`}</div>
+              </div>
+            ))
+          ) : (
+            <div className="text-gray-500 col-span-2">此題目沒有可用選項</div>
+          )}
         </div>
       </div>
       
       <div className="mb-4">
         <div className="font-semibold mb-2">答案：</div>
-        <div>{question.answer}</div>
+        <div>{safeQuestion.answer}</div>
       </div>
       
       <div>
         <div className="font-semibold mb-2">章節：</div>
-        <div>{question.category}</div>
+        <div>{safeQuestion.category}</div>
       </div>
     </div>
   );
@@ -402,31 +419,44 @@ export default function DocsPage() {
     return []; // 返回空數組，不再生成模擬數據
   };
 
-  // 保存文件內容到本地存儲
   const saveFileContent = (fileID: string, content: any) => {
     try {
-      const storedData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
-      const parsedData = storedData ? JSON.parse(storedData) : {};
+      // 如果內容包含題目，確保每個題目的 options 都是陣列
+      if (content.questions && Array.isArray(content.questions)) {
+        content.questions = content.questions.map((q: any) => validateQuestion(q));
+        console.log(`驗證並修正了 ${content.questions.length} 個題目的資料格式`);
+      }
       
-      parsedData[fileID] = content;
-      localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(parsedData));
+      const contentData = getFileContent("") || {};
+      contentData[fileID] = content;
+      localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(contentData));
+      console.log(`已保存文件內容: ${fileID}`);
     } catch (error) {
-      console.error("Error saving file content to localStorage:", error);
+      console.error("保存文件內容失敗:", error);
     }
   };
 
-  // 從本地存儲獲取文件內容
   const getFileContent = (fileID: string): any => {
     try {
-      const storedData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
-        return parsedData[fileID] || null;
+      const contentData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
+      if (contentData) {
+        const parsedData = JSON.parse(contentData);
+        if (fileID && parsedData[fileID]) {
+          const content = parsedData[fileID];
+          // 確保載入的題目資料格式正確
+          if (content.questions && Array.isArray(content.questions)) {
+            content.questions = content.questions.map((q: any) => validateQuestion(q));
+            console.log(`驗證並修正了載入的 ${content.questions.length} 個題目資料`);
+          }
+          return content;
+        }
+        return parsedData;
       }
+      return null;
     } catch (error) {
-      console.error("Error loading file content from localStorage:", error);
+      console.error("讀取文件內容失敗:", error);
+      return null;
     }
-    return null;
   };
 
   // 處理 Excel 檔案並解析題目
@@ -476,12 +506,32 @@ export default function DocsPage() {
         
         // 優先檢查指定的欄位格式
         if (row.QuestionInChinese !== undefined) {
-          // 獲取所有可能的選項欄位
+          // 獲取所有可能的選項欄位，確保始終返回陣列
           const options = [];
-          if (row.AnswerAInChinese) options.push(row.AnswerAInChinese);
-          if (row.AnswerBInChinese) options.push(row.AnswerBInChinese);
-          if (row.AnswerCInChinese) options.push(row.AnswerCInChinese);
-          if (row.AnswerDInChinese) options.push(row.AnswerDInChinese);
+          
+          // 嚴格驗證每個選項
+          const optionFields = [
+            { key: 'AnswerAInChinese', label: 'A' },
+            { key: 'AnswerBInChinese', label: 'B' },
+            { key: 'AnswerCInChinese', label: 'C' },
+            { key: 'AnswerDInChinese', label: 'D' }
+          ];
+          
+          for (const field of optionFields) {
+            const value = row[field.key];
+            if (value && typeof value === 'string' && value.trim() !== '') {
+              options.push(value.trim());
+            } else {
+              // 如果選項為空，提供預設選項
+              options.push(`選項 ${field.label}`);
+              console.warn(`題目 ${index + 1} 的選項 ${field.label} 為空，使用預設值`);
+            }
+          }
+          
+          // 確保至少有4個選項
+          while (options.length < 4) {
+            options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
+          }
           
           // 獲取正確答案
           let correctAnswer = row.CorrectAnswer || "";
@@ -495,7 +545,7 @@ export default function DocsPage() {
           return {
             id: (row.QuestionNo || index + 1).toString(),
             question: row.QuestionInChinese || "未定義題目",
-            options: options,
+            options: options, // 確保始終為陣列且有4個選項
             answer: correctAnswer,
             category: row.ChapterNo?.toString() || "",
             difficulty: "普通",
@@ -521,20 +571,28 @@ export default function DocsPage() {
           for (const optionField of optionFields) {
             // 檢查主欄位和備用欄位
             let optionValue = row[optionField.field];
-            if (optionValue === undefined) {
+            if (optionValue === undefined || optionValue === null) {
               // 嘗試備用欄位
               for (const fallback of optionField.fallbacks) {
-                if (row[fallback] !== undefined) {
+                if (row[fallback] !== undefined && row[fallback] !== null) {
                   optionValue = row[fallback];
                   break;
                 }
               }
             }
             
-            // 只添加非空選項
+            // 確保選項值是有效的字串
             if (optionValue && typeof optionValue === 'string' && optionValue.trim() !== '') {
-              options.push(optionValue);
+              options.push(optionValue.trim());
+            } else {
+              // 提供預設選項
+              options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
             }
+          }
+          
+          // 確保至少有4個選項
+          while (options.length < 4) {
+            options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
           }
           
           // 檢查各種可能的答案欄位命名
@@ -543,7 +601,7 @@ export default function DocsPage() {
           return {
             id: row.id?.toString() || row.ID?.toString() || row.QuestionNo?.toString() || (index + 1).toString(),
             question: questionContent,
-            options: options,
+            options: options, // 確保始終為陣列且有足夠選項
             answer: answerField,
             category: row.category || row.Category || row.chapter || row.Chapter || row.ChapterNo?.toString() || "",
             difficulty: row.difficulty || row.Difficulty || "普通",
@@ -578,10 +636,22 @@ export default function DocsPage() {
           // 取第一個可能是問題的欄位
           const questionField = questionColumns.length > 0 ? questionColumns[0] : '';
           
-          // 從可能的選項欄位中獲取選項
+          // 確保選項始終為陣列且有足夠數量
           const options = optionColumns
             .map(col => row[col])
-            .filter(val => val !== undefined && val !== null && val !== '');
+            .filter((val: any) => val !== undefined && val !== null && val !== '' && typeof val === 'string')
+            .map((val: any) => val.trim());
+          
+          // 確保至少有4個選項
+          while (options.length < 4) {
+            options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
+          }
+          
+          // 如果沒有找到任何選項，提供預設選項
+          if (options.length === 0) {
+            options.push("選項 A", "選項 B", "選項 C", "選項 D");
+            console.warn(`題目 ${index + 1} 沒有找到有效選項，使用預設選項`);
+          }
           
           // 取第一個可能是正確答案的欄位
           const correctField = correctColumns.length > 0 ? correctColumns[0] : '';
@@ -589,7 +659,7 @@ export default function DocsPage() {
           return {
             id: (index + 1).toString(),
             question: questionField ? row[questionField] : "未定義題目",
-            options: options,
+            options: options, // 確保始終為陣列
             answer: correctField ? row[correctField] : "",
             category: "",
             difficulty: "普通",
@@ -598,8 +668,14 @@ export default function DocsPage() {
         }
       });
       
-      // 過濾掉沒有題目內容的題目
-      return questions.filter(q => q.question && q.question !== "未定義題目");
+      // 過濾掉沒有題目內容的題目，並確保每個題目都有有效的選項陣列
+      const validQuestions = questions.filter(q => {
+        // 使用驗證函數確保資料完整性
+        return q.question && q.question !== "未定義題目";
+      }).map(q => validateQuestion(q));
+      
+      console.log(`成功解析 ${validQuestions.length} 個題目`);
+      return validQuestions;
     } catch (error) {
       console.error("Error parsing Excel content:", error);
       return [];
@@ -2049,6 +2125,10 @@ export default function DocsPage() {
                                   src={picSrc} 
                                   alt={`題目圖片 ${index+1}`} 
                                   className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                                  onError={(e) => {
+                                    console.warn(`圖片載入失敗: ${picSrc}`);
+                                    e.currentTarget.style.display = 'none';
+                                  }}
                                 />
                               </div>
                             ))}
@@ -2061,6 +2141,10 @@ export default function DocsPage() {
                                 src={editingQuestion.picture} 
                                 alt="題目圖片" 
                                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
+                                onError={(e) => {
+                                  console.warn(`圖片載入失敗: ${editingQuestion.picture}`);
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
                             </div>
                           )
