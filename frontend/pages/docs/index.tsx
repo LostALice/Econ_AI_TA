@@ -1972,57 +1972,73 @@ export default function DocsPage() {
     // 計算有圖片的題目數量
     const questionsWithImages = sortedQuestions.filter(q => q.picture).length;
     
-    // 計算來源檔案數量
-    const sourceFiles = [...new Set(currentContent.questions
-      .filter(q => !q.deleted)
-      .map(q => q.sourceFile)
-      .filter(file => file)
-    )];
+    // 檢查是否為章節瀏覽模式（根據檔案名稱包含 "章節瀏覽" 來判斷）
+    const isChapterBrowseMode = currentContent.fileName.includes('章節瀏覽');
     
     return (
       <div>
-        {/* 章節篩選器 */}
-        <div className="mb-4 p-3 bg-content2 rounded-lg">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
-              <div className="text-sm">
-                <p>題庫: {currentContent.fileName}</p>
-                <p>總題數: {currentContent.questions.filter(q => !q.deleted).length} 題</p>
-                <p>顯示題數: {sortedQuestions.length} 題</p>
-                <p>包含圖片: {questionsWithImages} 題</p>
-                {sourceFiles.length > 0 && (
-                  <p>來源檔案: {sourceFiles.length} 個檔案</p>
-                )}
-                <p>最後更新: {currentContent.lastUpdate}</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">篩選章節：</label>
-              <Select
-                size="sm"
-                placeholder="選擇章節"
-                selectedKeys={[selectedChapter]}
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys)[0] as string;
-                  setSelectedChapter(selected || "all");
-                }}
-                className="w-48"
-                items={[
-                  { key: "all", label: "全部章節" },
-                  ...allChapters.map(chapter => ({ key: chapter, label: `第 ${chapter} 章` }))
-                ]}
-              >
-                {(item) => (
-                  <SelectItem key={item.key}>
-                    {item.label}
-                  </SelectItem>
-                )}
-              </Select>
+        {/* 根據模式顯示不同的題目摘要 */}
+        {isChapterBrowseMode ? (
+          /* 章節瀏覽模式的簡化摘要 */
+          <div className="mb-4 p-3 bg-content2 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
+            <div className="text-sm">
+              <p>章節: {currentContent.fileName}</p>
+              <p>題目數量: {sortedQuestions.length} 題</p>
+              <p>包含圖片: {questionsWithImages} 題</p>
             </div>
           </div>
-        </div>
+        ) : (
+          /* 檔案管理模式的完整摘要 */
+          <div className="mb-4 p-3 bg-content2 rounded-lg">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
+                <div className="text-sm">
+                  <p>題庫: {currentContent.fileName}</p>
+                  <p>總題數: {currentContent.questions.filter(q => !q.deleted).length} 題</p>
+                  <p>顯示題數: {sortedQuestions.length} 題</p>
+                  <p>包含圖片: {questionsWithImages} 題</p>
+                  {(() => {
+                    const sourceFiles = [...new Set(currentContent.questions
+                      .filter(q => !q.deleted)
+                      .map(q => q.sourceFile)
+                      .filter(file => file)
+                    )];
+                    return sourceFiles.length > 0 && (
+                      <p>來源檔案: {sourceFiles.length} 個檔案</p>
+                    );
+                  })()}
+                  <p>最後更新: {currentContent.lastUpdate}</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">篩選章節：</label>
+                <Select
+                  size="sm"
+                  placeholder="選擇章節"
+                  selectedKeys={[selectedChapter]}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    setSelectedChapter(selected || "all");
+                  }}
+                  className="w-48"
+                  items={[
+                    { key: "all", label: "全部章節" },
+                    ...allChapters.map(chapter => ({ key: chapter, label: `第 ${chapter} 章` }))
+                  ]}
+                >
+                  {(item) => (
+                    <SelectItem key={item.key}>
+                      {item.label}
+                    </SelectItem>
+                  )}
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
         
         {sortedQuestions.length === 0 ? (
           <div className="text-center p-8">
@@ -2721,7 +2737,7 @@ export default function DocsPage() {
                 
                 {!isLoading && studentViewMode === 'chapterSelection' && (
                   /* 學生章節選擇頁面 */
-                  <div className="max-w-4xl mx-auto">
+                  <div className="max-w-2xl mx-auto">
                     <div className="text-center mb-8">
                       <h1 className="text-3xl font-bold mb-4">
                         {studentQuestionBanks.find(bank => bank.key === selectedQuestionBank)?.label || "選擇章節"}
@@ -2743,28 +2759,56 @@ export default function DocsPage() {
                     </div>
                     
                     {availableStudentChapters.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {availableStudentChapters.map((chapter) => (
-                          <div
-                            key={chapter}
-                            className="bg-content1 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary select-none"
-                            style={{ userSelect: 'none' }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              console.log('章節卡片被點擊:', chapter);
-                              setSelectedStudentChapter(chapter);
-                              loadStudentQuestions(selectedQuestionBank, chapter);
+                      <div className="bg-content1 shadow-lg rounded-lg p-6">
+                        <div className="flex flex-col items-center gap-6">
+                          <div className="w-full max-w-md">
+                            <label className="block text-lg font-medium mb-3 text-center">
+                              選擇章節
+                            </label>
+                            <Select
+                              size="lg"
+                              placeholder="請選擇要練習的章節"
+                              selectionMode="single"
+                              selectedKeys={selectedStudentChapter ? [selectedStudentChapter] : []}
+                              onSelectionChange={(keys) => {
+                                const selected = Array.from(keys)[0] as string;
+                                if (selected) {
+                                  setSelectedStudentChapter(selected);
+                                }
+                              }}
+                              className="w-full"
+                              classNames={{
+                                trigger: "min-h-12",
+                                value: "text-lg"
+                              }}
+                              renderValue={(items) => {
+                                if (items.length === 0) return "";
+                                return `第 ${items[0].key} 章`;
+                              }}
+                            >
+                              {availableStudentChapters.map((chapter) => (
+                                <SelectItem key={chapter}>
+                                  第 {chapter} 章
+                                </SelectItem>
+                              ))}
+                            </Select>
+                          </div>
+                          
+                          <Button
+                            color="primary"
+                            size="lg"
+                            className="px-8"
+                            isDisabled={!selectedStudentChapter}
+                            onPress={() => {
+                              if (selectedStudentChapter) {
+                                loadStudentQuestions(selectedQuestionBank, selectedStudentChapter);
+                              }
                             }}
                           >
-                            <div className="text-center pointer-events-none">
-                              <h3 className="text-lg font-semibold mb-2">第 {chapter} 章</h3>
-                              <div className="w-full bg-primary text-primary-foreground rounded-medium px-3 py-1.5 text-sm font-medium">
-                                開始練習
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            開始練習
+                          </Button>
+                          
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center p-8">
@@ -3030,7 +3074,7 @@ export default function DocsPage() {
                     
                     {!isLoading && teacherChapterViewMode === 'chapterSelection' && (
                       /* 老師/助教章節選擇頁面 */
-                      <div className="max-w-4xl mx-auto">
+                      <div className="max-w-2xl mx-auto">
                         <div className="text-center mb-8">
                           <h1 className="text-3xl font-bold mb-4">
                             {studentQuestionBanks.find(bank => bank.key === teacherSelectedQuestionBank)?.label || "選擇章節"}
@@ -3052,28 +3096,56 @@ export default function DocsPage() {
                         </div>
                         
                         {teacherAvailableChapters.length > 0 ? (
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {teacherAvailableChapters.map((chapter) => (
-                              <div
-                                key={chapter}
-                                className="bg-content1 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary select-none"
-                                style={{ userSelect: 'none' }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('老師章節卡片被點擊:', chapter);
-                                  setTeacherSelectedChapter(chapter);
-                                  loadTeacherQuestions(teacherSelectedQuestionBank, chapter);
+                          <div className="bg-content1 shadow-lg rounded-lg p-6">
+                            <div className="flex flex-col items-center gap-6">
+                              <div className="w-full max-w-md">
+                                <label className="block text-lg font-medium mb-3 text-center">
+                                  選擇章節
+                                </label>
+                                <Select
+                                  size="lg"
+                                  placeholder="請選擇要瀏覽的章節"
+                                  selectionMode="single"
+                                  selectedKeys={teacherSelectedChapter ? [teacherSelectedChapter] : []}
+                                  onSelectionChange={(keys) => {
+                                    const selected = Array.from(keys)[0] as string;
+                                    if (selected) {
+                                      setTeacherSelectedChapter(selected);
+                                    }
+                                  }}
+                                  className="w-full"
+                                  classNames={{
+                                    trigger: "min-h-12",
+                                    value: "text-lg"
+                                  }}
+                                  renderValue={(items) => {
+                                    if (items.length === 0) return "";
+                                    return `第 ${items[0].key} 章`;
+                                  }}
+                                >
+                                  {teacherAvailableChapters.map((chapter) => (
+                                    <SelectItem key={chapter}>
+                                      第 {chapter} 章
+                                    </SelectItem>
+                                  ))}
+                                </Select>
+                              </div>
+                              
+                              <Button
+                                color="primary"
+                                size="lg"
+                                className="px-8"
+                                isDisabled={!teacherSelectedChapter}
+                                onPress={() => {
+                                  if (teacherSelectedChapter) {
+                                    loadTeacherQuestions(teacherSelectedQuestionBank, teacherSelectedChapter);
+                                  }
                                 }}
                               >
-                                <div className="text-center pointer-events-none">
-                                  <h3 className="text-lg font-semibold mb-2">第 {chapter} 章</h3>
-                                  <div className="w-full bg-primary text-primary-foreground rounded-medium px-3 py-1.5 text-sm font-medium">
-                                    瀏覽題目
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                瀏覽題目
+                              </Button>
+                              
+                            </div>
                           </div>
                         ) : (
                           <div className="text-center p-8">
