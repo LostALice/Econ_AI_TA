@@ -110,7 +110,7 @@ class SetupMYSQL:
             self.logger.debug(f"Debug Mode: {self._DEBUG}")
             if self._DEBUG in ["True", "true"]:
                 self.logger.warning("Dropping database")
-                self.cursor.execute(f"DROP DATABASE {self._DATABASE}")
+                self.cursor.execute(f"DROP SCHEMA {self._DATABASE}")
                 self.connection.commit()
                 self.create_database()
             else:
@@ -251,15 +251,27 @@ class SetupMYSQL:
             """
         )
 
-        # exams table
+        # exam table
         self.cursor.execute(
             """
             CREATE TABLE exams (
                 exam_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_name VARCHAR(255) NOT NULL,
-                exam_type VARCHAR(50) NOT NULL,
+                exam_type VARCHAR(255) NOT NULL,
                 exam_date DATETIME NOT NULL,
                 exam_duration INT NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT 1
+            );
+            """
+        )
+
+        # question table
+        self.cursor.execute(
+            """
+            -- Table: question
+            CREATE TABLE question (
+                question_id INT AUTO_INCREMENT PRIMARY KEY,
+                question_text TEXT,
                 enabled TINYINT(1) NOT NULL DEFAULT 1
             );
             """
@@ -269,38 +281,52 @@ class SetupMYSQL:
         self.cursor.execute(
             """
             CREATE TABLE exam_questions (
-                question_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
-                question_text TEXT NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT 1,
-                -- question_images VARCHAR(36) DEFAULT NULL,
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
-            );
-            """
-        )
-
-        # exam_images table
-        self.cursor.execute(
-            """
-            CREATE TABLE exam_images (
                 question_id INT NOT NULL,
-                question_images CHAR(36) NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT 1,
-                PRIMARY KEY (question_id, question_images),
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+                PRIMARY KEY (exam_id, question_id),
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id)
             );
             """
         )
 
-        # exam_options table
+        # question_image table
         self.cursor.execute(
             """
-            CREATE TABLE exam_options (
+            -- Table: question_image
+            CREATE TABLE question_image (
+                question_id INT NOT NULL,
+                image_uuid CHAR(36) NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (question_id, image_uuid),
+                FOREIGN KEY (question_id) REFERENCES question(question_id)
+            );
+            """
+        )
+
+        # option table
+        self.cursor.execute(
+            """
+            -- Table: option
+            CREATE TABLE `option` (
                 option_id INT AUTO_INCREMENT PRIMARY KEY,
-                question_id INT NOT NULL,
                 option_text TEXT NOT NULL,
                 is_correct TINYINT(1) NOT NULL DEFAULT 0,
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+                enabled TINYINT(1) NOT NULL DEFAULT 1
+            );
+            """
+        )
+
+        # question_option table
+        self.cursor.execute(
+            """
+            -- Table: question_option (linking table)
+            CREATE TABLE question_option (
+                question_id INT NOT NULL,
+                option_id INT NOT NULL,
+                PRIMARY KEY (question_id, option_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (option_id) REFERENCES `option`(option_id)
             );
             """
         )
@@ -308,29 +334,33 @@ class SetupMYSQL:
         # exam_submission table
         self.cursor.execute(
             """
+            -- Table: exam_submission
             CREATE TABLE exam_submission (
                 submission_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
                 user_id INT NOT NULL,
-                score INT NOT NULL DEFAULT 0,
-                score_percentage DECIMAL(4, 2) NOT NULL DEFAULT 0.0,
+                score INT NOT NULL,
+                regraded_score INT DEFAULT NULL,
                 submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
-                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+                FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
             );
             """
         )
+
         # exam_submission_answer table
         self.cursor.execute(
             """
-            CREATE TABLE exam_submission_answers (
-                submitted_answer_id INT AUTO_INCREMENT PRIMARY KEY,
+            -- Table: exam_submission_answer
+            CREATE TABLE exam_submission_answer (
                 submission_id INT NOT NULL,
                 question_id INT NOT NULL,
                 selected_option_id INT DEFAULT NULL,
+                is_correct_at_submission TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (submission_id, question_id),
                 FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id),
-                FOREIGN KEY (selected_option_id) REFERENCES exam_options(option_id)
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (selected_option_id) REFERENCES `option`(option_id)
             );
             """
         )
@@ -340,7 +370,7 @@ class SetupMYSQL:
             """
             CREATE TABLE class (
                 class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                classname VARCHAR(15) NOT NULL DEFAULT "New Class",
+                classname VARCHAR(255) NOT NULL DEFAULT "New Class",
                 enabled TINYINT(1) NOT NULL DEFAULT 1
             );
             """
@@ -353,6 +383,7 @@ class SetupMYSQL:
                 class_id INT NOT NULL,
                 user_id INT NOT NULL,
                 role_id INT UNSIGNED NOT NULL,
+                PRIMARY KEY (class_id, user_id),
                 FOREIGN KEY (class_id) REFERENCES class(class_id),
                 FOREIGN KEY (user_id) REFERENCES `user`(user_id),
                 FOREIGN KEY (role_id) REFERENCES role(role_id)
@@ -366,6 +397,7 @@ class SetupMYSQL:
             CREATE TABLE class_exam (
                 class_id INT NOT NULL,
                 exam_id INT NOT NULL,
+                PRIMARY KEY (class_id, exam_id),
                 FOREIGN KEY (class_id) REFERENCES class(class_id),
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
             );
@@ -378,7 +410,7 @@ class SetupMYSQL:
             CREATE TABLE tag (
                 tag_id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(15) NOT NULL UNIQUE,
-                description VARCHAR(255) NOT NULL UNIQUE,
+                description VARCHAR(255) NOT NULL,
                 enabled TINYINT(1) NOT NULL DEFAULT TRUE
             );
             """
@@ -388,12 +420,12 @@ class SetupMYSQL:
         self.cursor.execute(
             """
             CREATE TABLE question_tag (
-                question_tag_id INT AUTO_INCREMENT PRIMARY KEY,
                 question_id INT NOT NULL,
                 tag_id INT NOT NULL,
                 enabled TINYINT(1) NOT NULL DEFAULT TRUE,
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES tag(tag_id) ON DELETE CASCADE
+                PRIMARY KEY (question_id, tag_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (tag_id) REFERENCES tag(tag_id)
             );
             """
         )

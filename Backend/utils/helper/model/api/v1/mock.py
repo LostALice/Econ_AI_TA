@@ -1,10 +1,11 @@
 # Code by AkinoAlice@TyrantRey
 
 from pydantic import BaseModel
-
+from datetime import datetime
 from typing import List, Literal
 
 ExamType = Literal["basic", "cse"]
+MOCK_TYPE = Literal["basic", "cse", "all"]
 
 
 class ExamOptionModel(BaseModel):
@@ -33,10 +34,19 @@ class ExamsInfoModel(BaseModel):
     exam_questions: List[ExamQuestionModel] | None
 
 
-class CreateNewExamParamsModel(BaseModel):
+class ExamParamsModel(BaseModel):
+    class_id: int
     exam_name: str
     exam_type: ExamType
-    exam_date: str
+    exam_date: datetime
+    exam_duration: int
+
+
+class CreateNewExamParamsModel(BaseModel):
+    class_id: int
+    exam_name: str
+    exam_type: ExamType
+    exam_date: datetime
     exam_duration: int
 
 
@@ -106,3 +116,32 @@ class TagModel(BaseModel):
     tag_id: int
     name: str
     description: str
+
+
+class ExamsModel(BaseModel):
+    exam_id: int
+    exam_name: str
+    exam_type: ExamType
+    exam_date: datetime
+    # Duration in minutes
+    exam_duration: int
+
+
+class QuestionModel(BaseModel):
+    question_id: int
+    question_text: str
+
+
+class QuestionImageModel(BaseModel):
+    question_id: int
+    image_uuid: str
+
+
+class QuestionImageBase64Model(QuestionImageModel):
+    image_data_base64: str
+
+
+class OptionModel(BaseModel):
+    option_id: int
+    option_text: str
+    is_correct: bool
