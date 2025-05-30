@@ -195,24 +195,6 @@ tail -f mysql_backend_clean/app.log
 python mysql_backend_clean/db_connection.py
 ```
 
-### 預設測試帳號
-
-系統預設提供以下測試帳號：
-
-```
-教師帳號:
-  Email: teacher@fcu.edu.tw
-  Password: teacher123
-
-助教帳號:
-  Email: ta@fcu.edu.tw  
-  Password: ta123
-
-學生帳號:
-  Email: student@fcu.edu.tw
-  Password: student123
-```
-
 ### 程式碼結構
 
 ```
