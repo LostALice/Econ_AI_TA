@@ -50,6 +50,34 @@ import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFi
 
 import { validateQuestion, validateQuestions, repairQuestions } from "@/utils/dataValidation";
 
+// 統一的 Toast 消息管理
+const TOAST_MESSAGES = {
+  SUCCESS: {
+    LOAD: "載入成功",
+    UPLOAD: "上傳成功", 
+    SAVE: "儲存成功",
+    DELETE: "刪除成功",
+    UPDATE: "更新成功",
+    ADD: "新增成功"
+  },
+  ERROR: {
+    LOAD: "載入失敗，請稍後再試",
+    UPLOAD: "上傳失敗",
+    OPERATION: "操作失敗",
+    FORMAT: "格式不支援，請使用 Excel 檔案"
+  },
+  WARNING: {
+    NO_CONTENT: "暫無可用內容",
+    FILE_NOT_FOUND: "找不到檔案",
+    NO_CHAPTER: "請選擇章節",
+    STORAGE_FULL: "存儲空間不足"
+  },
+  INFO: {
+    PROCESSING: "處理中...",
+    NO_CHANGES: "無需同步"
+  }
+};
+
 // 用於在本地存儲模擬文件列表
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
 const LOCAL_STORAGE_DOCS_CONTENT_KEY = "mock_docs_content";
@@ -430,7 +458,7 @@ export default function DocsPage() {
         setFileList(dbDocs);
         addToast({
           color: "success",
-          title: "文件載入成功",
+          title: TOAST_MESSAGES.SUCCESS.LOAD,
           description: `已成功載入 ${dbDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
         });
       } else {
@@ -441,7 +469,7 @@ export default function DocsPage() {
           setFileList(localDocs);
           addToast({
             color: "success",
-            title: "文件載入成功 (本地緩存)",
+            title: TOAST_MESSAGES.SUCCESS.LOAD,
             description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
           });
         } else {
@@ -449,7 +477,7 @@ export default function DocsPage() {
           setFileList([]);
           addToast({
             color: "primary",
-            title: "尚無文件",
+            title: TOAST_MESSAGES.WARNING.NO_CONTENT,
             description: `請上傳${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
           });
         }
@@ -464,7 +492,7 @@ export default function DocsPage() {
         setFileList(localDocs);
         addToast({
           color: "warning",
-          title: "資料庫連接失敗",
+          title: TOAST_MESSAGES.WARNING.FILE_NOT_FOUND,
           description: "使用本地緩存資料替代",
         });
       } else {
@@ -472,7 +500,7 @@ export default function DocsPage() {
         setFileList([]);
         addToast({
           color: "danger",
-          title: "載入失敗",
+          title: TOAST_MESSAGES.ERROR.LOAD,
           description: "無法載入文件列表，請稍後再試",
         });
       }
@@ -508,7 +536,7 @@ export default function DocsPage() {
         if (error instanceof DOMException && error.name === 'QuotaExceededError') {
           addToast({
             color: "warning",
-            title: "本地存儲空間不足",
+            title: TOAST_MESSAGES.WARNING.STORAGE_FULL,
             description: "檔案仍會正常上傳到資料庫，本地備份已跳過。",
           });
         }
@@ -994,8 +1022,8 @@ export default function DocsPage() {
       if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
         addToast({
           color: "warning",
-          title: "格式不支援",
-          description: "僅支援 Excel 檔案 (.xlsx, .xls)",
+          title: TOAST_MESSAGES.ERROR.FORMAT,
+          description: "",
         });
         setIsLoading(false);
         return;
@@ -1004,8 +1032,8 @@ export default function DocsPage() {
       // 提供更詳細的上傳狀態提示
       addToast({
         color: "primary",
-        title: "處理中",
-        description: `正在上傳並處理 Excel 檔案，其中的圖片將被自動提取...`,
+        title: TOAST_MESSAGES.INFO.PROCESSING,
+        description: "",
       });
       
       // 上傳檔案至後端 MySQL 資料庫
@@ -1054,7 +1082,7 @@ export default function DocsPage() {
             if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
               addToast({
                 color: "warning",
-                title: "存儲空間不足",
+                title: TOAST_MESSAGES.WARNING.STORAGE_FULL,
                 description: "檔案已上傳成功，但無法本地備份。建議點擊「清理存儲空間」按鈕。",
               });
             }
@@ -1078,7 +1106,7 @@ export default function DocsPage() {
         if (hasImages) {
           addToast({
             color: "success",
-            title: "圖片處理成功",
+            title: TOAST_MESSAGES.SUCCESS.UPLOAD,
             description: `檔案中的圖片已成功提取並與題目關聯`,
           });
         }
@@ -1107,7 +1135,7 @@ export default function DocsPage() {
       
       addToast({
         color: "success",
-        title: "上傳成功",
+        title: TOAST_MESSAGES.SUCCESS.UPLOAD,
         description: `文件已成功上傳至資料庫，包含 ${newFile.questionCount} 個題目`,
       });
       
@@ -1290,8 +1318,8 @@ export default function DocsPage() {
         } else {
           addToast({
             color: "warning",
-            title: "檔案不存在",
-            description: "找不到此檔案的內容",
+            title: TOAST_MESSAGES.WARNING.FILE_NOT_FOUND,
+            description: "",
           });
         }
         
@@ -1304,8 +1332,8 @@ export default function DocsPage() {
       console.error("Error handling document click:", error);
       addToast({
         color: "danger",
-        title: "載入失敗",
-        description: "無法開啟文件，請稍後再試",
+        title: TOAST_MESSAGES.ERROR.LOAD,
+        description: "",
       });
     }
   };
@@ -1356,7 +1384,7 @@ export default function DocsPage() {
       
       addToast({
         color: "success",
-        title: "資料庫同步成功",
+        title: TOAST_MESSAGES.SUCCESS.UPDATE,
         description: `已更新 ${result.updated_count} 個題目，刪除 ${result.deleted_count} 個題目`
       });
       
@@ -1364,7 +1392,7 @@ export default function DocsPage() {
       console.error("同步資料庫失敗:", error);
       addToast({
         color: "danger",
-        title: "同步失敗",
+        title: TOAST_MESSAGES.ERROR.OPERATION,
         description: "無法將修改同步到資料庫，但已保存在本地"
       });
     } finally {
@@ -1413,7 +1441,7 @@ export default function DocsPage() {
 
     addToast({
       color: "success",
-      title: "更新成功",
+      title: TOAST_MESSAGES.SUCCESS.UPDATE,
       description: "題目已成功更新",
     });
   };  // 刪除題目
@@ -1470,7 +1498,7 @@ export default function DocsPage() {
 
     addToast({
       color: "success",
-      title: "刪除成功",
+      title: TOAST_MESSAGES.SUCCESS.DELETE,
       description: "題目已成功刪除",
     });
   };
@@ -1486,7 +1514,7 @@ export default function DocsPage() {
         if (modifiedQuestions.length === 0) {
         addToast({
           color: "primary",
-          title: "無需同步",
+          title: TOAST_MESSAGES.INFO.NO_CHANGES,
           description: "沒有檢測到任何修改"
         });
         setIsLoading(false);
@@ -1515,7 +1543,7 @@ export default function DocsPage() {
       console.error("保存所有修改失敗:", error);
       addToast({
         color: "danger",
-        title: "保存失敗",
+        title: TOAST_MESSAGES.ERROR.OPERATION,
         description: "無法將所有修改保存到資料庫"
       });
     } finally {
@@ -1585,7 +1613,7 @@ export default function DocsPage() {
 
     addToast({
       color: "success",
-      title: "新增成功",
+      title: TOAST_MESSAGES.SUCCESS.ADD,
       description: "題目已成功新增",
     });
   };
@@ -1632,7 +1660,7 @@ export default function DocsPage() {
           
           addToast({
             color: "success",
-            title: "更新成功",
+            title: TOAST_MESSAGES.SUCCESS.UPDATE,
             description: "文件名稱已成功更新",
           });
         }
@@ -1696,7 +1724,7 @@ export default function DocsPage() {
             
             addToast({
               color: "success",
-              title: "替換成功",
+              title: TOAST_MESSAGES.SUCCESS.UPDATE,
               description: "文件內容已成功替換",
             });
             
@@ -1831,7 +1859,7 @@ export default function DocsPage() {
       
       addToast({
         color: "success",
-        title: "刪除成功",
+        title: TOAST_MESSAGES.SUCCESS.DELETE,
         description: successMessage,
       });
       
@@ -2206,8 +2234,8 @@ export default function DocsPage() {
     if (!chapter) {
       addToast({
         color: "warning",
-        title: "請選擇章節",
-        description: "請先選擇要練習的章節",
+        title: TOAST_MESSAGES.WARNING.NO_CHAPTER,
+        description: "",
       });
       return;
     }
@@ -2263,15 +2291,15 @@ export default function DocsPage() {
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "success",
-            title: "題目載入成功",
-            description: `已載入 ${bankLabel} 第 ${chapter} 章共 ${chapterQuestions.length} 個題目 (來自 ${successFiles}/${totalFiles} 個檔案)`,
+            title: TOAST_MESSAGES.SUCCESS.LOAD,
+            description: `${chapterQuestions.length} 個題目`,
           });
         } else {
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "warning",
-            title: "暫無題目",
-            description: `第 ${chapter} 章目前沒有可用的${bankLabel}題目`,
+            title: TOAST_MESSAGES.WARNING.NO_CONTENT,
+            description: "",
           });
           
           setCurrentContent(null);
@@ -2328,15 +2356,15 @@ export default function DocsPage() {
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
             addToast({
               color: "success",
-              title: "題目載入成功 (本地緩存)",
-              description: `已載入 ${bankLabel} 第 ${chapter} 章共 ${chapterQuestions.length} 個題目 (來自 ${successFiles}/${totalFiles} 個檔案)`,
+              title: TOAST_MESSAGES.SUCCESS.LOAD,
+              description: `${chapterQuestions.length} 個題目`,
             });
           } else {
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
             addToast({
               color: "warning",
-              title: "暫無題目",
-              description: `第 ${chapter} 章目前沒有可用的本地${bankLabel}題目`,
+              title: TOAST_MESSAGES.WARNING.NO_CONTENT,
+              description: "",
             });
             
             setCurrentContent(null);
@@ -2346,8 +2374,8 @@ export default function DocsPage() {
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "primary",
-            title: "暫無題目",
-            description: `目前沒有可用的${bankLabel}題目`,
+            title: TOAST_MESSAGES.WARNING.NO_CONTENT,
+            description: "",
           });
           
           // 如果沒有題目，回到章節選擇頁面
@@ -2360,8 +2388,8 @@ export default function DocsPage() {
       const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
       addToast({
         color: "danger",
-        title: "載入失敗",
-        description: `無法載入${bankLabel}第 ${chapter} 章題目，請稍後再試`,
+        title: TOAST_MESSAGES.ERROR.LOAD,
+        description: "",
       });
       
       // 載入失敗時回到章節選擇頁面
@@ -2549,8 +2577,8 @@ export default function DocsPage() {
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "success",
-            title: "題目載入成功",
-            description: `已載入 ${bankLabel} 第 ${chapter} 章共 ${chapterQuestions.length} 個題目 (來自 ${successFiles}/${totalFiles} 個檔案)`,
+            title: TOAST_MESSAGES.SUCCESS.LOAD,
+            description: `${chapterQuestions.length} 個題目`,
           });
         } else {
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
@@ -2614,8 +2642,8 @@ export default function DocsPage() {
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
             addToast({
               color: "success",
-              title: "題目載入成功 (本地緩存)",
-              description: `已載入 ${bankLabel} 第 ${chapter} 章共 ${chapterQuestions.length} 個題目 (來自 ${successFiles}/${totalFiles} 個檔案)`,
+              title: TOAST_MESSAGES.SUCCESS.LOAD,
+              description: `${chapterQuestions.length} 個題目`,
             });
           } else {
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
@@ -2665,9 +2693,9 @@ export default function DocsPage() {
         {isUnsigned ? (
           <div className="flex items-center justify-center h-[90vh]">
             <div className="flex flex-col justify-center items-center h-full w-3/6 gap-5">
-              <h1 className="text-3xl font-bold mb-4">文件管理系統</h1>
+              <h1 className="text-3xl font-bold mb-4">題庫</h1>
               <p className="text-lg text-default-600 mb-6 text-center">
-                請先登入以使用文件管理功能
+                請先登入以閱覽題庫功能
               </p>
               <Button
                 className="border text-medium border-none"
@@ -2742,10 +2770,9 @@ export default function DocsPage() {
                       <h1 className="text-3xl font-bold mb-4">
                         {studentQuestionBanks.find(bank => bank.key === selectedQuestionBank)?.label || "選擇章節"}
                       </h1>
-                      <p className="text-lg text-default-600">請選擇您要練習的章節</p>
                       <Button 
                         color="default" 
-                        variant="light" 
+                        variant="solid" 
                         size="sm"
                         className="mt-2"
                         onPress={() => {
@@ -2815,8 +2842,8 @@ export default function DocsPage() {
                         <p className="text-xl font-medium mb-2">暫無可用章節</p>
                         <p className="text-default-500 mb-4">此題庫目前沒有可用的章節</p>
                         <Button 
-                          color="primary" 
-                          variant="light"
+                          color="default" 
+                          variant="solid"
                           onPress={() => setStudentViewMode('bankSelection')}
                         >
                           返回題庫選擇
@@ -2835,7 +2862,7 @@ export default function DocsPage() {
                         </h2>
                         <Button 
                           color="default" 
-                          variant="light" 
+                          variant="solid" 
                           size="sm"
                           onPress={() => {
                             setStudentViewMode('chapterSelection');
@@ -2857,8 +2884,8 @@ export default function DocsPage() {
                     <p className="text-xl font-medium mb-2">暫無可用題目</p>
                     <p className="text-default-500 mb-4">請聯繫老師或助教上傳題目</p>
                     <Button 
-                      color="primary" 
-                      variant="light"
+                      color="default" 
+                      variant="solid"
                       onPress={() => setStudentViewMode('chapterSelection')}
                     >
                       返回章節選擇
@@ -3079,10 +3106,9 @@ export default function DocsPage() {
                           <h1 className="text-3xl font-bold mb-4">
                             {studentQuestionBanks.find(bank => bank.key === teacherSelectedQuestionBank)?.label || "選擇章節"}
                           </h1>
-                          <p className="text-lg text-default-600">請選擇您要瀏覽的章節</p>
                           <Button 
                             color="default" 
-                            variant="light" 
+                            variant="solid" 
                             size="sm"
                             className="mt-2"
                             onPress={() => {
