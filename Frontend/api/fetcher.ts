@@ -20,16 +20,33 @@ export async function fetcher(
     },
   };
   const response = await fetch(url, { ...defaultOptions, ...options });
-  const data = response.json();
+  const data = await response.json();
 
-  if (response.status >= 400) {
+  if (response.status >= 500) {
+    // deleteCookie("token");
+    // deleteCookie("role");
+
+    addToast({
+      title: response.status,
+      description: "Internal Server Error",
+      color: "warning",
+    });
+    return data;
+  } else if (response.status == 422) {
+    addToast({
+      title: response.status,
+      description: response.statusText,
+      color: "warning",
+    });
+    return data;
+  } else if (response.status >= 400) {
     deleteCookie("token");
     deleteCookie("role");
 
     Router.replace("/login");
     addToast({
       title: response.status,
-      description: "Session Timeout, Please re-login",
+      description: response.statusText,
       color: "warning",
     });
     return data;

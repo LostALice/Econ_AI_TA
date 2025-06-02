@@ -42,6 +42,15 @@ class ExamParamsModel(BaseModel):
     exam_duration: int
 
 
+class OptionParamsModel(BaseModel):
+    option_text: str
+    is_correct: bool
+
+
+class ImageParamsModel(BaseModel):
+    base64_image: str
+
+
 class CreateNewExamParamsModel(BaseModel):
     class_id: int
     exam_name: str

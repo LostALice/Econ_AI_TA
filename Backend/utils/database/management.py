@@ -114,6 +114,34 @@ class ManagementDatabaseController:
             for class_ in data
         ]
 
+    def get_class_by_user_id(self, user_id: int) -> list[ClassModel]:
+        self.database.cursor.execute(
+            """
+            SELECT
+                c.class_id,
+                c.classname
+            FROM
+                class_user AS cu
+            JOIN 
+                class AS c ON c.class_id = cu.class_id
+            WHERE
+                user_id = %s
+            GROUP BY
+                c.class_id;""",
+            (user_id,),
+        )
+        self.database.sql_query_logger()
+        data = self.database.cursor.fetchall()
+
+        self.logger.debug(data)
+        return [
+            ClassModel(
+                class_id=class_["class_id"],
+                classname=class_["classname"],
+            )
+            for class_ in data
+        ]
+
     def new_class(self, classname: str) -> int:
         self.database.cursor.execute(
             """

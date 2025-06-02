@@ -14,6 +14,8 @@ from Backend.utils.helper.model.api.v1.mock import (
     QuestionModel,
     OptionModel,
     QuestionImageBase64Model,
+    OptionParamsModel,
+    ImageParamsModel,
 )
 from Backend.utils.helper.api.dependency import (
     require_student,
@@ -61,7 +63,7 @@ async def get_mock_info(mock_type: MOCK_TYPE, payload: UserPayload) -> list[Exam
     Endpoint to get mock exam lists
 
     Returns:
-        Union[list[ExamsInfoModel], ExamsInfoModel]: List of mock exam lists or single mock exam list.
+        list[ExamsModel]: List of mock exam lists or single mock exam list.
     """
     logger.debug("Get mock exam lists")
     user_id = int(payload.user_id)
@@ -94,7 +96,7 @@ async def create_exam(exam_prams: ExamParamsModel) -> int:
     return new_exam_id
 
 
-@router.post("/new/exam/{exam_id}/question")
+@router.post("/new/exam/{exam_id}/question/")
 async def create_exam_question(exam_id: int, question_text: str) -> int:
     question_id = mysql_client.insert_new_exam_question(
         exam_id=exam_id, question_text=question_text
@@ -106,10 +108,12 @@ async def create_exam_question(exam_id: int, question_text: str) -> int:
     return question_id
 
 
-@router.post("/new/exam/{exam_id}/question/{question_id}/option")
+@router.post("/new/exam/{exam_id}/question/{question_id}/option/")
 async def create_exam_question_option(
-    exam_id: int, question_id: int, option_text: str, is_correct: bool
+    exam_id: int, question_id: int, option_prams: OptionParamsModel
 ) -> int:
+    option_text = option_prams.option_text
+    is_correct = option_prams.is_correct
     option_id = mysql_client.insert_new_exam_question_option(
         question_id=question_id, option_text=option_text, is_correct=is_correct
     )
@@ -120,18 +124,21 @@ async def create_exam_question_option(
     return option_id
 
 
-@router.post("/new/exam/{exam_id}/question/{question_id}/image")
+@router.post("/new/exam/{exam_id}/question/{question_id}/image/")
 async def create_exam_question_image(
-    exam_id: int, question_id: int, base64_image: str
+    exam_id: int, question_id: int, base64_image: ImageParamsModel
 ) -> str:
     image_uuid = str(uuid4())
-    image_path = (
-        Path("./images/mock/") / str(exam_id) / str(question_id) / (image_uuid + ".png")
-    )
-
+    image_store_path = Path("./images/mock/") / str(exam_id) / str(question_id)
+    image_path = image_store_path / (str(image_uuid) + ".png")
+    
+    logger.debug(image_path)
+    logger.debug(image_store_path)
+    logger.debug(base64_image)
+    
     try:
-        image_path.mkdir(parents=True, exist_ok=True)
-        image_data = base64.b64decode(base64_image)
+        image_store_path.mkdir(parents=True, exist_ok=True)
+        image_data = base64.b64decode(base64_image.base64_image)
         with image_path.open("wb") as image_file:
             image_file.write(image_data)
         success = mysql_client.insert_new_exam_question_image(
@@ -155,24 +162,24 @@ async def create_exam_question_image(
     return image_uuid
 
 
-@router.patch("/disable/exam/{exam_id}")
+@router.patch("/disable/exam/{exam_id}/")
 async def disable_exam(exam_id: int) -> bool:
     return mysql_client.disable_exam(exam_id=exam_id)
 
 
-@router.patch("/disable/exam/{exam_id}/question/{question_id}")
+@router.patch("/disable/exam/{exam_id}/question/{question_id}/")
 async def disable_exam_question(exam_id: int, question_id: int) -> bool:
     return mysql_client.disable_exam_question(question_id=question_id)
 
 
-@router.patch("/disable/exam/{exam_id}/question/{question_id}/option/{option_id}")
+@router.patch("/disable/exam/{exam_id}/question/{question_id}/option/{option_id}/")
 async def disable_exam_question_option(
     exam_id: int, question_id: int, option_id: int
 ) -> bool:
     return mysql_client.disable_exam_question_option(option_id=option_id)
 
 
-@router.patch("/disable/exam/{exam_id}/question/{question_id}/image/{image_uuid}")
+@router.patch("/disable/exam/{exam_id}/question/{question_id}/image/{image_uuid}/")
 async def disable_exam_question_image(
     exam_id: int, question_id: int, image_uuid: str
 ) -> bool:
@@ -186,7 +193,7 @@ async def disable_exam_question_image(
     return success
 
 
-@router.patch("/modify/exam/{exam_id}")
+@router.patch("/modify/exam/{exam_id}/")
 async def modify_exam(exam_id: int, exam_prams: ExamParamsModel) -> bool:
     logger.debug((exam_id, exam_prams))
     success = mysql_client.modify_exam(
@@ -202,7 +209,7 @@ async def modify_exam(exam_id: int, exam_prams: ExamParamsModel) -> bool:
     return success
 
 
-@router.patch("/modify/exam/{exam_id}/question/{question_id}")
+@router.patch("/modify/exam/{exam_id}/question/{question_id}/")
 async def modify_exam_question(
     exam_id: int, question_id: int, question_text: str
 ) -> int:
@@ -216,10 +223,12 @@ async def modify_exam_question(
     return success
 
 
-@router.patch("/modify/exam/{exam_id}/question/{question_id}/option/{option_id}")
+@router.patch("/modify/exam/{exam_id}/question/{question_id}/option/{option_id}/")
 async def modify_exam_question_option(
-    exam_id: int, question_id: int, option_id: int, option_text: str, is_correct: bool
+    exam_id: int, question_id: int, option_id: int, option_prams: OptionParamsModel
 ) -> bool:
+    option_text = option_prams.option_text
+    is_correct = option_prams.is_correct
     success = mysql_client.modify_exam_question_option(
         option_id=option_id,
         option_text=option_text,
@@ -231,7 +240,7 @@ async def modify_exam_question_option(
     return success
 
 
-@router.patch("/modify/exam/{exam_id}/question/{question_id}/image/{image_uuid}")
+@router.patch("/modify/exam/{exam_id}/question/{question_id}/image/{image_uuid}/")
 async def modify_exam_question_image(
     exam_id: int, question_id: int, image_uuid: str, base64_image: str
 ) -> bool:
@@ -246,17 +255,17 @@ async def modify_exam_question_image(
     return success
 
 
-@router.get("/exam/{exam_id}/question")
+@router.get("/exam/{exam_id}/question/")
 async def get_exam_question(exam_id: int) -> list[QuestionModel]:
     return mysql_client.query_exam_question(exam_id=exam_id)
 
 
-@router.get("/exam/{exam_id}/question/{question_id}/option")
+@router.get("/exam/{exam_id}/question/{question_id}/option/")
 async def get_exam_question_option(exam_id: int, question_id: int) -> list[OptionModel]:
     return mysql_client.query_question_option(exam_id=exam_id, question_id=question_id)
 
 
-@router.get("/exam/{exam_id}/question/{question_id}/image")
+@router.get("/exam/{exam_id}/question/{question_id}/image/")
 async def get_exam_question_image(
     exam_id: int, question_id: int
 ) -> list[QuestionImageBase64Model]:
@@ -293,7 +302,7 @@ async def get_tag_list() -> list[TagModel]:
     return tag_list
 
 
-@router.get("/tag/{tag_id}")
+@router.get("/tag/{tag_id}/")
 async def get_tag(tag_id: int) -> TagModel:
     tag = mysql_client.query_tag(tag_id=tag_id)
 
@@ -309,12 +318,12 @@ async def create_tag(tag_name: str, tag_description: str) -> bool:
     return mysql_client.create_tag(tag_name=tag_name, tag_description=tag_description)
 
 
-@router.post("/tag/add/{question_id}")
+@router.post("/tag/add/{question_id}/")
 async def add_tag(tag_id: int, question_id: int) -> bool:
     return mysql_client.add_question_tag(question_id=question_id, tag_id=tag_id)
 
 
-@router.delete("/tag/remove/{question_id}")
+@router.delete("/tag/remove/{question_id}/")
 async def remove_tag(tag_id: int, question_id: int) -> bool:
     return mysql_client.remove_question_tag(question_id=question_id, tag_id=tag_id)
 

@@ -106,7 +106,7 @@ async def verify_jwt_token(token: str = Cookie(None)) -> JWTPayload:
         raise HTTPException(status_code=401, detail="Invalid authentication token")
     except Exception as e:
         logger.error(f"Unexpected error during token verification: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=401, detail="Internal server error")
 
 
 async def require_role(

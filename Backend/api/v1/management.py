@@ -6,7 +6,7 @@ from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.database.management import ManagementDatabaseController
 from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.model.api.v1.management import UserModel, ClassModel
-from Backend.utils.helper.api.dependency import require_teacher
+from Backend.utils.helper.api.dependency import require_teacher, UserPayload
 
 
 # development
@@ -46,6 +46,14 @@ def get_user_list() -> list[UserModel]:
 @router.get("/class-list/")
 def get_class_list() -> list[ClassModel]:
     data = management_database_controller.get_class_list()
+    logger.debug(data)
+    return data if data else []
+
+
+@router.get("/class-list/user-id/")
+def get_class_list_by_user_id(user_payload: UserPayload) -> list[ClassModel]:
+    user_id = user_payload.user_id
+    data = management_database_controller.get_class_by_user_id(user_id=user_id)
     logger.debug(data)
     return data if data else []
 

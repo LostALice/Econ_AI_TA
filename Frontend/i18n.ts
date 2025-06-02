@@ -285,6 +285,10 @@ export const LanguageTable = {
   },
   mock: {
     index: {
+      failToFetchExamList: {
+        zh: "無法取得考試清單",
+        en: "Failed to fetch exam list"
+      },
       basic: {
         zh: "模擬大一經濟學原理考試",
         en: "Basic of Economics",
@@ -348,8 +352,8 @@ export const LanguageTable = {
         en: "Exam Title:",
       },
       examDuration: {
-        zh: "模擬考時長:",
-        en: "Exam duration:",
+        zh: "模擬考時長(分):",
+        en: "Exam duration(min):",
       },
       typeOfExam: {
         zh: "模擬考類型:",
@@ -451,6 +455,10 @@ export const LanguageTable = {
         zh: "新題目",
         en: "New Question",
       },
+      newTempQuestionOption: {
+        zh: "新選項",
+        en: "New Option",
+      },
       examCreateSuccess: {
         zh: "模擬考建立成功",
         en: "Mock exam created successfully.",
@@ -467,6 +475,66 @@ export const LanguageTable = {
         zh: "模擬考建立失失敗",
         en: "Mock exam creation failed.",
       },
+      examDeleteSuccess: {
+        zh: "考試刪除成功",
+        en: "Exam Delete Success"
+      },
+      examDeleteFailed: {
+        zh: "考試刪除失敗",
+        en: "Exam Delete Failed"
+      },
+      questionDeleteSuccess: {
+        zh: "題目刪除成功",
+        en: "Question Delete Success"
+      },
+      questionDeleteFailed: {
+        zh: "題目刪除失敗",
+        en: "Question Delete Failed"
+      },
+      questionSaveSuccess: {
+        zh: "題目保存成功",
+        en: "Question Save Success"
+      },
+      questionSaveFailed: {
+        zh: "題目保存失敗",
+        en: "Question Save Failed"
+      },
+      imageRemoveFailed: {
+        zh: "圖片移除失敗",
+        en: "Image Remove Failed"
+      },
+      NoClass: {
+        zh: "沒有班別 請到班級管理新增",
+        en: "No class. Please go to class management to add one.",
+      },
+      classSelection: {
+        zh: "班級選擇",
+        en: "Class selection",
+      },
+      failToFetchClassList: {
+        zh: "無法取得班級列表",
+        en: "Fail to get class list"
+      },
+      fetchQuestionListFail: {
+        zh: "取得題目清單失敗",
+        en: "Fail To Fetch Option List"
+      },
+      failToFetchOptionList: {
+        zh: "無法取得選項列表",
+        en: "Fail to get class list"
+      },
+      failToFetchImageList: {
+        zh: "無法取得圖片列表",
+        en: "Fail to get image list"
+      },
+      noClassSelected: {
+        zh: "未選擇班級",
+        en: "No class selected"
+      },
+      maximumImageLimitError: {
+        zh: "已達到圖片限制（最多 5 張圖片）",
+        en: "Image limit reached (max 5 images)."
+      }
     },
     mock: {
       quiz: {
@@ -709,7 +777,7 @@ export const LanguageTable = {
       },
       cantChange: {
         zh: "密碼更改失敗",
-        en: "",
+        en: "Password change failed",
       },
     },
     success: {
@@ -717,97 +785,97 @@ export const LanguageTable = {
       en: "Password have been changed",
     },
   },
-  "management": {
-    "toast": {
-      "fetchInitDataFailed": {
+  management: {
+    toast: {
+      fetchInitDataFailed: {
         "zh": "無法取得初始資料",
         "en": "Failed to fetch initial data"
       },
-      "classNameEmpty": {
+      classNameEmpty: {
         "zh": "班級名稱不能為空。",
         "en": "Class name cannot be empty."
       },
-      "classCreated": {
+      classCreated: {
         "zh": "已建立新班級",
         "en": "Created new Class"
       },
-      "classCreateFailedRetry": {
+      classCreateFailedRetry: {
         "zh": "建立新班級失敗。請再試一次。",
         "en": "Failed to create new Class. Please try again."
       },
-      "classCreateUnexpectedError": {
+      classCreateUnexpectedError: {
         "zh": "建立班級時發生意外錯誤",
         "en": "An unexpected error occurred while creating class"
       },
-      "noUserSelectedToAdd": {
+      noUserSelectedToAdd: {
         "zh": "沒有選擇要新增的使用者。",
         "en": "No users selected to add."
       },
-      "noClassSelected": {
+      noClassSelected: {
         "zh": "未選擇班級。",
         "en": "No class selected."
       },
-      "usersAddedSuccess": {
+      usersAddedSuccess: {
         "zh": "成功新增 {count} 位使用者。",
         "en": "Successfully added {count} user(s)."
       },
-      "addUsersFailed": {
+      addUsersFailed: {
         "zh": "新增使用者失敗。",
         "en": "Failed to add users."
       },
-      "usersRemovedSuccess": {
+      usersRemovedSuccess: {
         "zh": "成功移除 {count} 位使用者。",
         "en": "Successfully removed {count} user(s)."
       },
-      "removeUsersFailed": {
+      removeUsersFailed: {
         "zh": "移除使用者失敗，發生意外錯誤。",
         "en": "Failed to remove users. An unexpected error occurred."
       },
-      "classDeletedSuccess": {
+      classDeletedSuccess: {
         "zh": "班級已成功刪除。",
         "en": "Deleted class successfully."
       },
-      "classDeleteFailedApiError": {
+      classDeleteFailedApiError: {
         "zh": "刪除班級失敗。API 返回非預期結果。",
         "en": "Failed to delete class. The API returned an unexpected result."
       },
-      "classDeleteUnexpectedError": {
+      classDeleteUnexpectedError: {
         "zh": "刪除班級時發生意外錯誤。",
         "en": "An unexpected error occurred while deleting the class."
       },
-      "removeUserCountZero": {
+      removeUserCountZero: {
         "zh": "使用者數量不能為零。",
         "en": "Number of users cannot be 0."
       },
-      "fetchClassUsersFailed": {
+      fetchClassUsersFailed: {
         "zh": "無法載入所選班級的使用者。",
         "en": "Failed to load users for the selected class."
       }
     },
-    "controls": {
-      "selectClassLabel": {
+    controls: {
+      selectClassLabel: {
         "zh": "選擇班級",
         "en": "Select a class"
       },
-      "newClassNameLabel": {
+      newClassNameLabel: {
         "zh": "新班級名稱",
         "en": "New class name"
       },
-      "classNamePlaceholder": {
+      classNamePlaceholder: {
         "zh": "班級名稱",
         "en": "Class Name"
       },
-      "newClassButton": {
+      newClassButton: {
         "zh": "新班級",
         "en": "New class"
       },
-      "deleteClassButton": {
+      deleteClassButton: {
         "zh": "刪除班級",
         "en": "Delete class"
       }
     },
-    "display": {
-      "noClassSelectedStatus": {
+    display: {
+      noClassSelectedStatus: {
         "zh": "未選擇班級",
         "en": "No class selected"
       },
@@ -816,30 +884,30 @@ export const LanguageTable = {
         "en": "Current class"
       }
     },
-    "listbox": {
-      "userNotInClassLabel": {
+    listbox: {
+      userNotInClassLabel: {
         "zh": "不在班級中的使用者",
         "en": "User not in class"
       },
-      "userSelectedChip": {
+      userSelectedChip: {
         "zh": "位使用者已選擇",
         "en": "user selected"
       },
-      "userTotalChip": {
+      userTotalChip: {
         "zh": "位使用者總數",
         "en": "user in total"
       },
-      "userInClassLabel": {
+      userInClassLabel: {
         "zh": "班級中的使用者",
         "en": "User in class"
       }
     },
-    "buttons": {
-      "addButton": {
+    buttons: {
+      addButton: {
         "zh": "新增",
         "en": "Add"
       },
-      "removeButton": {
+      removeButton: {
         "zh": "移除",
         "en": "Remove"
       }

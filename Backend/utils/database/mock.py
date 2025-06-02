@@ -146,7 +146,6 @@ class MockerDatabaseController:
     ) -> int | None:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
                 INSERT INTO exams (exam_name, exam_type, exam_date, exam_duration, enabled)
@@ -178,7 +177,6 @@ class MockerDatabaseController:
     def insert_new_exam_question(self, exam_id: int, question_text: str) -> int | None:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
                 INSERT INTO question (question_text)
@@ -212,10 +210,9 @@ class MockerDatabaseController:
     ) -> int | None:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
-                INSERT INTO option (option_text, is_correct)
+                INSERT INTO `option` (option_text, is_correct)
                 VALUES (%s, %s)
                 """,
                 (option_text, is_correct),
@@ -256,7 +253,6 @@ class MockerDatabaseController:
 
     def disable_exam(self, exam_id: int) -> bool:
         self.database.connection.ping(attempts=3)
-        self.database.connection.start_transaction()
         self.database.cursor.execute(
             """
             UPDATE exams 
@@ -269,7 +265,6 @@ class MockerDatabaseController:
 
     def disable_exam_question(self, question_id: int) -> bool:
         self.database.connection.ping(attempts=3)
-        self.database.connection.start_transaction()
         self.database.cursor.execute(
             """
             UPDATE question 
@@ -282,10 +277,9 @@ class MockerDatabaseController:
 
     def disable_exam_question_option(self, option_id: int) -> bool:
         self.database.connection.ping(attempts=3)
-        self.database.connection.start_transaction()
         self.database.cursor.execute(
             """
-            UPDATE option 
+            UPDATE `option` 
             SET enabled = FALSE
             WHERE option_id = %s
             """,
@@ -305,7 +299,6 @@ class MockerDatabaseController:
         file_content_to_restore = None
         try:
             self.database.connection.ping(attempts=3)
-            self.database.connection.start_transaction()
 
             if image_path.exists():
                 with image_path.open("rb") as f:
@@ -359,7 +352,6 @@ class MockerDatabaseController:
     ) -> bool:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
                 UPDATE exams
@@ -388,7 +380,6 @@ class MockerDatabaseController:
     def modify_exam_question(self, question_id: int, question_text: str) -> bool:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
                 UPDATE question 
@@ -409,10 +400,9 @@ class MockerDatabaseController:
     ) -> bool:
         self.database.connection.ping(attempts=3)
         try:
-            self.database.connection.start_transaction()
             self.database.cursor.execute(
                 """
-                UPDATE option 
+                UPDATE `option` 
                 SET option_text=%s, is_correct=%s
                 WHERE option_id=%s
                 """,
@@ -463,8 +453,6 @@ class MockerDatabaseController:
                 self.logger.warning(
                     f"Attempted to modify non-existent image file: {image_path}. Proceeding to write new file."
                 )
-
-            self.database.connection.start_transaction()
 
             decoded_new_image = base64.b64decode(new_base64_image)
 
@@ -539,7 +527,7 @@ class MockerDatabaseController:
             SELECT
                 o.option_id, o.option_text, o.is_correct
             FROM
-                option AS o
+                `option` AS o
             JOIN
                 question_option AS qo ON o.option_id = qo.option_id
             JOIN
