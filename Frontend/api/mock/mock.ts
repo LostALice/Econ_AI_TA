@@ -6,12 +6,14 @@ import {
   ISubmittedExam,
   IExamResult,
 } from "@/types/mock/mock";
+
+import { IExamsModel } from "@/types/mock/create";
 import { siteConfig } from "@/config/site";
 import { fetcher } from "../fetcher";
 
-export async function fetchMockExamQuestionList(
+export async function fetchExamQuestionList(
   mock_id: number
-): Promise<[IMockExamQuestionList[], IMockExamInformation]> {
+): Promise<[IExamsModel]> {
   const resp = await fetcher(siteConfig.api_url + "/mock/" + mock_id + "/", {
     method: "GET",
     headers: {

@@ -154,3 +154,14 @@ class OptionModel(BaseModel):
     option_id: int
     option_text: str
     is_correct: bool
+
+
+class MockAnswerModel(BaseModel):
+    question_id: int
+    selected_option_id: int | None
+
+
+class ExamSubmissionModel(BaseModel):
+    exam_id: int
+    submission_date: str
+    answer: list[MockAnswerModel]

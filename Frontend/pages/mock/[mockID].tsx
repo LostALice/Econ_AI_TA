@@ -6,14 +6,14 @@ import { LangContext } from "@/contexts/LangContext"
 import { GetServerSideProps } from "next"
 import { useRouter } from "next/router"
 
-import {
-    IMockExamQuestionList,
-    IMockExamInformation,
-    ISubmittedQuestion,
-    ISubmittedExam,
-} from "@/types/mock/mock"
-import { IStudentAnswer } from "@/types/mock/mock"
-import { fetchMockExamQuestionList, submitExam } from "@/api/mock/mock"
+// import {
+//     IMockExamQuestionList,
+//     IMockExamInformation,
+//     ISubmittedQuestion,
+//     ISubmittedExam,
+// } from "@/types/mock/mock"
+// import { IStudentAnswer } from "@/types/mock/mock"
+// import { fetchMockExamQuestionList, submitExam } from "@/api/mock/mock"
 
 import { LanguageTable } from "@/i18n"
 import { ImageBox } from "@/components/chat/imageBox"
@@ -32,6 +32,20 @@ import {
     useDisclosure,
 } from "@heroui/react"
 
+import {
+    fetchExamInfo,
+    fetchExamQuestion,
+    fetchExamQuestionImage,
+    fetchExamQuestionOption,
+    submitExam,
+} from "@/api/mock/create"
+
+import {
+    IExamsModel,
+    IExamQuestionModel,
+    IStudentAnswer,
+    IExamSubmissionModel
+} from "@/types/mock/create"
 export const getServerSideProps: GetServerSideProps = async (context) => {
     const { resolvedUrl } = context
     const regex = /^\/mock\/\d+$/
@@ -48,115 +62,103 @@ export default function MockPage() {
     const { language, setLang } = useContext(LangContext)
     const { isOpen: isModelOpen, onOpen: onModelOpen, onClose: onModelClose } = useDisclosure();
 
-    const mockID = Number(router.query.mockID) as number
+    const mockExamID = Number(router.query.mockID) as number
+    const [mockExamQuestionList, setMockExamQuestionList] = useState<IExamQuestionModel[]>([])
+
     const [studentAnswers, setStudentAnswers] = useState<IStudentAnswer[]>([])
-    const [questionsList, SetQuestionList] = useState<IMockExamQuestionList[]>([])
-    const [mockInfo, SetMockInfo] = useState<IMockExamInformation | undefined>()
+    const [mockInfo, setMockInfo] = useState<IExamsModel | undefined>()
 
     useEffect(() => {
-        // Fetch exam question from the server
-        fetchMockExamQuestionList(mockID).then(
-            (response) => {
-                if (response[0].length > 0) {
-                    const [mockQuestionsList, mockQuestionsInfo] = response
-                    SetMockInfo(mockQuestionsInfo)
-                    SetQuestionList(mockQuestionsList)
+        const settingUpExam = async () => {
+            try {
+                const exam = await fetchExamInfo(mockExamID)
+                const examQuestionList = await fetchExamQuestion(mockExamID)
+                if (!exam) return;
+                if (!examQuestionList) return;
+                setMockInfo(exam)
+
+                const tempQuestionList: IExamQuestionModel[] = []
+                const tempStudentAnswerList: IStudentAnswer[] = []
+                for (const question of examQuestionList) {
+                    console.log(question)
+                    const questionOption = await fetchExamQuestionOption(exam.exam_id, question.question_id)
+                    const questionImage = await fetchExamQuestionImage(exam.exam_id, question.question_id)
+                    if (!questionOption) return
+                    tempQuestionList.push({
+                        question_id: question.question_id,
+                        question_text: question.question_text,
+                        question_options: questionOption,
+                        question_images: questionImage
+                    })
+                    tempStudentAnswerList.push({
+                        question_id: question.question_id,
+                        selected_option_id: null
+                    })
                 }
-                else {
-                    console.error("Failed to fetch mock exam questions")
-                }
+                setMockExamQuestionList(tempQuestionList)
+                setStudentAnswers(tempStudentAnswerList)
             }
-        )
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            event.preventDefault();
-        };
-
-        window.addEventListener("beforeunload", handleBeforeUnload);
-
-        return () => {
-            window.removeEventListener("beforeunload", handleBeforeUnload);
-        };
-    }, [mockID])
-
-    const onHandleAnswerChange = (newQuestionID: number, newOptionID: number) => {
-        let inArray: boolean = false
-        const newStudentAnswer: IStudentAnswer = {
-            question_id: newQuestionID,
-            answer_option_id: newOptionID,
-        }
-
-        for (const prevStudentAnswer of studentAnswers) {
-            if (prevStudentAnswer.question_id === newQuestionID) {
-                inArray = true
-                break
+            catch (e) {
+                console.error(e)
+                addToast({
+                    title: "ERROR",
+                    color: "danger",
+                })
             }
         }
+        settingUpExam()
 
-        if (inArray) {
-            const updatedStudentAnswers = studentAnswers.map((answer) => {
-                if (answer.question_id === newQuestionID) {
-                    return newStudentAnswer
-                }
-                return answer
-            })
-            setStudentAnswers(updatedStudentAnswers)
-        }
-        else {
-            setStudentAnswers([...studentAnswers, newStudentAnswer])
-        }
-    }
+    }, [mockExamID])
 
-    const onHandleSubmitAnswer = () => {
+    const onHandleForcedSubmitAnswer = async () => { }
+    const onHandleAnswerChange = async (questionId: number, optionId: number) => {
+        const tempAnswer: IStudentAnswer = {
+            question_id: questionId,
+            selected_option_id: optionId
+        }
+        const studentAns = studentAnswers.map((ans) =>
+            ans.question_id === questionId ? tempAnswer : ans
+        );
+        setStudentAnswers(studentAns)
         console.log(studentAnswers)
-        if (studentAnswers.length != questionsList.length) {
-            addToast({
-                color: "warning",
-                title: LanguageTable.mock.mock.answerNotComplete[language],
-            })
-        } else {
-            onModelOpen()
-        }
     }
 
-    const onHandleForcedSubmitAnswer = async () => {
-        // TODO: Send answer to the server
-        if (!mockInfo) {
-            console.error("No mock information found")
-            return
-        }
-
-        const tempExamQuestionToBeSubmitted: ISubmittedQuestion[] = []
+    const onCheckIsAnswerAllFilled = (): boolean => {
         for (const ans of studentAnswers) {
-            tempExamQuestionToBeSubmitted.push({
-                question_id: ans.question_id,
-                submitted_answer_option_id: ans.answer_option_id,
-            })
+            if (ans.selected_option_id === null) {
+                return false
+            }
         }
+        return true
+    }
 
-        const tempExamToBeSubmitted: ISubmittedExam = {
-            exam_id: mockInfo.exam_id,
-            user_id: 0,
-            submitted_questions: tempExamQuestionToBeSubmitted,
-        }
-
-        console.log(tempExamToBeSubmitted)
-        const submissionID = await submitExam(tempExamToBeSubmitted)
-
-        if (submissionID) {
+    const onHandleSubmitAnswer = async () => {
+        if (!onCheckIsAnswerAllFilled()) {
             addToast({
-                color: "success",
-                title: LanguageTable.mock.mock.answerSubmitSuccess[language],
+                title: LanguageTable.mock.mock.answerNotComplete[language],
+                color: "warning"
             })
-
-            router.push("/mock/results/" + submissionID)
-        } else {
-            addToast({
-                color: "warning",
-                title: LanguageTable.mock.mock.answerSubmitFailed[language],
-            })
-            router.push("/mock")
         }
-
+        const submit_exam: IExamSubmissionModel = {
+            exam_id: mockExamID,
+            submission_date: new Date().toISOString(),
+            answer: studentAnswers
+        }
+        console.log(submit_exam)
+        const submissionId = await submitExam(submit_exam)
+        router.push(`/mock/result/${submissionId}`)
+        console.log(submissionId)
+    }
+    const onHandleForceSubmitAnswer = async () => {
+        const submit_exam: IExamSubmissionModel = {
+            exam_id: mockExamID,
+            submission_date: new Date().toISOString(),
+            answer: studentAnswers
+        }
+        console.log(submit_exam)
+        const submissionId = await submitExam(submit_exam)
+        router.push(`/mock/result/${submissionId}`)
+        console.log(submissionId)
     }
 
     return (
@@ -177,7 +179,7 @@ export default function MockPage() {
                                         {LanguageTable.mock.mock.back[language]}
                                     </Button>
                                     <Button color="danger" onPress={() => {
-                                        onHandleForcedSubmitAnswer()
+                                        onHandleSubmitAnswer()
                                         onClose()
                                     }}>
                                         {LanguageTable.mock.mock.submit[language]}
@@ -193,7 +195,7 @@ export default function MockPage() {
                             mockInfo ? (
                                 <>
                                     <span className="text-2xl font-bold">{LanguageTable.mock.mock.quiz[language]}:{mockInfo.exam_name}</span>
-                                    <Timer duration={mockInfo.exam_duration} onTimeUp={onHandleForcedSubmitAnswer} />
+                                    {mockInfo.exam_duration > -1 ? <Timer duration={mockInfo.exam_duration} onTimeUp={onHandleForceSubmitAnswer} /> : <></>}
                                     <span className="text-2xl font-bold">{LanguageTable.mock.mock.duration[language]}{mockInfo.exam_duration}{LanguageTable.mock.mock.minutes[language]}</span>
                                 </>
                             )
@@ -201,16 +203,16 @@ export default function MockPage() {
                         }
                     </div>
                     {
-                        questionsList.length > 0 ?
+                        mockExamQuestionList.length > 0 ?
                             (
                                 <>
-                                    {questionsList.map((question, qIdx) => (
+                                    {mockExamQuestionList.map((question, qIdx) => (
                                         <div key={qIdx} className="mb-8">
                                             <p className="text-xl mb-2">{qIdx + 1}. {question.question_text}</p>
                                             <div className="overflow-x-auto mb-4">
                                                 <div className="flex gap-4">
-                                                    {question.question_images.map((image, index) => (
-                                                        <ImageBox key={index} base64Image={image} onClose={() => (null)} />
+                                                    {question.question_images?.map((image, index) => (
+                                                        <ImageBox key={index} base64Image={image.image_data_base64} onClose={() => (null)} />
                                                     ))}
                                                 </div>
                                             </div>
@@ -234,7 +236,7 @@ export default function MockPage() {
                                     <div className="flex justify-center">
                                         <Button
                                             className="px-6 py-2 rounded hover:bg-slate-700 transition"
-                                            onPress={onHandleSubmitAnswer}
+                                            onPress={onModelOpen}
                                         >
                                             {LanguageTable.mock.mock.submit[language]}
                                         </Button>

@@ -81,3 +81,25 @@ export interface ICreateExamPrams {
   exam_type: TExamType,
   exam_date: string,
 }
+
+export interface IStudentAnswer {
+  question_id: number
+  selected_option_id: number | null
+}
+
+export interface IExamSubmissionModel {
+  exam_id: number
+  submission_date: string
+  answer: IStudentAnswer[]
+}
+
+export interface IMockResult {
+  submission_id: number
+  exam_id: number
+  user_id: number
+  exam_name: string
+  exam_type: TExamType
+  exam_date: string
+  score: number
+  total_question: number
+}

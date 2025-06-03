@@ -615,9 +615,13 @@ export const LanguageTable = {
         zh: "正確答案:",
         en: "Total correct answer:",
       },
-      scorePercentage: {
-        zh: "分數百分比:",
-        en: "Score percentage:",
+      score: {
+        zh: "分數:",
+        en: "Score:",
+      },
+      totalQuestion: {
+        zh: "題目數量:",
+        en: "Number of questions:",
       },
       back: {
         zh: "返回",

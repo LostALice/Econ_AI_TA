@@ -8,7 +8,8 @@ import {
   IQuestionModel,
   IQuestionImageBase64Model,
   IOptionModel,
-  IClassListModel
+  IClassListModel,
+  IExamSubmissionModel
 } from "@/types/mock/create";
 import { fetcher } from "../fetcher";
 
@@ -37,7 +38,17 @@ export async function fetchExamLists(examType: TExamType): Promise<IExamsModel[]
     return []
   }
 }
-
+export async function fetchExamInfo(examId: number): Promise<IExamsModel | null> {
+  try {
+    const resp = await fetcher(siteConfig.api_url + `/mock/info/${examId}/exam/`, { method: "GET" });
+    console.log(resp)
+    return resp as IExamsModel
+  }
+  catch (err) {
+    console.log(err)
+    return null
+  }
+}
 export async function fetchExamQuestion(examId: number): Promise<IQuestionModel[]> {
   try {
     const resp = await fetcher(siteConfig.api_url + `/mock/exam/${examId}/question/`, { method: "GET" });
@@ -318,7 +329,25 @@ export async function deleteExamQuestionImage(
     return false
   }
 }
-
+export async function submitExam(submit_exam: IExamSubmissionModel): Promise<number | null> {
+  try {
+    const resp = await fetcher(
+      siteConfig.api_url + `/mock/submit/`, {
+      method: "POST",
+      body: JSON.stringify({
+        exam_id: submit_exam.exam_id,
+        submission_date: submit_exam.submission_date,
+        answer: submit_exam.answer,
+      })
+    })
+    console.log(resp)
+    return resp as number
+  }
+  catch (error) {
+    console.log(error)
+    return null
+  }
+}
 // export async function createNewExam(
 //   exam: ICreateNewExamPrams
 // ): Promise<IExamsInfo> {

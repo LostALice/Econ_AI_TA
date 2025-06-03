@@ -2,12 +2,12 @@
 
 import os
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from Backend.utils.database.database import mysql_client
+from Backend.utils.database.result import ResultDatabaseController
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.helper.api.dependency import require_admin
-from Backend.utils.helper.model.api.v1.mock import ExamResultModel
+from Backend.utils.helper.api.dependency import require_student
+from Backend.utils.helper.model.api.v1.result import MockResult
 
 logger = CustomLoggerHandler().get_logger()
 
@@ -20,20 +20,12 @@ if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
 
     load_dotenv("./.env")
 
-router = APIRouter(dependencies=[Depends(require_admin)])
+router = APIRouter(dependencies=[Depends(require_student)])
+mysql_client = ResultDatabaseController()
 
 
-@router.get("/result/")
-def get_result(
-    class_id: list[int] | int | None,
-    user_id: list[int] | int | None,
-    tag_id: list[int] | int | None,
-    teacher_id: list[int] | int | None,
-): ...
-
-
-@router.get("/{submission_id}")
-async def query_mock_exam_results(submission_id: int) -> ExamResultModel | None:
+@router.get("/mock/{submission_id}/")
+async def query_mock_exam_results(submission_id: int) -> MockResult:
     """
     Query mock exam results based on submission ID.
     Args:
@@ -42,7 +34,9 @@ async def query_mock_exam_results(submission_id: int) -> ExamResultModel | None:
         ExamResultModel
     """
     logger.debug(submission_id)
-    exam_results = mysql_client.query_mock_exam_results(submission_id)
+    exam_results = mysql_client.query_mock_exam_result(submission_id)
+    if not exam_results:
+        raise HTTPException(status_code=404, detail="Exam Submission ID not Found")
     logger.debug(exam_results)
 
-    return exam_results if exam_results else None
+    return exam_results

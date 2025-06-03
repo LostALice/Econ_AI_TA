@@ -1,3 +1,5 @@
+# Code by AkinoAlice@TyrantRey
+
 from Backend.utils.database.database import mysql_client
 from Backend.utils.helper.logger import CustomLoggerHandler
 from Backend.utils.helper.model.api.v1.mock import (
@@ -7,6 +9,7 @@ from Backend.utils.helper.model.api.v1.mock import (
     QuestionModel,
     OptionModel,
     QuestionImageModel,
+    MockAnswerModel,
 )
 
 from datetime import datetime
@@ -489,6 +492,35 @@ class MockerDatabaseController:
                     )
             return False
 
+    def query_exam_info(self, exam_id: int) -> ExamsModel:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            SELECT 
+                e.exam_id,
+                e.exam_name,
+                e.exam_type,
+                e.exam_date,
+                e.exam_duration
+            FROM 
+                exams AS e
+            WHERE 
+                e.exam_id = %s
+                AND e.enabled = 1
+            """,
+            (exam_id,),
+        )
+        fetch_data = self.database.cursor.fetchone()
+        self.logger.info(fetch_data)
+
+        return ExamsModel(
+            exam_id=fetch_data["exam_id"],
+            exam_name=fetch_data["exam_name"],
+            exam_type=fetch_data["exam_type"],
+            exam_date=fetch_data["exam_date"],
+            exam_duration=fetch_data["exam_duration"],
+        )
+
     def query_exam_question(self, exam_id: int) -> list[QuestionModel]:
         self.database.connection.ping(attempts=3)
         self.database.cursor.execute(
@@ -517,6 +549,28 @@ class MockerDatabaseController:
             )
             for question in fetch_data
         ]
+
+    def query_question_info(self, question_id: int) -> QuestionModel:
+        self.database.connection.ping()
+        self.database.cursor.execute(
+            """
+            SELECT 
+                q.question_id,
+                q.question_text
+            FROM 
+                question AS q
+            WHERE 
+                q.question = %s
+                AND q.enabled = 1
+            """,
+            (question_id,),
+        )
+        fetch_data = self.database.cursor.fetchone()
+        self.logger.info(fetch_data)
+        return QuestionModel(
+            question_id=fetch_data["question_id"],
+            question_text=fetch_data["question_text"],
+        )
 
     def query_question_option(
         self, exam_id: int, question_id: int
@@ -552,6 +606,29 @@ class MockerDatabaseController:
             for option in fetch_data
         ]
 
+    def query_question_option_info(self, option_id: int) -> OptionModel:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            SELECT
+                o.option_id, o.option_text, o.is_correct
+            FROM
+                `option` AS o
+            WHERE
+                o.option_id = %s
+                AND o.enabled = 1
+            """,
+            (option_id,),
+        )
+        fetch_data = self.database.cursor.fetchone()
+        self.logger.info(fetch_data)
+
+        return OptionModel(
+            option_id=fetch_data["option_id"],
+            option_text=fetch_data["option_text"],
+            is_correct=fetch_data["is_correct"],
+        )
+
     def query_question_image(
         self, exam_id: int, question_id: int
     ) -> list[QuestionImageModel]:
@@ -581,6 +658,62 @@ class MockerDatabaseController:
                 image_uuid=image["image_uuid"],
             )
             for image in fetch_data
+        ]
+
+    def query_question_image_info(self, image_uuid: str) -> QuestionImageModel:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            SELECT
+                qi.question_id, qi.image_uuid
+            FROM
+                question_image AS qi
+            WHERE
+                qi.image_uuid = %s
+                AND qi.enabled = 1
+            """,
+            (image_uuid,),
+        )
+
+        fetch_data = self.database.cursor.fetchall()
+        self.logger.info(fetch_data)
+        return QuestionImageModel(
+            question_id=fetch_data["question_id"],
+            image_uuid=fetch_data["image_uuid"],
+        )
+
+    def query_exam_correct_answer(self, exam_id: int) -> list[MockAnswerModel]:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            SELECT 
+                q.question_id, 
+                o.option_id
+            FROM 
+                exams e
+                JOIN exam_questions eq ON e.exam_id = eq.exam_id
+                JOIN question q ON eq.question_id = q.question_id
+                JOIN question_option qo ON q.question_id = qo.question_id
+                JOIN `option` o ON qo.option_id = o.option_id
+            WHERE
+                e.enabled = 1
+                AND q.enabled = 1
+                AND o.enabled = 1
+                AND o.is_correct = 1;
+            """
+        )
+        self.database.sql_query_logger()
+        fetch_data = self.database.cursor.fetchall()
+
+        if not fetch_data:
+            return []
+        self.logger.debug(fetch_data)
+        return [
+            MockAnswerModel(
+                question_id=correct_question["question_id"],
+                selected_option_id=correct_question["option_id"],
+            )
+            for correct_question in fetch_data
         ]
 
     def query_tag_list(self) -> list[TagModel]:
@@ -677,3 +810,38 @@ class MockerDatabaseController:
         success = self.database.commit()
 
         return success
+
+    def insert_submitted_exam(self, exam_id: int, user_id: int, score: int) -> int:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            INSERT INTO exam_submission (exam_id, user_id, score)
+            VALUES (%s, %s, %s)
+            """,
+            (exam_id, user_id, score),
+        )
+        self.database.sql_query_logger()
+        self.database.commit()
+
+        self.database.cursor.execute("SELECT LAST_INSERT_ID() AS last_id;")
+        last_id = self.database.cursor.fetchone()["last_id"]
+        self.logger.info(last_id)
+        return last_id
+
+    def insert_submitted_answer(
+        self, submission_id: int, question_id: int, selection_option_id: int | None
+    ) -> bool:
+        self.database.connection.ping(attempts=3)
+        try:
+            self.database.cursor.execute(
+                """
+                INSERT INTO exam_submission_answer (submission_id, question_id, selected_option_id)
+                VALUES (%s, %s, %s)
+                """,
+                (submission_id, question_id, selection_option_id),
+            )
+            self.database.sql_query_logger()
+            return self.database.commit()
+        except Exception as e:
+            self.logger.error(e)
+            return False

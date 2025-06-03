@@ -39,6 +39,13 @@ export async function fetcher(
       color: "warning",
     });
     return data;
+  } else if (response.status == 404) {
+    addToast({
+      title: response.status,
+      description: response.statusText,
+      color: "warning",
+    });
+    return data;
   } else if (response.status >= 400) {
     deleteCookie("token");
     deleteCookie("role");

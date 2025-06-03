@@ -1,26 +1,21 @@
 // Code by AkinoAlice@TyrantRey
 
 import { siteConfig } from "@/config/site";
-import { IExamResult } from "@/types/mock/mock";
+import { IMockResult } from "@/types/mock/create";
 import { fetcher } from "@/api/fetcher";
 
 export async function fetchExamResults(
   submissionID: number
-): Promise<IExamResult | null> {
-  const resp = await fetcher(siteConfig.api_url + "/result/" + submissionID, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-  });
-
-  const data = await resp;
-  console.log(data);
-
-  if (data == null) {
+): Promise<IMockResult | null> {
+  try {
+    const resp = await fetcher(siteConfig.api_url + `/result/mock/${submissionID}/`, {
+      method: "GET",
+    });
+    console.log(resp);
+    return resp as IMockResult;
+  }
+  catch (error) {
+    console.error(error);
     return null;
   }
-
-  return data;
 }

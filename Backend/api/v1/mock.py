@@ -13,9 +13,11 @@ from Backend.utils.helper.model.api.v1.mock import (
     ExamsModel,
     QuestionModel,
     OptionModel,
+    QuestionImageModel,
     QuestionImageBase64Model,
     OptionParamsModel,
     ImageParamsModel,
+    ExamSubmissionModel,
 )
 from Backend.utils.helper.api.dependency import (
     require_student,
@@ -131,11 +133,11 @@ async def create_exam_question_image(
     image_uuid = str(uuid4())
     image_store_path = Path("./images/mock/") / str(exam_id) / str(question_id)
     image_path = image_store_path / (str(image_uuid) + ".png")
-    
+
     logger.debug(image_path)
     logger.debug(image_store_path)
     logger.debug(base64_image)
-    
+
     try:
         image_store_path.mkdir(parents=True, exist_ok=True)
         image_data = base64.b64decode(base64_image.base64_image)
@@ -255,14 +257,29 @@ async def modify_exam_question_image(
     return success
 
 
+@router.get("/info/{exam_id}/exam/")
+async def get_exam_info(exam_id: int) -> ExamsModel:
+    return mysql_client.query_exam_info(exam_id=exam_id)
+
+
 @router.get("/exam/{exam_id}/question/")
 async def get_exam_question(exam_id: int) -> list[QuestionModel]:
     return mysql_client.query_exam_question(exam_id=exam_id)
 
 
+@router.get("/info/{question_id}/question/")
+async def get_exam_question_info(question_id: int) -> QuestionModel:
+    return mysql_client.query_question_info(question_id=question_id)
+
+
 @router.get("/exam/{exam_id}/question/{question_id}/option/")
 async def get_exam_question_option(exam_id: int, question_id: int) -> list[OptionModel]:
     return mysql_client.query_question_option(exam_id=exam_id, question_id=question_id)
+
+
+@router.get("/info/{option_id}/option/")
+async def get_exam_question_option_info(option_id: int) -> OptionModel:
+    return mysql_client.query_question_option_info(option_id=option_id)
 
 
 @router.get("/exam/{exam_id}/question/{question_id}/image/")
@@ -290,6 +307,11 @@ async def get_exam_question_image(
         )
 
     return encoded_question_images
+
+
+@router.get("/info/{image_uuid}/image/")
+async def get_exam_question_image_info(image_uuid: str) -> QuestionImageModel:
+    return mysql_client.query_question_image_info(image_uuid=image_uuid)
 
 
 @router.get("/tag/list/")
@@ -331,3 +353,32 @@ async def remove_tag(tag_id: int, question_id: int) -> bool:
 @router.delete("/tag/delete/")
 async def delete_tag(tag_id: int) -> bool:
     return mysql_client.disable_tag(tag_id=tag_id)
+
+
+@router.post("/submit/")
+async def submit_mock_exam(
+    submitted_exam: ExamSubmissionModel, user_payload: UserPayload
+) -> int:
+    user_id = int(user_payload.user_id)
+    user_submitted_answer = submitted_exam.answer
+
+    correct_answer = mysql_client.query_exam_correct_answer(
+        exam_id=submitted_exam.exam_id
+    )
+    logger.debug(user_submitted_answer)
+    score = 0
+    for user_ans, correct_ans in zip(user_submitted_answer, correct_answer):
+        if user_ans.selected_option_id == correct_ans.selected_option_id:
+            score += 1
+
+    submitted_exam_id = mysql_client.insert_submitted_exam(
+        exam_id=submitted_exam.exam_id, user_id=user_id, score=score
+    )
+
+    for user_ans in user_submitted_answer:
+        mysql_client.insert_submitted_answer(
+            submission_id=submitted_exam_id,
+            question_id=user_ans.question_id,
+            selection_option_id=user_ans.selected_option_id,
+        )
+    return submitted_exam_id

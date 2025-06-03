@@ -25,9 +25,9 @@ export const Timer = ({ duration, onTimeUp }: { duration: number, onTimeUp: () =
     const seconds = timeLeft % 60;
 
     return (
-        <div className="fixed bottom-5 right-5">
-            <div className="p-4 rounded-lg shadow-lg text-center">
-                <span className="text-xl font-bold mb-2">{LanguageTable.mock.mock.timeLeft[language]}</span>
+        <div className="fixed bottom-5 right-5 border border-white rounded-md">
+            <div className={"p-4 rounded-lg shadow-lg text-center " + (minutes < 10 ? "text-red-600" : "text-white")}>
+                <span className={"text-xl font-bold mb-2"}>{LanguageTable.mock.mock.timeLeft[language]}</span>
                 <div className="text-3xl">
                     {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
                 </div>
