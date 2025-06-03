@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=2.0.2",
     "ollama>=0.4.7",
     "openai>=1.68.2",
+    "pandas>=2.2.3",
     "pydantic>=2.10.6",
     "pyjwt>=2.10.1",
     "pymilvus>=2.5.6",

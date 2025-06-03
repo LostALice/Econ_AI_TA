@@ -16,36 +16,42 @@ class ResultDatabaseController:
         self.database.connection.ping(attempts=3)
         self.database.cursor.execute(
             """
-            SELECT 
+            WITH ExamQuestionCounts AS (
+                SELECT
+                    eq.exam_id,
+                    COUNT(DISTINCT eq.question_id) AS total_questions_in_exam
+                FROM
+                    exam_questions AS eq
+                JOIN
+                    question AS q ON eq.question_id = q.question_id
+                WHERE
+                    q.enabled = 1
+                GROUP BY
+                    eq.exam_id
+            )
+            SELECT
                 es.submission_id,
                 es.exam_id,
                 es.user_id,
-                e.exam_name, 
+                e.exam_name,
                 e.exam_type,
-                e.exam_date,
+                e.exam_date,         -- This is the exam's official date, not submission time
+                es.submission_time,  -- THIS is the actual time the submission was made
                 es.score,
-                COUNT(o.option_id) AS total_question
-            FROM 
-                exams AS e
-                JOIN exam_submission AS es ON es.exam_id = e.exam_id
-                JOIN exam_questions eq ON e.exam_id = eq.exam_id
-                JOIN question q ON eq.question_id = q.question_id
-                JOIN question_option qo ON q.question_id = qo.question_id
-                JOIN `option` o ON qo.option_id = o.option_id
+                eqc.total_questions_in_exam
+            FROM
+                exam_submission AS es
+            JOIN
+                exams AS e ON es.exam_id = e.exam_id
+            LEFT JOIN
+                ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
             WHERE
                 e.enabled = 1
-                AND q.enabled = 1
-                AND o.enabled = 1
-                AND o.is_correct = 1
+                --     AND es.exam_id = 9
+                --     AND es.user_id = 2
                 AND es.submission_id = %s
-            GROUP BY
-                es.submission_id,
-                es.exam_id,
-                es.user_id,
-                e.exam_name, 
-                e.exam_type,
-                e.exam_date,
-                es.score;
+            ORDER BY
+                es.exam_id, es.user_id, es.submission_time;
             """,
             (submission_id,),
         )
@@ -53,12 +59,210 @@ class ResultDatabaseController:
         self.logger.info(fetch_data)
 
         return MockResult(
+            class_id=fetch_data["class_id"],
             submission_id=fetch_data["submission_id"],
             exam_id=fetch_data["exam_id"],
             user_id=fetch_data["user_id"],
             exam_name=fetch_data["exam_name"],
             exam_type=fetch_data["exam_type"],
             exam_date=fetch_data["exam_date"].isoformat(),
+            submission_time=fetch_data["submission_time"].isoformat(),
             score=fetch_data["score"],
-            total_question=fetch_data["total_question"],
+            total_question=fetch_data["total_questions_in_exam"],
         )
+
+    def query_mock_exam_result_by_exam(self, exam_id: int) -> list[MockResult]:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            WITH ExamQuestionCounts AS (
+                SELECT
+                    eq.exam_id,
+                    COUNT(DISTINCT eq.question_id) AS total_questions_in_exam
+                FROM
+                    exam_questions AS eq
+                JOIN
+                    question AS q ON eq.question_id = q.question_id
+                WHERE
+                    q.enabled = 1
+                GROUP BY
+                    eq.exam_id
+            )
+            SELECT
+                cu.class_id,
+                es.submission_id,
+                es.exam_id,
+                es.user_id,
+                e.exam_name,
+                e.exam_type,
+                e.exam_date,         -- This is the exam's official date, not submission time
+                es.submission_time,  -- THIS is the actual time the submission was made
+                es.score,
+                eqc.total_questions_in_exam
+            FROM
+                exam_submission AS es
+            JOIN
+                exams AS e ON es.exam_id = e.exam_id
+            JOIN 
+                class_user cu ON es.user_id = cu.user_id
+            LEFT JOIN
+                ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
+            WHERE
+                e.enabled = 1
+                AND es.exam_id = %s
+                -- AND cu.class_id = 1
+                -- AND es.user_id = 2
+            ORDER BY
+                es.exam_id, es.user_id, es.submission_time;
+            """,
+            (exam_id,),
+        )
+        fetch_data = self.database.cursor.fetchall()
+        self.logger.info(fetch_data)
+
+        return [
+            MockResult(
+                class_id=data["class_id"],
+                submission_id=data["submission_id"],
+                exam_id=data["exam_id"],
+                user_id=data["user_id"],
+                exam_name=data["exam_name"],
+                exam_type=data["exam_type"],
+                exam_date=data["exam_date"].isoformat(),
+                submission_time=data["submission_time"].isoformat(),
+                score=data["score"],
+                total_question=data["total_questions_in_exam"],
+            )
+            for data in fetch_data
+        ]
+
+    def query_mock_exam_result_by_class(self, class_id: int) -> list[MockResult]:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            WITH ExamQuestionCounts AS (
+                SELECT
+                    eq.exam_id,
+                    COUNT(DISTINCT eq.question_id) AS total_questions_in_exam
+                FROM
+                    exam_questions AS eq
+                JOIN
+                    question AS q ON eq.question_id = q.question_id
+                WHERE
+                    q.enabled = 1
+                GROUP BY
+                    eq.exam_id
+            )
+            SELECT
+                cu.class_id,
+                es.submission_id,
+                es.exam_id,
+                es.user_id,
+                e.exam_name,
+                e.exam_type,
+                e.exam_date,         -- This is the exam's official date, not submission time
+                es.submission_time,  -- THIS is the actual time the submission was made
+                es.score,
+                eqc.total_questions_in_exam
+            FROM
+                exam_submission AS es
+            JOIN
+                exams AS e ON es.exam_id = e.exam_id
+            JOIN 
+                class_user cu ON es.user_id = cu.user_id
+            LEFT JOIN
+                ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
+            WHERE
+                e.enabled = 1
+                -- AND es.exam_id = 9
+                AND cu.class_id = %s
+                -- AND es.user_id = 2
+            ORDER BY
+                es.exam_id, es.user_id, es.submission_time;
+            """,
+            (class_id,),
+        )
+        fetch_data = self.database.cursor.fetchall()
+        self.logger.info(fetch_data)
+
+        return [
+            MockResult(
+                class_id=data["class_id"],
+                submission_id=data["submission_id"],
+                exam_id=data["exam_id"],
+                user_id=data["user_id"],
+                exam_name=data["exam_name"],
+                exam_type=data["exam_type"],
+                exam_date=data["exam_date"].isoformat(),
+                submission_time=data["submission_time"].isoformat(),
+                score=data["score"],
+                total_question=data["total_questions_in_exam"],
+            )
+            for data in fetch_data
+        ]
+
+    def query_mock_exam_result_by_user(self, user_id: int) -> list[MockResult]:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            WITH ExamQuestionCounts AS (
+                SELECT
+                    eq.exam_id,
+                    COUNT(DISTINCT eq.question_id) AS total_questions_in_exam
+                FROM
+                    exam_questions AS eq
+                JOIN
+                    question AS q ON eq.question_id = q.question_id
+                WHERE
+                    q.enabled = 1
+                GROUP BY
+                    eq.exam_id
+            )
+            SELECT
+                cu.class_id,
+                es.submission_id,
+                es.exam_id,
+                es.user_id,
+                e.exam_name,
+                e.exam_type,
+                e.exam_date,         -- This is the exam's official date, not submission time
+                es.submission_time,  -- THIS is the actual time the submission was made
+                es.score,
+                eqc.total_questions_in_exam
+            FROM
+                exam_submission AS es
+            JOIN
+                exams AS e ON es.exam_id = e.exam_id
+            JOIN 
+                class_user cu ON es.user_id = cu.user_id
+            LEFT JOIN
+                ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
+            WHERE
+                e.enabled = 1
+                -- AND cu.class_id = 1
+                -- AND es.exam_id = 9
+                AND es.user_id = %s
+            ORDER BY
+                es.exam_id, es.user_id, es.submission_time;
+            """,
+            (user_id,),
+        )
+        fetch_data = self.database.cursor.fetchall()
+        self.logger.info(fetch_data)
+
+        return [
+            MockResult(
+                class_id=data["class_id"],
+                submission_id=data["submission_id"],
+                exam_id=data["exam_id"],
+                user_id=data["user_id"],
+                exam_name=data["exam_name"],
+                exam_type=data["exam_type"],
+                exam_date=data["exam_date"].isoformat(),
+                submission_time=data["submission_time"].isoformat(),
+                score=data["score"],
+                total_question=data["total_questions_in_exam"],
+            )
+            for data in fetch_data
+        ]
+
