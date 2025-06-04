@@ -5,11 +5,13 @@ from Backend.utils.helper.model.api.v1.mock import ExamType
 
 
 class MockResult(BaseModel):
-    class_id: int
     submission_id: int
+    class_id: int
+    classname: str
     exam_id: int
-    user_id: int
     exam_name: str
+    user_id: int
+    username:str
     exam_type: ExamType
     exam_date: str
     submission_time: str
