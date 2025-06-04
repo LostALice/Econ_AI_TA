@@ -29,7 +29,7 @@ export async function fetchClassList(): Promise<IClassListModel[]> {
 
 export async function fetchExamLists(examType: TExamType): Promise<IExamsModel[]> {
   try {
-    const resp = await fetcher(siteConfig.api_url + `/mock/exam/${examType}/`, { method: "GET" });
+    const resp = await fetcher(siteConfig.api_url + `/mock/exam/${examType}`, { method: "GET" });
     console.log(resp)
     return resp as IExamsModel[]
   }

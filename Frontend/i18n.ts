@@ -587,33 +587,17 @@ export const LanguageTable = {
       },
     },
     result: {
-      classList: {
-        zh: "班級列表",
-        en: "Class list",
+      examResults: {
+        zh: "模擬考成績",
+        en: "Mock exam result",
       },
-      examList: {
-        zh: "考試列表",
-        en: "Exam list",
-      },
-      studentList: {
-        zh: "學生列表",
-        en: "Student list",
-      },
-      submissionId: {
-        zh: "提交ID",
-        en: "Submission ID",
-      },
-      class: {
-        zh: "班級",
-        en: "Class",
-      },
-      exam: {
-        zh: "模擬考",
+      examId: {
+        zh: "模擬考 ID:",
         en: "Mock Exam ID:",
       },
-      user: {
-        zh: "使用者",
-        en: "User",
+      userId: {
+        zh: "使用者 ID:",
+        en: "User ID:",
       },
       examName: {
         zh: "模擬考名稱:",
@@ -627,25 +611,17 @@ export const LanguageTable = {
         zh: "模擬考日期:",
         en: "Exam date:",
       },
-      submissionTime: {
-        zh: "提交時間",
-        en: "Submission Time",
+      totalCorrectAnswer: {
+        zh: "正確答案:",
+        en: "Total correct answer:",
       },
       score: {
         zh: "分數:",
         en: "Score:",
       },
       totalQuestion: {
-        zh: "題目總數",
-        en: "Total Number of Questions",
-      },
-      examResults: {
-        zh: "模擬考成績",
-        en: "Mock exam result",
-      },
-      totalCorrectAnswer: {
-        zh: "正確答案:",
-        en: "Total correct answer:",
+        zh: "題目數量:",
+        en: "Number of questions:",
       },
       back: {
         zh: "返回",
