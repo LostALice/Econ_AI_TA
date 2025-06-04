@@ -5,7 +5,6 @@ import { useRouter } from "next/router"
 import {
     Button,
     Link,
-    Skeleton,
     Spinner
 } from "@heroui/react"
 import DefaultLayout from "@/layouts/default";
@@ -14,13 +13,13 @@ import { LangContext } from "@/contexts/LangContext";
 
 import { useContext, useEffect, useState } from "react";
 import { LanguageTable } from "@/i18n";
-import { IExamResult } from "@/types/mock/mock"
+import { IMockResult } from "@/types/mock/create"
 
 import { fetchExamResults } from "@/api/mock/results/submissionID"
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
     const { resolvedUrl } = context
-    const regex = /^\/mock\/results\/\d+$/
+    const regex = /^\/mock\/result\/\d+$/
     if (!regex.test(resolvedUrl)) {
         return { notFound: true }
     }
@@ -29,28 +28,24 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 }
 
-export default function MockPage() {
+export default function SubmissionResultPage() {
     const router = useRouter()
 
     const { language, setLang } = useContext(LangContext);
-    const submissionID = Number(router.query.submissionID) as number
+    const submissionID = Number(router.query.submissionId) as number
 
-    const [examResult, setExamResult] = useState<IExamResult | null>()
+    const [examResult, setExamResult] = useState<IMockResult | null>(null)
     const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
 
     useEffect(() => {
         // Fetch exam result from the server
         setIsPageLoading(true)
-        fetchExamResults(submissionID)
-            .then((response) => {
-                if (response) {
-                    setExamResult(response)
-                }
-            })
-            .finally(() => {
-                setIsPageLoading(false)
-            })
+        const loadData = async () => {
+            const resultData = await fetchExamResults(submissionID)
+            setExamResult(resultData)
+        }
         setIsPageLoading(false)
+        loadData()
     }, [submissionID])
 
     return (
@@ -89,19 +84,19 @@ export default function MockPage() {
                                     <div>
                                         <span className="font-semibold">
                                             {LanguageTable.mock.result.examDate[language]}
-                                            {examResult ? examResult.exam_date : LanguageTable.mock.result.noData[language]}
+                                            {examResult ? examResult.exam_date.replace("T", " ") : LanguageTable.mock.result.noData[language]}
                                         </span>
                                     </div>
                                     <div>
                                         <span className="font-semibold">
-                                            {LanguageTable.mock.result.totalCorrectAnswer[language]}
-                                            {examResult ? examResult.total_correct_answers : LanguageTable.mock.result.noData[language]}
+                                            {LanguageTable.mock.result.score[language]}
+                                            {examResult ? examResult.score : LanguageTable.mock.result.noData[language]}
                                         </span>
                                     </div>
                                     <div>
                                         <span className="font-semibold">
-                                            {LanguageTable.mock.result.scorePercentage[language]}
-                                            {examResult ? examResult.score_percentage : LanguageTable.mock.result.noData[language]}%
+                                            {LanguageTable.mock.result.totalQuestion[language]}
+                                            {examResult ? examResult.total_question : LanguageTable.mock.result.noData[language]}
                                         </span>
                                     </div>
                                 </div>

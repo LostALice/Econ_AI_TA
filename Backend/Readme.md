@@ -278,3 +278,66 @@ Raises: HTTPException: If there's an error in file type, format, or database ope
     - file_id: string
 
 ---
+
+```sql
+CREATE TABLE exams (
+    exam_id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_name VARCHAR(255) NOT NULL,
+    exam_type VARCHAR(255) NOT NULL,
+    exam_date DATETIME NOT NULL,
+    exam_duration INT NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1
+);
+CREATE TABLE question (
+    question_id INT AUTO_INCREMENT PRIMARY KEY,
+    question_text TEXT,
+    enabled TINYINT(1) NOT NULL DEFAULT 1
+);
+CREATE TABLE exam_questions (
+    exam_id INT NOT NULL,
+    question_id INT NOT NULL,
+    PRIMARY KEY (exam_id, question_id),
+    FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+    FOREIGN KEY (question_id) REFERENCES question(question_id)
+);
+CREATE TABLE question_image (
+    question_id INT NOT NULL,
+    image_uuid CHAR(36) NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    PRIMARY KEY (question_id, image_uuid),
+    FOREIGN KEY (question_id) REFERENCES question(question_id)
+);
+CREATE TABLE `option` (
+    option_id INT AUTO_INCREMENT PRIMARY KEY,
+    option_text TEXT NOT NULL,
+    is_correct TINYINT(1) NOT NULL DEFAULT 0,
+    enabled TINYINT(1) NOT NULL DEFAULT 1
+);
+CREATE TABLE question_option (
+    question_id INT NOT NULL,
+    option_id INT NOT NULL,
+    PRIMARY KEY (question_id, option_id),
+    FOREIGN KEY (question_id) REFERENCES question(question_id),
+    FOREIGN KEY (option_id) REFERENCES `option`(option_id)
+);
+CREATE TABLE exam_submission (
+    submission_id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_id INT NOT NULL,
+    user_id INT NOT NULL,
+    score INT NOT NULL,
+    regraded_score INT DEFAULT NULL,
+    submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+    FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
+);
+CREATE TABLE exam_submission_answer (
+    submission_id INT NOT NULL,
+    question_id INT NOT NULL,
+    selected_option_id INT DEFAULT NULL,
+    is_correct_at_submission TINYINT(1) NOT NULL DEFAULT 1,
+    PRIMARY KEY (submission_id, question_id),
+    FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
+    FOREIGN KEY (question_id) REFERENCES question(question_id),
+    FOREIGN KEY (selected_option_id) REFERENCES `option`(option_id)
+);
+```

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class LoginFormModel(BaseModel):
     username: str
-    hashed_password: str
+    password: str
 
 
 class UserInfoModel(BaseModel):

@@ -16,9 +16,10 @@ from Backend.utils.helper.model.api.v1.mock import (
     MockExamInformationModel,
     SubmittedExamModel,
     ExamResultModel,
+    TagModel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
-from typing import Literal, Optional
+from typing import Literal
 
 import mysql.connector as connector
 import json
@@ -26,26 +27,18 @@ import json
 from pprint import pformat
 from os import getenv
 
-
 # development
-if getenv("DEBUG") == "True":
+GLOBAL_DEBUG_MODE = getenv("DEBUG")
+
+
+if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
 
 
-class SetupMYSQL(object):
-    _instance = None
-
-    def __new__(cls):
-        if not cls._instance:
-            if not cls._instance:
-                cls._instance = super(SetupMYSQL, cls).__new__(cls)
-                cls._instance._initialize()
-
-        return cls._instance
-
-    def _initialize(self) -> None:
+class SetupMYSQL:
+    def __init__(self) -> None:
         self._DEBUG = getenv("MYSQL_DEBUG")
 
         self._HOST = getenv("MYSQL_HOST")
@@ -77,17 +70,13 @@ class SetupMYSQL(object):
         )
 
         # logger
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
-        self.logger.debug("=======================")
         self.logger.debug("| Start loading MYSQL |")
-        self.logger.debug("=======================")
 
         self._setup()
 
-        self.logger.debug("==========================")
         self.logger.debug("| MYSQL Loading Finished |")
-        self.logger.debug("==========================")
 
     def _setup(self):
         """
@@ -118,18 +107,17 @@ class SetupMYSQL(object):
         self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
         try:
-            self.connection.database = self._DATABASE
             self.logger.debug(f"Debug Mode: {self._DEBUG}")
             if self._DEBUG in ["True", "true"]:
                 self.logger.warning("Dropping database")
-                self.cursor.execute(f"DROP DATABASE {self._DATABASE}")
+                self.cursor.execute(f"DROP SCHEMA {self._DATABASE}")
                 self.connection.commit()
                 self.create_database()
             else:
                 self.logger.info(f"Skipped recrate database, Debug: {self._DEBUG}")
+            self.connection.database = self._DATABASE
         except connector.Error as error:
             self.logger.error(error)
-            self.logger.debug(pformat(f"Creating MYSQL database {self._DATABASE}"))
             self.create_database()
         finally:
             self.logger.debug(f"Using MYSQL database {self._DATABASE}")
@@ -137,14 +125,15 @@ class SetupMYSQL(object):
             self.cursor = self.connection.cursor(dictionary=True, prepared=True)
 
     def create_database(self) -> None:
-        self.cursor.execute(f"CREATE DATABASE {self._DATABASE};")
+        self.logger.debug(f"Creating MYSQL database {self._DATABASE}")
+        self.cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self._DATABASE};")
         self.connection.connect(database=self._DATABASE)
         self.connection.commit()
 
         # ROLE table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`role` (
+            """
+            CREATE TABLE role (
                 `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`role_id`),
@@ -156,8 +145,8 @@ class SetupMYSQL(object):
 
         # USER table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`user` (
+            """
+            CREATE TABLE `user` (
                 `user_id` INT NOT NULL AUTO_INCREMENT,
                 `username` VARCHAR(45) NOT NULL,
                 `role_id` INT UNSIGNED NOT NULL,
@@ -170,8 +159,8 @@ class SetupMYSQL(object):
 
         # LOGIN table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`login` (
+            """
+            CREATE TABLE login (
                 `user_id` INT NOT NULL,
                 `password` VARCHAR(64) NOT NULL,
                 `jwt` VARCHAR(255) NOT NULL DEFAULT "",
@@ -185,8 +174,8 @@ class SetupMYSQL(object):
 
         # CHAT table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`chat` (
+            """
+            CREATE TABLE chat (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `user_id` INT NOT NULL,
                 `chat_name` VARCHAR(45) NOT NULL,
@@ -199,8 +188,8 @@ class SetupMYSQL(object):
 
         # FILE table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`file` (
+            """
+            CREATE TABLE file (
                 `file_id` VARCHAR(45) NOT NULL,
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
@@ -215,8 +204,8 @@ class SetupMYSQL(object):
 
         # QA table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`qa` (
+            """
+            CREATE TABLE qa (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `question` LONGTEXT NOT NULL,
@@ -235,8 +224,8 @@ class SetupMYSQL(object):
 
         # ATTACHMENT table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`attachment` (
+            """
+            CREATE TABLE attachment (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `file_id` VARCHAR(45) NOT NULL,
@@ -250,8 +239,8 @@ class SetupMYSQL(object):
 
         # IMAGES table
         self.cursor.execute(
-            f"""
-            CREATE TABLE `{self._DATABASE}`.`images` (
+            """
+            CREATE TABLE images (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `qa_id` VARCHAR(45) NOT NULL,
                 `images_file_id` VARCHAR(45) NOT NULL,
@@ -262,16 +251,28 @@ class SetupMYSQL(object):
             """
         )
 
-        # exams table
+        # exam table
         self.cursor.execute(
             """
             CREATE TABLE exams (
                 exam_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_name VARCHAR(255) NOT NULL,
-                exam_type VARCHAR(50) NOT NULL,
+                exam_type VARCHAR(255) NOT NULL,
                 exam_date DATETIME NOT NULL,
                 exam_duration INT NOT NULL,
-                is_enabled TINYINT(1) NOT NULL DEFAULT True
+                enabled TINYINT(1) NOT NULL DEFAULT 1
+            );
+            """
+        )
+
+        # question table
+        self.cursor.execute(
+            """
+            -- Table: question
+            CREATE TABLE question (
+                question_id INT AUTO_INCREMENT PRIMARY KEY,
+                question_text TEXT,
+                enabled TINYINT(1) NOT NULL DEFAULT 1
             );
             """
         )
@@ -280,38 +281,52 @@ class SetupMYSQL(object):
         self.cursor.execute(
             """
             CREATE TABLE exam_questions (
-                question_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
-                question_text TEXT NOT NULL,
-                is_enabled TINYINT(1) NOT NULL DEFAULT True,
-                -- question_images VARCHAR(36) DEFAULT NULL,
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
-            );
-            """
-        )
-
-        # exam_images table
-        self.cursor.execute(
-            """
-            CREATE TABLE exam_images (
                 question_id INT NOT NULL,
-                question_images CHAR(36) NOT NULL,
-                is_enabled TINYINT(1) NOT NULL DEFAULT True,
-                PRIMARY KEY (question_id, question_images),
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+                PRIMARY KEY (exam_id, question_id),
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id)
             );
             """
         )
 
-        # exam_options table
+        # question_image table
         self.cursor.execute(
             """
-            CREATE TABLE exam_options (
+            -- Table: question_image
+            CREATE TABLE question_image (
+                question_id INT NOT NULL,
+                image_uuid CHAR(36) NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (question_id, image_uuid),
+                FOREIGN KEY (question_id) REFERENCES question(question_id)
+            );
+            """
+        )
+
+        # option table
+        self.cursor.execute(
+            """
+            -- Table: option
+            CREATE TABLE `option` (
                 option_id INT AUTO_INCREMENT PRIMARY KEY,
-                question_id INT NOT NULL,
                 option_text TEXT NOT NULL,
-                is_correct TINYINT(1) NOT NULL DEFAULT False,
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id)
+                is_correct TINYINT(1) NOT NULL DEFAULT 0,
+                enabled TINYINT(1) NOT NULL DEFAULT 1
+            );
+            """
+        )
+
+        # question_option table
+        self.cursor.execute(
+            """
+            -- Table: question_option (linking table)
+            CREATE TABLE question_option (
+                question_id INT NOT NULL,
+                option_id INT NOT NULL,
+                PRIMARY KEY (question_id, option_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (option_id) REFERENCES `option`(option_id)
             );
             """
         )
@@ -319,26 +334,98 @@ class SetupMYSQL(object):
         # exam_submission table
         self.cursor.execute(
             """
+            -- Table: exam_submission
             CREATE TABLE exam_submission (
                 submission_id INT AUTO_INCREMENT PRIMARY KEY,
                 exam_id INT NOT NULL,
                 user_id INT NOT NULL,
+                score INT NOT NULL,
+                regraded_score INT DEFAULT NULL,
                 submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
+            );
+            """
+        )
+
+        # exam_submission_answer table
+        self.cursor.execute(
+            """
+            -- Table: exam_submission_answer
+            CREATE TABLE exam_submission_answer (
+                submission_id INT NOT NULL,
+                question_id INT NOT NULL,
+                selected_option_id INT DEFAULT NULL,
+                is_correct_at_submission TINYINT(1) NOT NULL DEFAULT 1,
+                PRIMARY KEY (submission_id, question_id),
+                FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (selected_option_id) REFERENCES `option`(option_id)
+            );
+            """
+        )
+
+        # classes table
+        self.cursor.execute(
+            """
+            CREATE TABLE class (
+                class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                classname VARCHAR(255) NOT NULL DEFAULT "New Class",
+                enabled TINYINT(1) NOT NULL DEFAULT 1
+            );
+            """
+        )
+
+        # class user table
+        self.cursor.execute(
+            """
+            CREATE TABLE class_user (
+                class_id INT NOT NULL,
+                user_id INT NOT NULL,
+                role_id INT UNSIGNED NOT NULL,
+                PRIMARY KEY (class_id, user_id),
+                FOREIGN KEY (class_id) REFERENCES class(class_id),
+                FOREIGN KEY (user_id) REFERENCES `user`(user_id),
+                FOREIGN KEY (role_id) REFERENCES role(role_id)
+            );
+            """
+        )
+
+        # class Exam table
+        self.cursor.execute(
+            """
+            CREATE TABLE class_exam (
+                class_id INT NOT NULL,
+                exam_id INT NOT NULL,
+                PRIMARY KEY (class_id, exam_id),
+                FOREIGN KEY (class_id) REFERENCES class(class_id),
                 FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
             );
             """
         )
-        # exam_submission_answer table
+
+        # tag table
         self.cursor.execute(
             """
-            CREATE TABLE exam_submission_answers (
-                submitted_answer_id INT AUTO_INCREMENT PRIMARY KEY,
-                submission_id INT NOT NULL,
+            CREATE TABLE tag (
+                tag_id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(15) NOT NULL UNIQUE,
+                description VARCHAR(255) NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT TRUE
+            );
+            """
+        )
+
+        # question_tag table
+        self.cursor.execute(
+            """
+            CREATE TABLE question_tag (
                 question_id INT NOT NULL,
-                selected_option_id INT DEFAULT NULL,
-                FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
-                FOREIGN KEY (question_id) REFERENCES exam_questions(question_id),
-                FOREIGN KEY (selected_option_id) REFERENCES exam_options(option_id)
+                tag_id INT NOT NULL,
+                enabled TINYINT(1) NOT NULL DEFAULT TRUE,
+                PRIMARY KEY (question_id, tag_id),
+                FOREIGN KEY (question_id) REFERENCES question(question_id),
+                FOREIGN KEY (tag_id) REFERENCES tag(tag_id)
             );
             """
         )
@@ -359,7 +446,7 @@ class SetupMYSQL(object):
 
         self.cursor.execute(
             """
-            INSERT INTO `role` (`role_name`) VALUES ("Admin");
+            INSERT INTO `role` (`role_name`) VALUES ("Admin"), ("Teacher"), ("TA"), ("Student");
             """
         )
         self.cursor.execute(
@@ -376,19 +463,57 @@ class SetupMYSQL(object):
         )
         self.connection.commit()
 
-        # Anonymous
-        self.cursor.execute(
-            """
-            INSERT INTO `role` (`role_name`) VALUES ("Anonymous");
-            """
-        )
+        # Teacher
         self.cursor.execute(
             """
             INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 2);
             """,
-            ("Anonymous",),
+            ("Teacher",),
         )
+
+        # TA
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 3);
+            """,
+            ("TA",),
+        )
+
+        # Student
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 4);
+            """,
+            ("Student",),
+        )
+
         self.connection.commit()
+
+        if self._DEBUG:
+            # Teacher
+            self.cursor.execute(
+                """
+                INSERT INTO `login` (user_id, password) VALUES (2, %s);
+                """,
+                (hashed_admin_password,),
+            )
+
+            # TA
+            self.cursor.execute(
+                """
+                INSERT INTO `login` (user_id, password) VALUES (3, %s);
+                """,
+                (hashed_admin_password,),
+            )
+
+            # Student
+            self.cursor.execute(
+                """
+                INSERT INTO `login` (user_id, password) VALUES (4, %s);
+                """,
+                (hashed_admin_password,),
+            )
+            self.connection.commit()
 
         self.logger.debug(pformat(f"Created MYSQL database {self._DATABASE}"))
 
@@ -397,7 +522,29 @@ class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
         super().__init__()
 
-    def query_role_id(self, role_name: str) -> int | None:
+    def query_role_id_by_user_id(self, user_id: int) -> int | None:
+        """query the role id using user id
+
+        Args:
+            user_id: (int): role id
+
+        Returns:
+            int: role name
+            None: not found
+        """
+        self.connection.ping(attempts=3)
+
+        self.cursor.execute(
+            """SELECT role_id FROM `user` WHERE user_id = %s""", (user_id,)
+        )
+        self.sql_query_logger()
+        role_id = self.cursor.fetchone()
+
+        self.logger.info(pformat(role_id))
+
+        return role_id["role_id"] if role_id else None
+
+    def query_role_id_by_role_name(self, role_name: str) -> int | None:
         """query the role name using role id
 
         Args:
@@ -420,71 +567,93 @@ class MySQLHandler(SetupMYSQL):
 
         return int(role_id) if role_id else None
 
+    def remove_expired_token(self, user_id: int) -> None:
+        self.cursor.execute(
+            """UPDATE login SET jwt = "" WHERE user_id = %s""",
+            (user_id,),
+        )
+        self.commit()
+
+    def verify_login_token(self, user_id: int, token: str) -> bool:
+        self.connection.commit()
+        self.cursor.execute(
+            """SELECT jwt FROM login WHERE user_id = %s LIMIT 1;""", (user_id,)
+        )
+        self.sql_query_logger()
+        result = self.cursor.fetchall()[0]
+
+        self.logger.info((user_id, token, result))
+
+        return result["jwt"] == token
+
     def create_user(
         self,
         username: str,
         hashed_password: str,
-        role_name: Literal["user", "admin"] = "user",
+        role_name: Literal["User", "Admin"] = "User",
     ) -> int | bool:
-        """create a new user
-
-        Args:
-            username (str): provide a username
-            password (str): password
-            role_name (str): admin | user
+        """
+        Create a new user account.
 
         Returns:
-            int:
-                200: success
-                302: username exists in database
-                500: database error
+            200: Success
+            302: Username already exists
+            500: Error during database commit
         """
         self.connection.ping(attempts=3)
         self.logger.debug(
             pformat(f"create_user {username} {hashed_password} {role_name}")
         )
 
-        # check if user already exists
+        # Check if username already exists
         self.cursor.execute(
-            """SELECT username FROM `users` WHERE username = %s""", (username,)
+            "SELECT username FROM `user` WHERE username = %s", (username,)
         )
-
         self.sql_query_logger()
-        is_username_exist = self.cursor.fetchone()
-        self.logger.info("is_username_exist", is_username_exist)
-
-        if is_username_exist:
+        if self.cursor.fetchone():
             return 302
 
-        # check if role exists in database
+        # Get role_id from role table
         self.cursor.execute(
-            """SELECT role_id FROM `role` WHERE role_name = %s""", (role_name,)
+            "SELECT role_id FROM `role` WHERE role_name = %s", (role_name,)
+        )
+        self.sql_query_logger()
+        role_row = self.cursor.fetchone()
+
+        if not role_row:
+            self.logger.error(f"Role '{role_name}' not found in the database")
+            return 500
+
+        role_id = role_row["role_id"]
+
+        # Insert user into `user` table
+        self.cursor.execute(
+            """
+            INSERT INTO `user` (username, role_id)
+            VALUES (%s, %s)
+            """,
+            (username, role_id),
         )
 
-        self.sql_query_logger()
-        role_id = self.cursor.fetchone()
-        self.logger.info(pformat(role_id))
+        user_id = self.cursor.lastrowid
 
-        if is_username_exist:
-            return 302
-
+        # Insert hashed password into `login` table
         self.cursor.execute(
             """
             INSERT INTO `login` (user_id, password)
-            VALUES (
-                %s, %s,
-            );""",
-            (username, hashed_password),
+            VALUES (%s, %s)
+            """,
+            (user_id, hashed_password),
         )
-
-        return self.commit()
+        result = self.commit()
+        # Commit all DB changes
+        if result:
+            return 200
+        return 500
 
     def insert_login_token(self, user_id: int, jwt_token: str) -> bool:
         """
         Insert or update a JWT token for a specific user in the login table.
-
-        This function updates the "jwt" field in the "login" table for the specified user.
-        It"s typically used when a user logs in and receives a new JWT token.
 
         Args:
             user_id (int): The unique identifier of the user.
@@ -493,17 +662,19 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: True if the token was successfully inserted/updated, False otherwise.
         """
-        self.logger.info(pformat(f"insert_login_token {user_id} {jwt_token}"))
+        self.logger.info(f"insert_login_token {user_id}")
 
         self.cursor.execute(
             """
             UPDATE login
             SET jwt = %s
-            WHERE user_id = %s""",
+            WHERE user_id = %s
+            """,
             (jwt_token, user_id),
         )
+        result = self.commit()
 
-        return True if self.commit() else False
+        return True if result else False
 
     def get_user_info(
         self, username: str, hashed_password: str
@@ -644,7 +815,7 @@ class MySQLHandler(SetupMYSQL):
         question: str,
         answer: str,
         token_size: int,
-        sent_by_username: str,
+        user_id: int,
         file_ids: list[str],
     ) -> bool:
         """
@@ -675,18 +846,11 @@ class MySQLHandler(SetupMYSQL):
                     "question": question,
                     "answer": answer,
                     "token_size": token_size,
-                    "sent_by_username": sent_by_username,
+                    "user_id": user_id,
                     "file_ids": file_ids,
                 }
             )
         )
-
-        self.cursor.execute(
-            """SELECT user_id FROM user WHERE username = %s""", (sent_by_username,)
-        )
-        user_id = self.cursor.fetchone()["user_id"]
-
-        self.logger.debug(f"Fetched user: {sent_by_username}, user_id: {user_id}")
 
         self.cursor.execute(
             f"""
@@ -707,7 +871,7 @@ class MySQLHandler(SetupMYSQL):
                 %s, %s, %s, %s, %s, %s
             );
         """,
-            (chat_id, qa_id, question, answer, token_size, sent_by_username),
+            (chat_id, qa_id, question, answer, token_size, user_id),
         )
 
         success = self.commit()
@@ -828,7 +992,7 @@ class MySQLHandler(SetupMYSQL):
         return query_result
 
     def query_mock_exam_list(
-        self, mock_type: Optional[Literal["basic", "cse", "all"]]
+        self, mock_type: Literal["basic", "cse", "all"] | None
     ) -> list[ExamsInfoModel]:
         """
         This function queries the database for a list of mock exams, including nested details for exam questions and options.
@@ -862,7 +1026,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -878,12 +1042,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -907,7 +1071,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -923,12 +1087,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "basic"
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1 AND e.exam_type = "basic"
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -952,7 +1116,7 @@ class MySQLHandler(SetupMYSQL):
                                     "question_images", (
                                         SELECT JSON_ARRAYAGG(ei.question_images)
                                         FROM exam_images ei
-                                        WHERE ei.question_id = eq.question_id AND ei.is_enabled = 1
+                                        WHERE ei.question_id = eq.question_id AND ei.enabled = 1
                                     ),
                                     "question_options", (
                                         SELECT JSON_ARRAYAGG(
@@ -968,12 +1132,12 @@ class MySQLHandler(SetupMYSQL):
                                 )
                             )
                             FROM exam_questions eq
-                            WHERE eq.exam_id = e.exam_id AND eq.is_enabled = 1 AND e.exam_type = "cse"
+                            WHERE eq.exam_id = e.exam_id AND eq.enabled = 1 AND e.exam_type = "cse"
                             ORDER BY eq.question_id DESC
                         )
                     ) AS exam_data
                     FROM exams e
-                    WHERE e.is_enabled = 1
+                    WHERE e.enabled = 1
                 ) sub;
                 """
             )
@@ -1094,15 +1258,13 @@ class MySQLHandler(SetupMYSQL):
 
         return exam_info_data
 
-    def query_mock_exam(
-        self, mock_type: Optional[Literal["basic", "cse"]]
-    ) -> dict | None:
+    def query_mock_exam(self, mock_type: Literal["basic", "cse"] | None) -> dict | None:
         self.connection.ping(attempts=3)
 
         self.cursor.execute(
             """
             SELECT exam_id, exam_name, exam_type, exam_duration FROM exams
-            WHERE exam_type = %s AND is_enabled = True;
+            WHERE exam_type = %s AND enabled = True;
         """,
             (mock_type,),
         )
@@ -1157,7 +1319,7 @@ class MySQLHandler(SetupMYSQL):
             FROM exams
             WHERE exam_id = %s
             """,
-            (last_id,)
+            (last_id,),
         )
         inserted_exam_info = self.cursor.fetchone()
         self.logger.info(inserted_exam_info)
@@ -1298,14 +1460,14 @@ class MySQLHandler(SetupMYSQL):
         ]
 
     def modify_question(
-        self, question: ExamQuestionModel, image_uuids: Optional[list[str]]
+        self, question: ExamQuestionModel, image_uuids: list[str] | None
     ) -> bool:
         """
         This function modifies a question record in the database by updating its text, options, and optionally its associated images.
 
         Args:
             question: ExamQuestionModel - The question object containing updated text, options, and identifier.
-            images_path: Optional[list[str]] - A list of new image paths to associate with the question. If provided, existing images will be deleted and replaced.
+            images_path: list[str] | None - A list of new image paths to associate with the question. If provided, existing images will be deleted and replaced.
 
         Return:
             bool - True if the modification was successful; False otherwise.
@@ -1351,7 +1513,7 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_images
-            SET is_enabled=0
+            SET enabled=0
             WHERE question_id=%s;
             """,
             (question.question_id,),
@@ -1373,9 +1535,9 @@ class MySQLHandler(SetupMYSQL):
             self.sql_query_logger()
         return self.commit()
 
-    def disable_exam(self, exam_id: int) -> bool:
+    def enable_exam(self, exam_id: int) -> bool:
         """
-        This function deletes an exam record from the exam table in the database.
+        This function enable an exam record from the exam table in the database.
         It pings the database connection, executes the deletion SQL query, logs the SQL query, and commits the transaction.
 
         Args:
@@ -1388,12 +1550,37 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
-            SET enabled=%s
+            SET enabled=0
             WHERE exam_id=%s
             """,
-            (1, exam_id),
+            (exam_id,),
         )
 
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def disable_exam(self, exam_id: int) -> bool:
+        """
+        This function disable an exam record from the exam table in the database.
+        It pings the database connection, executes the deletion SQL query, logs the SQL query, and commits the transaction.
+
+        Args:
+            exam_id: int - The unique identifier of the exam to be deleted.
+
+        Return:
+            bool - True if the deletion was successful and the transaction was committed; False otherwise.
+        """
+        self.connection.ping(attempts=3)
+        self.cursor.execute(
+            f"""
+            UPDATE {self._DATABASE}.exam
+            SET enabled=1
+            WHERE exam_id=%s
+            """,
+            (exam_id,),
+        )
 
         self.sql_query_logger()
         success = self.commit()
@@ -1438,10 +1625,10 @@ class MySQLHandler(SetupMYSQL):
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
-            SET enabled=%s
+            SET enabled=1
             WHERE question_id=%s
             """,
-            (1, question_id),
+            (question_id,),
         )
 
         self.sql_query_logger()
@@ -1475,9 +1662,9 @@ class MySQLHandler(SetupMYSQL):
 
     def get_mock_exam_question_list(
         self, mock_id: int
-    ) -> tuple[list[MockExamQuestionsListModel], Optional[MockExamInformationModel]]:
+    ) -> tuple[list[MockExamQuestionsListModel], MockExamInformationModel | None]:
         """
-        This function retrieves a list of mock exam questions based on the provided mock_id.
+        Retrieves a list of mock exam questions based on the provided mock_id.
         """
 
         self.connection.ping(attempts=3)
@@ -1517,7 +1704,7 @@ class MySQLHandler(SetupMYSQL):
                 FROM exam_questions AS q
                 LEFT JOIN exam_options AS o
                         ON q.question_id = o.question_id
-                WHERE q.exam_id = %s
+                WHERE q.exam_id = %s AND q.enabled = 0
                 GROUP BY q.exam_id, q.question_id, q.question_text
                 ) AS s;
             """,
@@ -1607,13 +1794,13 @@ class MySQLHandler(SetupMYSQL):
 
     def insert_mock_exam_submitted_question(
         self, exam: SubmittedExamModel
-    ) -> Optional[int]:
+    ) -> int | None:
         """
         Inserts a submitted exam question into the database.
         Args:
             class SubmittedExamModel(BaseModel):
                 exam_id: int
-                user_id: Optional[int]
+                user_id: int | None
                 submit_time: str
                 submitted_questions: list[SubmittedQuestionModel]
 
@@ -1638,6 +1825,10 @@ class MySQLHandler(SetupMYSQL):
         if _submission_id is None:
             return None
 
+        # Insert submitted answers and track scoring
+        correct_count = 0
+        total_questions = len(exam.submitted_questions)
+
         for question in exam.submitted_questions:
             self.cursor.execute(
                 """
@@ -1651,12 +1842,45 @@ class MySQLHandler(SetupMYSQL):
                 ),
             )
 
+            # Retrieve the correct option for the question
+            self.cursor.execute(
+                """
+                SELECT option_id FROM exam_options 
+                WHERE question_id = %s AND is_correct = 1
+                """,
+                (question.question_id,),
+            )
+            correct_option = self.cursor.fetchone()
+
+            # Check if the submitted answer is correct
+            if (
+                correct_option
+                and correct_option[0] == question.submitted_answer_option_id
+            ):
+                correct_count += 1
+
+        # Calculate the score and percentage
+        score = correct_count
+        score_percentage = (
+            (correct_count / total_questions) * 100 if total_questions > 0 else 0.0
+        )
+
+        # Update the score and score percentage in the exam_submission table
+        self.cursor.execute(
+            """
+            UPDATE exam_submission
+            SET score = %s, score_percentage = %s
+            WHERE submission_id = %s
+            """,
+            (score, round(score_percentage, 2), _submission_id),
+        )
+
         self.sql_query_logger()
         self.commit()
 
         return _submission_id
 
-    def query_mock_exam_results(self, submission_id: int) -> Optional[ExamResultModel]:
+    def query_mock_exam_results(self, submission_id: int) -> ExamResultModel | None:
         """
         Retrieve the results of a submitted mock exam.
         Args:
@@ -1665,7 +1889,7 @@ class MySQLHandler(SetupMYSQL):
             class ExamResultModel(BaseModel):
                 exam_id: int
                 submission_id: int
-                user_id: Optional[int] = 0
+                user_id: int | None = 0
                 exam_name: str
                 exam_type: ExamType
                 exam_date: str
@@ -1734,6 +1958,99 @@ class MySQLHandler(SetupMYSQL):
             score_percentage=fetch_data["score_percentage"],
         )
 
+    def create_tag(self, tag_name: str, tag_description: str) -> bool:
+        self.cursor.execute(
+            """
+            INSERT INTO tag (name, description) VALUES (%s, %s);
+            """,
+            (tag_name, tag_description),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def disable_tag(self, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            UPDATE tag SET enable = FALSE
+            WHERE tag_id = %s;
+            """,
+            (tag_id,),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def query_tag(self, tag_id: int) -> TagModel | None:
+        self.cursor.execute(
+            """
+            SELECT tag_id, name, description FROM tag WHERE enable = TRUE AND tag_id = %s;
+            """,
+            (tag_id,),
+        )
+
+        self.sql_query_logger()
+        fetch_data = self.cursor.fetchall()
+
+        if not fetch_data:
+            return None
+
+        self.logger.debug(pformat(fetch_data))
+        return fetch_data
+
+    def query_tag_list(self) -> list[TagModel]:
+        self.cursor.execute(
+            """
+            SELECT tag_id, name, description FROM tag WHERE enable = TRUE;
+            """,
+        )
+        self.sql_query_logger()
+        fetch_data = self.cursor.fetchall()
+
+        if not fetch_data:
+            return []
+        self.logger.debug(pformat(fetch_data))
+        return [
+            TagModel(
+                tag_id=tag["tag_id"],
+                name=tag["name"],
+                description=tag["description"],
+            )
+            for tag in fetch_data
+        ]
+
+    def add_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            INSERT INTO question_tag (question_id, tag_id) VALUES (%s, %s);
+            """,
+            (question_id, tag_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    def remove_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.cursor.execute(
+            """
+            UPDATE question_tag SET enable = FALSE
+            WHERE tag_id = %s AND question_id = %s;
+            """,
+            (tag_id, question_id),
+        )
+
+        self.sql_query_logger()
+        success = self.commit()
+
+        return success
+
+    # logger
     def sql_query_logger(self) -> None:
         """Log sql query"""
         self.logger.debug(pformat(f"Committed SQL query: {str(self.cursor.statement)}"))
@@ -1771,6 +2088,8 @@ class MySQLHandler(SetupMYSQL):
                 self.connection.close()
                 self.logger.debug(pformat("Mysql connection closed"))
 
+
+mysql_client = MySQLHandler()
 
 if __name__ == "__main__":
     from dotenv import load_dotenv

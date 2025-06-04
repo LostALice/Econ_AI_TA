@@ -9,10 +9,10 @@ import {
     DrawerHeader,
     DrawerBody,
     useDisclosure,
+    addToast,
 } from "@heroui/react"
 
-import { IExamsInfoForStudent } from "@/types/mock/index";
-import { getTargetedExamTypeList } from "@/api/mock/index"
+import { getExamTypeList } from "@/api/mock/index"
 
 import { LangContext } from "@/contexts/LangContext";
 import { AuthContext } from "@/contexts/AuthContext"
@@ -20,25 +20,34 @@ import { AuthContext } from "@/contexts/AuthContext"
 import { getCookie } from "cookies-next"
 import { useContext, useEffect, useState } from "react";
 import { LanguageTable } from "@/i18n";
+import { IExamsModel } from "@/types/mock/create";
 
 export default function MockPage() {
     const { isOpen: isOpenDrawer, onOpen: onOpenDrawer, onOpenChange: onOpenDrawerChange } = useDisclosure();
     const { language, setLang } = useContext(LangContext);
     const { role, setRole } = useContext(AuthContext)
 
-    const [examLists, setExamLists] = useState<IExamsInfoForStudent[]>([]);
-
+    const [examLists, setExamLists] = useState<IExamsModel[]>([]);
 
     useEffect(() => {
         const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language]
         setRole(userRole)
-    })
+    }, [language, setRole])
 
     const handleFetchExamTypeList = async (examType: string) => {
-        const exam_data = await getTargetedExamTypeList(examType)
-        console.log(exam_data)
-        setExamLists(exam_data)
-    }
+        try {
+            const exam_data = await getExamTypeList(examType);
+            console.log(exam_data);
+            setExamLists(exam_data);
+        } catch (error) {
+            console.error("Failed to fetch exam list:", error);
+            addToast({
+                title: LanguageTable.mock.index.failToFetchExamList[language],
+                color: "warning"
+            })
+            setExamLists([]);
+        }
+    };
 
     return (
         <DefaultLayout>
@@ -92,7 +101,7 @@ export default function MockPage() {
                             onOpenDrawer()
                         }}
                         className="w-full py-3 transition duration-200 text-center border rounded text-xl"
-                        isDisabled={role == LanguageTable.nav.role.unsigned[language] ? true : false}
+                        isDisabled={role === LanguageTable.nav.role.unsigned[language]}
                     >
                         {LanguageTable.mock.index.basic[language]}
                     </Button>
@@ -106,15 +115,29 @@ export default function MockPage() {
                     >
                         {LanguageTable.mock.index.cse[language]}
                     </Button>
-                    <Button
-                        isDisabled={role == !LanguageTable.nav.role.admin[language]}
-                        as={Link}
-                        href="/mock/create"
-                        underline="hover"
-                        className="w-full py-3 transition duration-200 text-center border rounded text-xl"
-                    >
-                        {LanguageTable.mock.index.create[language]}
-                    </Button>
+                    {
+
+                        ["Teacher", "Ta", "Admin"].includes(role) ?
+                            <>
+                                <Button
+                                    as={Link}
+                                    href="/mock/create"
+                                    underline="hover"
+                                    className="w-full py-3 transition duration-200 text-center border rounded text-xl"
+                                >
+                                    {LanguageTable.mock.index.create[language]}
+                                </Button>
+                                <Button
+                                    as={Link}
+                                    href="/mock/performance"
+                                    underline="hover"
+                                    className="w-full py-3 transition duration-200 text-center border rounded text-xl"
+                                >
+                                    {LanguageTable.mock.index.result[language]}
+                                </Button>
+                            </>
+                            : <></>
+                    }
                 </div>
             </div>
         </DefaultLayout>

@@ -79,20 +79,20 @@ export const PasswordInput = (props: any) => {
             {...props}
             isRequired
             type={isPasswordVisible ? "text" : "password"}
-            endContent={
-                <button
-                    aria-label="toggle password visibility"
-                    className="focus:outline-none"
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                >
-                    {isPasswordVisible ? (
-                        <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
-                    ) : (
-                        <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
-                    )}
-                </button>
-            }
+            // endContent={
+            //     <button
+            //         aria-label="toggle password visibility"
+            //         className="focus:outline-none"
+            //         type="button"
+            //         onClick={togglePasswordVisibility}
+            //     >
+            //         {isPasswordVisible ? (
+            //             <EyeFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+            //         ) : (
+            //             <EyeSlashFilledIcon className="text-2xl text-default-400 pointer-events-none" />
+            //         )}
+            //     </button>
+            // }
         />
     )
 }

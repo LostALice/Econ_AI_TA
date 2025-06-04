@@ -6,30 +6,32 @@ from Backend.utils.helper.model.api.v1.chatroom import (
     QuestioningModel,
     QuestionResponseModel,
 )
-from Backend.utils.database.vector_database import MilvusHandler
-from Backend.utils.RAG.response_handler import ResponseHandler
-from Backend.utils.RAG.vector_extractor import VectorHandler
+from Backend.utils.database.vector_database import milvus_client
+from Backend.utils.RAG.response_handler import response_client
+from Backend.utils.RAG.vector_extractor import encoder_client
 from Backend.utils.helper.logger import CustomLoggerHandler
-from Backend.utils.database.database import MySQLHandler
+from Backend.utils.database.database import mysql_client
+from Backend.utils.helper.api.dependency import require_student
+from Backend.utils.helper.model.api.dependency import JWTPayload
 
-# from Backend.utils.helper.model.model import *
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pprint import pformat
 from uuid import uuid4
+from typing import Annotated
 
 import base64
 import os
 
-router = APIRouter()
-mysql_client = MySQLHandler()
-milvus_client = MilvusHandler()
-encoder_client = VectorHandler()
-response_client = ResponseHandler()
-logger = CustomLoggerHandler(__name__).setup_logging()
+router = APIRouter(dependencies=[Depends(require_student)])
+# mysql_client = MySQLHandler()
+# milvus_client = MilvusHandler()
+# encoder_client = VectorHandler()
+# response_client = ResponseHandler()
+logger = CustomLoggerHandler().get_logger()
+logger.debug("| Chatroom Loading Finished |")
 
 
-@router.get("/chatroom/uuid/")
+@router.get("/uuid/")
 async def get_uuid() -> str:
     """
     Generates uuid for a new chatroom.
@@ -42,7 +44,7 @@ async def get_uuid() -> str:
     return chatroom_uuid
 
 
-@router.patch("/chatroom/rating/", status_code=200)
+@router.patch("/rating/", status_code=200)
 async def answer_rating(
     rating_model: RatingModel,
 ) -> AnswerRatingModel:
@@ -87,20 +89,20 @@ async def answer_rating(
     raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/chatroom/{chat_id}/", status_code=200)
+@router.post("/{chat_id}/", status_code=200)
 async def questioning(
     question_model: QuestioningModel,
+    payload: Annotated[JWTPayload, Depends(require_student)],
 ) -> QuestionResponseModel:
     """Ask the question and return the answer from RAG
 
     Args:
-        Args:
         chat_id (str): chatroom uuid
         question (list[str]): question content
-        sent_by_username (str): user name
         collection (str, optional): collection of docs database. Defaults to "default".
         language (str): language for the response
         images: (optional: list[str] | None): list of base64 encoded images
+        payload: (Annotated, JWTPayload(Depends(require_student))) decoded jwt
 
     Returns:
         status_code: int
@@ -110,19 +112,18 @@ async def questioning(
     """
     chat_id = question_model.chat_id
     question = question_model.question
-    sent_by_username = question_model.sent_by_username
     collection = question_model.collection
     language = question_model.language
     question_type = question_model.question_type
     question_uuid = str(uuid4())
     images = question_model.images
+    user_id = payload.user_id
 
     logger.debug(
         pformat(
             {
                 "chat_id": chat_id,
                 "question": question,
-                "sent_by_username": sent_by_username,
                 "collection": collection,
                 "question_uuid": question_uuid,
             }
@@ -189,7 +190,7 @@ async def questioning(
         answer=answer,
         question=question[-1],
         token_size=token_size,
-        sent_by_username=sent_by_username,
+        user_id=user_id,
         file_ids=document_file_uuid,
     )
 

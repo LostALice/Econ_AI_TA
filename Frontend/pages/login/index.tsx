@@ -4,13 +4,13 @@ import { useDisclosure, Button, Input, Card, CardBody, CardHeader, Divider, Sele
 import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/router";
 import { setCookie, getCookie, deleteCookie, hasCookie } from "cookies-next";
-import { sha3_256 } from "js-sha3";
 import { siteConfig } from "@/config/site";
 
 import { LanguageTable } from "@/i18n";
 import { AuthContext } from "@/contexts/AuthContext";
 import { LangContext } from "@/contexts/LangContext";
 import { PasswordInput } from "@/components/login/password/passwordInput";
+import { fetcher } from "@/api/fetcher";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +40,6 @@ export default function LoginPage() {
 
   // 登入相關狀態
   const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
@@ -49,7 +48,7 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    if (hasCookie("role") && hasCookie("jwt")) {
+    if (hasCookie("role") && hasCookie("token")) {
       const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
       setRole(userRole);
       setIsLoggedIn(true);
@@ -107,7 +106,7 @@ export default function LoginPage() {
   // 登出功能
   const logout = () => {
     deleteCookie("role");
-    deleteCookie("jwt");
+    deleteCookie("token");
     setIsLoggedIn(false);
     setFormData({
       role: "",
@@ -131,27 +130,22 @@ export default function LoginPage() {
     setLoginError("");
 
     try {
-      // 使用SHA3-256哈希密碼
-      const hashed_password = sha3_256(formData.password);
-
-      const response = await fetch(siteConfig.api_url + "/authorization/login/", {
+      const response = await fetcher(siteConfig.api_url + "/authorization/login/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           username: formData.username,  // Using username as username
-          hashed_password: hashed_password,
+          password: formData.password,
           role: formData.role,  // Added role to the request
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (response) {
+        console.log(response);
+        const data = await response;
 
         if (data.success) {
           // 登入成功
-          setCookie("jwt", data.jwt_token);
+          setCookie("token", data.jwt_token);
           setCookie("role", data.role);
 
           const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];

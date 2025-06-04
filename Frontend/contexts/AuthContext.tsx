@@ -1,9 +1,7 @@
 // Code by AkinoAlice@TyrantRey
 import { createContext, useState, useEffect } from "react";
 import {
-  setCookie,
   getCookie,
-  hasCookie,
   deleteCookie,
 } from "cookies-next";
 import { LangContext } from "@/contexts/LangContext";
@@ -70,7 +68,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setRoleState(getRoleDisplayName(user.role));
         } else {
           setUserInfo(null);
-          setRoleState(LanguageTable.nav.role.unsigned[language]);
+    setRoleState(LanguageTable.nav.role.unsigned[language]);
         }
       }
     };
@@ -101,22 +99,20 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const logout = () => {
     // copy from default out function
     deleteCookie("role");
-    deleteCookie("jwt");
-    // setUsername("");
-    // setPassword("");
+    deleteCookie("token");
     const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language];
     setRole(userRole);
 
     setRoleState(userRole);
     setUserInfo(null);
-    localStorage.removeItem("jwt");
+    localStorage.removeItem("token");
     localStorage.removeItem("role");
     console.log("User logged out");
   };
 
   // 調試輸出當前狀態
   useEffect(() => {
-    console.log("Current auth state:", { role, isLoggedIn: role !== LanguageTable.nav.role.unsigned[language] });
+    console.log("Current auth state:", { role, isLoggedIn: LanguageTable.nav.role.unsigned[language] });
   }, [role, language]);
 
   return (

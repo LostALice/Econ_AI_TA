@@ -2,11 +2,11 @@
 
 import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/chat/types";
 import { siteConfig } from "@/config/site";
+import { fetcher } from "../fetcher";
 
 export async function askQuestion(
   chatUUID: string,
   question: string[],
-  userID: string,
   language: string,
   collection: string | "default" = "default",
   images: string[],
@@ -23,7 +23,6 @@ export async function askQuestion(
   const postBody = JSON.stringify({
     chat_id: chatUUID,
     question: question,
-    sent_by_username: userID,
     language: language,
     question_type: question_type,
     collection: collection,
@@ -31,14 +30,15 @@ export async function askQuestion(
   });
 
   console.log(postBody);
-  const resp = await fetch(`${siteConfig.api_url}/chatroom/${chatUUID}/`, {
+  const resp = await fetcher(`${siteConfig.api_url}/chatroom/${chatUUID}/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: postBody,
   });
-  const data = await resp.json();
+  const data = await resp;
 
   console.log(data);
 
@@ -50,12 +50,41 @@ export async function askQuestion(
 }
 
 export async function getChatroomUUID(): Promise<string> {
-  const response = await fetch(siteConfig.api_url + "/chatroom/uuid/", {
+  const response = await fetcher(siteConfig.api_url + "/chatroom/uuid/", {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
   });
+  return await response;
+}
 
-  return await response.json();
+export async function fetchDocsList(
+  documentationType: string
+): Promise<IDocsFormat[]> {
+  const resp = await fetcher(
+    siteConfig.api_url + "/documentation/" + documentationType + "/",
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    }
+  );
+  const data = await resp;
+
+  if (!data.docs_list) {
+    console.error("No documentation found.");
+    return [];
+  }
+
+  let docsList = [];
+  for (let file of data.docs_list) {
+    const docsInfo: IDocsFormat = {
+      fileID: file.file_id,
+      fileName: file.file_name,
+      lastUpdate: file.last_update.toString().replace("T", " "),
+    };
+    docsList.push(docsInfo);
+  }
+  console.debug(docsList);
+  return docsList;
 }

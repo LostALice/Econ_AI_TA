@@ -2,23 +2,6 @@
 
 export type TExamType = "basic" | "cse";
 
-export interface IExamsInfo {
-  exam_id: number;
-  exam_name: string;
-  exam_type: TExamType;
-  exam_date: string;
-  exam_duration: number; // in minutes
-  exam_questions: IExamQuestion[];
-}
-
-export interface IExamQuestion {
-  exam_id: number;
-  question_id: number;
-  question_text: string;
-  question_options: IExamOption[];
-  question_images: null | string[];
-}
-
 // MC support only
 export interface IExamOption {
   option_id: number;
@@ -54,12 +37,73 @@ export interface IModifiedQuestionOptionsPrams {
 
 export type IExamOptionForStudent = Omit<IExamOption, "is_correct">;
 
-export interface IExamQuestionForStudent
-  extends Omit<IExamQuestion, "question_options"> {
-  question_options: IExamOptionForStudent[];
+export interface IClassListModel {
+  class_id: number
+  classname: string
 }
 
-export interface IExamsInfoForStudent
-  extends Omit<IExamsInfo, "exam_questions"> {
-  exam_questions: IExamQuestionForStudent[];
+export interface IExamsModel {
+  exam_id: number
+  exam_name: string
+  exam_type: TExamType
+  exam_date: string
+  exam_duration: number
+}
+
+export interface IQuestionModel {
+  question_id: number
+  question_text: string
+}
+
+export interface IExamQuestionModel extends IQuestionModel {
+  question_options: IOptionModel[];
+  question_images: IQuestionImageBase64Model[] | null;
+}
+
+export interface IQuestionImageModel {
+  question_id: number
+  image_uuid: string
+}
+
+export interface IQuestionImageBase64Model extends IQuestionImageModel {
+  image_data_base64: string
+}
+
+export interface IOptionModel {
+  option_id: number
+  option_text: string
+  is_correct: boolean
+}
+
+export interface ICreateExamPrams {
+  class_id: number,
+  exam_name: string,
+  exam_type: TExamType,
+  exam_date: string,
+}
+
+export interface IStudentAnswer {
+  question_id: number
+  selected_option_id: number | null
+}
+
+export interface IExamSubmissionModel {
+  exam_id: number
+  submission_date: string
+  answer: IStudentAnswer[]
+}
+
+export interface IMockResult {
+  submission_id: number
+  class_id: number
+  classname: string
+  exam_id: number
+  exam_name: string
+  user_id: number
+  username: string
+  exam_type: TExamType
+  exam_date: string
+  submission_time: string
+  score: number
+  total_question: number
 }

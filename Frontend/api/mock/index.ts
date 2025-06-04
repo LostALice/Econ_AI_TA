@@ -1,20 +1,19 @@
 // Code by AkinoAlice@TyrantRey
 
 import { siteConfig } from "@/config/site";
-import { IExamsInfoForStudent } from "@/types/mock/index";
+import { fetcher } from "../fetcher";
+import { IExamsModel } from "@/types/mock/create";
 
-export async function getTargetedExamTypeList(
+export async function getExamTypeList(
   exam_type: string
-): Promise<IExamsInfoForStudent[]> {
-  const resp = await fetch(
-    siteConfig.api_url + "/mock/exam/" + exam_type + "/",
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  return resp.json();
+): Promise<IExamsModel[]> {
+  try {
+    const resp = await fetcher(siteConfig.api_url + `/mock/exam/${exam_type}/`);
+    console.log(resp)
+    return resp as IExamsModel[]
+  }
+  catch (err) {
+    console.error(err)
+    return []
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useContext } from "react"
 
-import { askQuestion, getChatroomUUID } from "@/api/chat/index"
+import { askQuestion, getChatroomUUID } from "@/api/chatroom/index"
 import { IMessageInfo, TQuestionMode } from "@/types/chat/types"
 import { MessageBox } from "@/components/chat/messageBox"
 import { ImageBox } from "@/components/chat/imageBox"
@@ -68,7 +68,6 @@ export default function ChatPage() {
     const message = await askQuestion(
       chatroomUUID,
       historyQuestions,
-      "Anonymous",
       language,
       "default",
       base64ImageList,
@@ -135,7 +134,7 @@ export default function ChatPage() {
     if (base64ImageList.length > 3) { return }
 
     const reader = new FileReader()
-    reader.readAsDataURL(files[-1])
+    reader.readAsDataURL(files[0])
     reader.onload = () => {
       if (reader.result) {
         let base64ImageString = reader.result as string
@@ -298,6 +297,6 @@ export default function ChatPage() {
           </span>
         </CardFooter>
       </Card>
-    </DefaultLayout >
+    </DefaultLayout>
   )
 }

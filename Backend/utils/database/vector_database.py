@@ -3,7 +3,7 @@
 from Backend.utils.helper.model.database.vector_database import SearchSimilarityModel
 from Backend.utils.helper.logger import CustomLoggerHandler
 
-from pymilvus import MilvusClient
+from pymilvus import MilvusClient  # type: ignore[import-untyped]
 from pymilvus import DataType
 
 from typing import Literal, Dict
@@ -19,16 +19,8 @@ if getenv("DEBUG") == "True":
     load_dotenv("./.env")
 
 
-class SetupMilvus(object):
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(SetupMilvus, cls).__new__(cls)
-            cls._instance._initialize()
-        return cls._instance
-
-    def _initialize(self) -> None:
+class SetupMilvus:
+    def __init__(self) -> None:
         self.DEBUG = getenv("MILVUS_DEBUG")
         self.HOST = getenv("MILVUS_HOST")
         self.PORT = getenv("MILVUS_PORT")
@@ -45,17 +37,13 @@ class SetupMilvus(object):
             "Missing MILVUS_DEFAULT_COLLECTION_NAME environment variable"
         )
 
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
-        self.logger.debug("========================")
         self.logger.debug("| Start loading Milvus |")
-        self.logger.debug("========================")
 
         self._setup()
 
-        self.logger.debug("===========================")
         self.logger.debug("| Milvus Loading Finished |")
-        self.logger.debug("===========================")
 
     def _setup(self) -> None:
         self.milvus_client = MilvusClient(uri=f"http://{self.HOST}:{self.PORT}")
@@ -257,3 +245,6 @@ class MilvusHandler(SetupMilvus):
         self.logger.debug(pformat(query_search_result))
 
         return query_search_result
+
+
+milvus_client = MilvusHandler()

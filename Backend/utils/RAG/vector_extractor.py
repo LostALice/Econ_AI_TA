@@ -18,17 +18,20 @@ import requests  # type: ignore
 import json
 
 # development
-if getenv("DEBUG") is None:
+GLOBAL_DEBUG_MODE = getenv("DEBUG")
+
+
+if GLOBAL_DEBUG_MODE is None or GLOBAL_DEBUG_MODE == "True":
     from dotenv import load_dotenv
 
     load_dotenv("./.env")
 
 
-class VectorHandler(object):
+class VectorHandler:
     """API: https://docs.twcc.ai/docs/user-guides/twcc/afs/api-and-parameters/embedding-api"""
 
     def __init__(self) -> None:
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
         _mode = getenv("EMBEDDING_DEPLOY_MODE")
         _vector_dim = getenv("MILVUS_VECTOR_DIM")
@@ -84,9 +87,9 @@ class VectorHandler(object):
         )
 
 
-class OllamaEmbeddingEncoder(object):
+class OllamaEmbeddingEncoder:
     def __init__(self):
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
     def initialization(self) -> None:
         _ollama_host = getenv("OLLAMA_HOST")
@@ -140,7 +143,7 @@ class OllamaEmbeddingEncoder(object):
         return [i for i in vector.embedding]
 
 
-class AfsEmbeddingEncoder(object):
+class AfsEmbeddingEncoder:
     def initialization(self) -> None:
         _api_key = str(getenv("AFS_API_URL"))
         _url = str(getenv("AFS_API_KEY"))
@@ -240,9 +243,9 @@ class AfsEmbeddingEncoder(object):
     #     return unpadded_vector
 
 
-class OpenaiEmbeddingEncoder(object):
+class OpenaiEmbeddingEncoder:
     def __init__(self):
-        self.logger = CustomLoggerHandler(__name__).setup_logging()
+        self.logger = CustomLoggerHandler().get_logger()
 
     def initialization(self) -> None:
         _openai_api_key = getenv("OPENAI_API_KEY")
@@ -253,6 +256,11 @@ class OpenaiEmbeddingEncoder(object):
         )
         assert _openai_embedding_model_name is not None, (
             "Environment variable OPENAI_EMBEDDING_MODEL_NAME not set"
+        )
+
+        self.logger.info("OpenAI API Key: %s", _openai_api_key)
+        self.logger.info(
+            "OpenAI Embedding Model Name: %s", _openai_embedding_model_name
         )
 
         self.openai_config = OPENAIEmbeddingConfig(
@@ -269,6 +277,8 @@ class OpenaiEmbeddingEncoder(object):
             self.openai_client = OpenAI()
         except Exception as e:
             self.logger.error(f"Failed to initialize OLLAMA client: {e}")
+
+        self.logger.debug("| OpenAI Embedding Loading Finished |")
 
     def encode(self, text: str) -> list[float]:
         """
@@ -291,3 +301,6 @@ class OpenaiEmbeddingEncoder(object):
             input=text,
         )
         return response.data[0].embedding
+
+
+encoder_client = VectorHandler()

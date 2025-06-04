@@ -17,7 +17,6 @@ class AnswerRatingModel(BaseModel):
 class QuestioningModel(BaseModel):
     chat_id: str
     question: list[str]
-    sent_by_username: str
     language: Literal["CHINESE", "ENGLISH"] = "CHINESE"
     question_type: Literal["CHATTING", "TESTING", "THEOREM"]
     collection: str = "default"
