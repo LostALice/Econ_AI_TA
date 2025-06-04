@@ -95,11 +95,15 @@ export interface IExamSubmissionModel {
 
 export interface IMockResult {
   submission_id: number
+  class_id: number
+  classname: string
   exam_id: number
-  user_id: number
   exam_name: string
+  user_id: number
+  username: string
   exam_type: TExamType
   exam_date: string
+  submission_time: string
   score: number
   total_question: number
 }
