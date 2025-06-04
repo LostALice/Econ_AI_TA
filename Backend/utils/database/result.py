@@ -31,18 +31,27 @@ class ResultDatabaseController:
             )
             SELECT
                 es.submission_id,
-                es.exam_id,
+                cu.class_id,
+                c.classname,
                 es.user_id,
+                u.username,
+                es.exam_id,
                 e.exam_name,
                 e.exam_type,
-                e.exam_date,         -- This is the exam's official date, not submission time
-                es.submission_time,  -- THIS is the actual time the submission was made
+                e.exam_date,
+                es.submission_time,
                 es.score,
                 eqc.total_questions_in_exam
             FROM
                 exam_submission AS es
             JOIN
                 exams AS e ON es.exam_id = e.exam_id
+            JOIN 
+                class_user cu ON es.user_id = cu.user_id
+            JOIN 
+                class c ON cu.class_id = c.class_id
+            JOIN 
+                `user` u ON es.user_id = u.user_id
             LEFT JOIN
                 ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
             WHERE
@@ -59,10 +68,12 @@ class ResultDatabaseController:
         self.logger.info(fetch_data)
 
         return MockResult(
-            class_id=fetch_data["class_id"],
             submission_id=fetch_data["submission_id"],
-            exam_id=fetch_data["exam_id"],
+            class_id=fetch_data["class_id"],
+            classname=fetch_data["classname"],
             user_id=fetch_data["user_id"],
+            username=fetch_data["username"],
+            exam_id=fetch_data["exam_id"],
             exam_name=fetch_data["exam_name"],
             exam_type=fetch_data["exam_type"],
             exam_date=fetch_data["exam_date"].isoformat(),
@@ -89,14 +100,16 @@ class ResultDatabaseController:
                     eq.exam_id
             )
             SELECT
-                cu.class_id,
                 es.submission_id,
-                es.exam_id,
+                cu.class_id,
+                c.classname,
                 es.user_id,
+                u.username,
+                es.exam_id,
                 e.exam_name,
                 e.exam_type,
-                e.exam_date,         -- This is the exam's official date, not submission time
-                es.submission_time,  -- THIS is the actual time the submission was made
+                e.exam_date,
+                es.submission_time,
                 es.score,
                 eqc.total_questions_in_exam
             FROM
@@ -105,6 +118,10 @@ class ResultDatabaseController:
                 exams AS e ON es.exam_id = e.exam_id
             JOIN 
                 class_user cu ON es.user_id = cu.user_id
+            JOIN 
+                class c ON cu.class_id = c.class_id
+            JOIN 
+                `user` u ON es.user_id = u.user_id
             LEFT JOIN
                 ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
             WHERE
@@ -122,10 +139,12 @@ class ResultDatabaseController:
 
         return [
             MockResult(
-                class_id=data["class_id"],
                 submission_id=data["submission_id"],
-                exam_id=data["exam_id"],
+                class_id=data["class_id"],
+                classname=data["classname"],
                 user_id=data["user_id"],
+                username=data["username"],
+                exam_id=data["exam_id"],
                 exam_name=data["exam_name"],
                 exam_type=data["exam_type"],
                 exam_date=data["exam_date"].isoformat(),
@@ -154,14 +173,16 @@ class ResultDatabaseController:
                     eq.exam_id
             )
             SELECT
-                cu.class_id,
                 es.submission_id,
-                es.exam_id,
+                cu.class_id,
+                c.classname,
                 es.user_id,
+                u.username,
+                es.exam_id,
                 e.exam_name,
                 e.exam_type,
-                e.exam_date,         -- This is the exam's official date, not submission time
-                es.submission_time,  -- THIS is the actual time the submission was made
+                e.exam_date,
+                es.submission_time,
                 es.score,
                 eqc.total_questions_in_exam
             FROM
@@ -170,6 +191,10 @@ class ResultDatabaseController:
                 exams AS e ON es.exam_id = e.exam_id
             JOIN 
                 class_user cu ON es.user_id = cu.user_id
+            JOIN 
+                class c ON cu.class_id = c.class_id
+            JOIN 
+                `user` u ON es.user_id = u.user_id
             LEFT JOIN
                 ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
             WHERE
@@ -187,10 +212,12 @@ class ResultDatabaseController:
 
         return [
             MockResult(
-                class_id=data["class_id"],
                 submission_id=data["submission_id"],
-                exam_id=data["exam_id"],
+                class_id=data["class_id"],
+                classname=data["classname"],
                 user_id=data["user_id"],
+                username=data["username"],
+                exam_id=data["exam_id"],
                 exam_name=data["exam_name"],
                 exam_type=data["exam_type"],
                 exam_date=data["exam_date"].isoformat(),
@@ -219,14 +246,16 @@ class ResultDatabaseController:
                     eq.exam_id
             )
             SELECT
-                cu.class_id,
                 es.submission_id,
-                es.exam_id,
+                cu.class_id,
+                c.classname,
                 es.user_id,
+                u.username,
+                es.exam_id,
                 e.exam_name,
                 e.exam_type,
-                e.exam_date,         -- This is the exam's official date, not submission time
-                es.submission_time,  -- THIS is the actual time the submission was made
+                e.exam_date,
+                es.submission_time,
                 es.score,
                 eqc.total_questions_in_exam
             FROM
@@ -235,6 +264,10 @@ class ResultDatabaseController:
                 exams AS e ON es.exam_id = e.exam_id
             JOIN 
                 class_user cu ON es.user_id = cu.user_id
+            JOIN 
+                class c ON cu.class_id = c.class_id
+            JOIN 
+                `user` u ON es.user_id = u.user_id
             LEFT JOIN
                 ExamQuestionCounts AS eqc ON es.exam_id = eqc.exam_id
             WHERE
@@ -252,10 +285,12 @@ class ResultDatabaseController:
 
         return [
             MockResult(
-                class_id=data["class_id"],
                 submission_id=data["submission_id"],
-                exam_id=data["exam_id"],
+                class_id=data["class_id"],
+                classname=data["classname"],
                 user_id=data["user_id"],
+                username=data["username"],
+                exam_id=data["exam_id"],
                 exam_name=data["exam_name"],
                 exam_type=data["exam_type"],
                 exam_date=data["exam_date"].isoformat(),
@@ -265,4 +300,3 @@ class ResultDatabaseController:
             )
             for data in fetch_data
         ]
-
