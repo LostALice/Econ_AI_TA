@@ -668,6 +668,64 @@ export const LanguageTable = {
         en: "Civil Service Examination",
       },
     },
+    tag: {
+      cantBeNone: {
+        zh: "標籤名稱或描述不能為空",
+        en: "Tag name or description can not be none"
+      },
+      createdTag: {
+        zh: "己建立標籤",
+        en: "Created tag"
+      },
+      failedCreateTag: {
+        zh: "建立標籤失敗",
+        en: "Failed create tag"
+      },
+      removedTag: {
+        zh: "已移除標籤",
+        en: "Removed tag"
+      },
+      failedRemoveTag: {
+        zh: "刪除標籤失敗",
+        en: "Failed to remove tag"
+      },
+      addedTag: {
+        zh: "已添加標籤",
+        en: "Added Tag"
+      },
+      failedAddTag: {
+        zh: "新增標籤失敗",
+        en: "Failed to add tag"
+      },
+      tagAlreadyAdded: {
+        zh: "標籤已新增",
+        en: "Tag already added"
+      },
+      addOrRemoveTag: {
+        zh: "新增/刪除標籤",
+        en: "Add/Remove Tag"
+      },
+      submit: {
+        zh: "提交",
+        en: "Submit"
+      },
+      delete: {
+        zh: "刪除",
+        en: "Delete"
+      },
+      close: {
+        zh: "關閉",
+        en: "Close"
+      },
+      addTag: {
+        zh: "添加標籤",
+        en: "Add tag"
+      },
+      editTag: {
+        zh: "編輯標籤",
+        en: "Edit tag"
+      },
+    }
   },
   login: {
     system: {

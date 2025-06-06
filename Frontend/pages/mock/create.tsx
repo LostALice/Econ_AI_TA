@@ -1,6 +1,6 @@
 
 
-import { useContext, useState, useEffect } from "react";
+import { useContext, useState, useEffect, ChangeEvent } from "react";
 import { LangContext } from "@/contexts/LangContext";
 import DefaultLayout from "@/layouts/default";
 import { LanguageTable } from "@/i18n";
@@ -13,7 +13,6 @@ import {
     IExamsModel,
     IQuestionModel,
     IExamQuestionModel,
-    ICreateExamPrams
 } from "@/types/mock/create";
 
 import {
@@ -42,7 +41,6 @@ import {
 import { getExamTypeList } from "@/api/mock/index"
 import {
     fetchClassList,
-    fetchExamLists,
     fetchExamQuestion,
     fetchExamQuestionOption,
     fetchExamQuestionImage,
@@ -52,12 +50,11 @@ import {
     createExamQuestionImage,
     deleteExam,
     deleteExamQuestion,
-    modifyExam,
     modifyExamQuestion,
     modifyExamQuestionOption,
-    modifyExamQuestionImage,
 } from "@/api/mock/create";
 import { ImageBox } from "@/components/chat/imageBox"
+import { TagBox } from "@/components/tag/tag";
 
 export default function MockPage() {
     const { language, setLang } = useContext(LangContext);
@@ -570,7 +567,7 @@ export default function MockPage() {
         <DefaultLayout>
             <Drawer isOpen={isOpenDrawer} placement="left" onOpenChange={onOpenDrawerChange}>
                 <DrawerContent>
-                    {(onClose) => (
+                    {(onClose: () => void) => (
                         <>
                             <DrawerHeader className="flex flex-col gap-1">
                                 {LanguageTable.mock.crate.examList[language]}
@@ -604,10 +601,10 @@ export default function MockPage() {
                             <ModalBody>
                                 <span>{LanguageTable.mock.crate.examTitle[language]}</span>
                                 <Input
-                                    onValueChange={(value) => {
+                                    onValueChange={(value: string) => {
                                         setCreateExamName(value)
                                     }}
-                                    validate={(value) => {
+                                    validate={(value: string) => {
                                         if (value == "") {
                                             return LanguageTable.mock.crate.titleNoNullError[language]
                                         }
@@ -617,7 +614,7 @@ export default function MockPage() {
                                 <NumberInput
                                     aria-label="exam duration"
                                     onValueChange={setCreateExamDuration}
-                                    validate={(value) => {
+                                    validate={(value: number) => {
                                         if (value <= 0) {
                                             return LanguageTable.mock.crate.durationSubZeroError[language]
                                         }
@@ -638,10 +635,10 @@ export default function MockPage() {
                                     disallowEmptySelection
                                     aria-label="class list"
                                     selectionMode="multiple"
-                                    onSelectionChange={(keys) => setSelectedClassIdList(keys as Set<number>)}
+                                    onSelectionChange={(keys: Set<number>) => setSelectedClassIdList(keys)}
                                     items={classList}
                                 >
-                                    {(class_) => (
+                                    {(class_: IClassListModel) => (
                                         <ListboxItem
                                             key={class_.class_id}
                                         >
@@ -768,6 +765,7 @@ export default function MockPage() {
                             />
                         </ListboxSection>
                     </Listbox>
+                    <TagBox questionId={currentQuestion?.question_id} />
                 </div>
                 <div className="w-full">
                     <div className="max-w mx-auto p-6">
@@ -780,7 +778,7 @@ export default function MockPage() {
                                     rows={4}
                                     placeholder={LanguageTable.mock.crate.enterQuestionText[language]}
                                     value={questionTextFelid}
-                                    onChange={(e) => setQuestionTextFelid(e.target.value)}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => setQuestionTextFelid(e.target.value)}
                                 />
                             </div>
 
@@ -818,7 +816,7 @@ export default function MockPage() {
                                                 placeholder={`${LanguageTable.mock.crate.optionText[language]} ${index + 1}`}
                                                 className="flex-2 rounded-md shadow-sm focus:outline-none"
                                                 value={option.option_text}
-                                                onChange={(e) => handleOptionChange(index, "option_text", e.target.value)}
+                                                onChange={(e: ChangeEvent<HTMLInputElement>) => handleOptionChange(index, "option_text", e.target.value)}
                                             />
                                             <Checkbox
                                                 isSelected={option.is_correct}
