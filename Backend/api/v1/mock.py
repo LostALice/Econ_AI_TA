@@ -317,8 +317,6 @@ async def get_exam_question_image_info(image_uuid: str) -> QuestionImageModel:
 @router.get("/tag/list/")
 async def get_tag_list() -> list[TagModel]:
     tag_list = mysql_client.query_tag_list()
-    if not tag_list:
-        raise HTTPException(status_code=404, detail="Tag Not Found")
     logger.info(tag_list)
 
     return tag_list
@@ -335,6 +333,11 @@ async def get_tag(tag_id: int) -> TagModel:
     return tag
 
 
+@router.get("/tag/question/{question_id}/")
+async def get_question_tag(question_id: int) -> list[TagModel]:
+    return mysql_client.query_question_tags(question_id=question_id)
+
+
 @router.post("/tag/create/")
 async def create_tag(tag_name: str, tag_description: str) -> bool:
     return mysql_client.create_tag(tag_name=tag_name, tag_description=tag_description)
@@ -346,8 +349,8 @@ async def add_tag(tag_id: int, question_id: int) -> bool:
 
 
 @router.delete("/tag/remove/{question_id}/")
-async def remove_tag(tag_id: int, question_id: int) -> bool:
-    return mysql_client.remove_question_tag(question_id=question_id, tag_id=tag_id)
+async def remove_question_tag(tag_id: int, question_id: int) -> bool:
+    return mysql_client.delete_question_tag(question_id=question_id, tag_id=tag_id)
 
 
 @router.delete("/tag/delete/")

@@ -750,10 +750,10 @@ class MockerDatabaseController:
 
         return success
 
-    def remove_question_tag(self, question_id: int, tag_id: int) -> bool:
+    def delete_question_tag(self, question_id: int, tag_id: int) -> bool:
         self.database.cursor.execute(
             """
-            UPDATE question_tag SET enabled = FALSE
+            DELETE from question_tag
             WHERE tag_id = %s AND question_id = %s;
             """,
             (tag_id, question_id),
@@ -783,6 +783,36 @@ class MockerDatabaseController:
             name=fetch_data[0]["name"],
             description=fetch_data[0]["description"],
         )
+
+    def query_question_tags(self, question_id: int) -> list[TagModel]:
+        self.database.connection.ping(attempts=3)
+        self.database.cursor.execute(
+            """
+            SELECT 
+                t.tag_id, t.name, t.description
+            FROM 
+                tag AS t
+            JOIN 
+                question_tag AS qt ON t.tag_id = qt.tag_id
+            WHERE 
+                qt.question_id = %s
+                AND qt.enabled = 1;
+            """,
+            (question_id,),
+        )
+
+        self.database.sql_query_logger()
+        fetch_data = self.database.cursor.fetchall()
+        self.logger.debug(fetch_data)
+
+        return [
+            TagModel(
+                tag_id=data["tag_id"],
+                name=data["name"],
+                description=data["description"],
+            )
+            for data in fetch_data
+        ]
 
     def create_tag(self, tag_name: str, tag_description: str) -> bool:
         self.database.cursor.execute(
