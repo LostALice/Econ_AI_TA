@@ -8,69 +8,66 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 設定日誌
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 def create_database():
     """創建資料庫"""
     try:
         # 明確從環境變數獲取資料庫設定
-        host = os.getenv('MYSQL_HOST', 'localhost')
-        port = int(os.getenv('MYSQL_PORT', '3306'))
-        user = os.getenv('MYSQL_USER', 'root')
-        password = os.getenv('MYSQL_PASSWORD', 'mysql')
-        
+        host = os.getenv("MYSQL_HOST", "localhost")
+        port = int(os.getenv("MYSQL_PORT", "3306"))
+        user = os.getenv("MYSQL_USER", "root")
+        password = os.getenv("MYSQL_PASSWORD", "mysql")
+
         # 印出連接信息以調試（不包含密碼）
         logger.info(f"嘗試連接到 MySQL 伺服器 {host}:{port} 使用者 {user}")
-        
+
         # 連接到 MySQL 伺服器，不指定資料庫
-        connection = pymysql.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password
-        )
-        
+        connection = pymysql.connect(host=host, port=port, user=user, password=password)
+
         cursor = connection.cursor()
-        
+
         # 創建資料庫 (如果不存在)
-        db_name = os.getenv('MYSQL_DATABASE', 'econ_afs')
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        db_name = os.getenv("MYSQL_DATABASE", "econ_afs")
+        cursor.execute(
+            f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
         logger.info(f"資料庫 '{db_name}' 已建立或已存在")
-        
+
         # 關閉連接
         cursor.close()
         connection.close()
-        
+
         return True
     except Exception as e:
         logger.error(f"建立資料庫時發生錯誤: {e}")
         return False
 
+
 def create_tables():
     """創建資料表"""
     try:
         # 明確從環境變數獲取資料庫設定
-        host = os.getenv('MYSQL_HOST', 'localhost')
-        port = int(os.getenv('MYSQL_PORT', '3306'))
-        user = os.getenv('MYSQL_USER', 'root')
-        password = os.getenv('MYSQL_PASSWORD', 'mysql')
-        database = os.getenv('MYSQL_DATABASE', 'econ_afs')
-        
+        host = os.getenv("MYSQL_HOST", "localhost")
+        port = int(os.getenv("MYSQL_PORT", "3306"))
+        user = os.getenv("MYSQL_USER", "root")
+        password = os.getenv("MYSQL_PASSWORD", "mysql")
+        database = os.getenv("MYSQL_DATABASE", "econ_afs")
+
         # 印出連接信息以調試（不包含密碼）
         logger.info(f"嘗試連接到資料庫 {database} 在 {host}:{port} 使用者 {user}")
-        
+
         # 連接到指定的資料庫
         connection = pymysql.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database
+            host=host, port=port, user=user, password=password, database=database
         )
-        
+
         cursor = connection.cursor()
-        
+
         # 建立題目資料表
         create_questions_table = """
         CREATE TABLE IF NOT EXISTS questions (
@@ -91,7 +88,7 @@ def create_tables():
             INDEX question_chapter_idx (question_no, chapter_no, file_name)
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """
-        
+
         # 建立檔案記錄資料表
         create_files_table = """
         CREATE TABLE IF NOT EXISTS uploaded_files (
@@ -103,43 +100,40 @@ def create_tables():
             question_count INT DEFAULT 0
         ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
         """
-        
+
         cursor.execute(create_questions_table)
         cursor.execute(create_files_table)
         connection.commit()
-        
+
         logger.info("資料表建立或已存在")
-        
+
         # 關閉連接
         cursor.close()
         connection.close()
-        
+
         return True
     except Exception as e:
         logger.error(f"建立資料表時發生錯誤: {e}")
         return False
 
+
 def apply_database_fixes():
     """應用資料庫結構修正"""
     try:
         # 明確從環境變數獲取資料庫設定
-        host = os.getenv('MYSQL_HOST', 'localhost')
-        port = int(os.getenv('MYSQL_PORT', '3306'))
-        user = os.getenv('MYSQL_USER', 'root')
-        password = os.getenv('MYSQL_PASSWORD', 'mysql')
-        database = os.getenv('MYSQL_DATABASE', 'econ_afs')
-        
+        host = os.getenv("MYSQL_HOST", "localhost")
+        port = int(os.getenv("MYSQL_PORT", "3306"))
+        user = os.getenv("MYSQL_USER", "root")
+        password = os.getenv("MYSQL_PASSWORD", "mysql")
+        database = os.getenv("MYSQL_DATABASE", "econ_afs")
+
         # 連接到指定的資料庫
         connection = pymysql.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database
+            host=host, port=port, user=user, password=password, database=database
         )
-        
+
         logger.info(f"已成功連接到 MySQL 資料庫 {database} 在 {host}，準備應用結構修正")
-        
+
         with connection.cursor() as cursor:
             # 檢查索引結構
             cursor.execute("SHOW INDEX FROM questions WHERE Key_name = 'question_no'")
@@ -149,40 +143,47 @@ def apply_database_fixes():
                     logger.info("已刪除唯一索引約束 'question_no'")
                 except Exception as e:
                     logger.warning(f"刪除舊索引時出現錯誤: {e}")
-            
+
             # 檢查檔案名稱索引
             cursor.execute("SHOW INDEX FROM questions WHERE Key_name = 'file_name_idx'")
             if not cursor.fetchone():
                 try:
-                    cursor.execute("ALTER TABLE questions ADD INDEX file_name_idx (file_name)")
+                    cursor.execute(
+                        "ALTER TABLE questions ADD INDEX file_name_idx (file_name)"
+                    )
                     logger.info("已新增 file_name_idx 索引")
                 except Exception as e:
                     logger.warning(f"新增檔案名稱索引時出現錯誤: {e}")
-            
+
             # 檢查題號章節索引
-            cursor.execute("SHOW INDEX FROM questions WHERE Key_name = 'question_chapter_idx'")
+            cursor.execute(
+                "SHOW INDEX FROM questions WHERE Key_name = 'question_chapter_idx'"
+            )
             if not cursor.fetchone():
                 try:
-                    cursor.execute("ALTER TABLE questions ADD INDEX question_chapter_idx (question_no, chapter_no, file_name)")
+                    cursor.execute(
+                        "ALTER TABLE questions ADD INDEX question_chapter_idx (question_no, chapter_no, file_name)"
+                    )
                     logger.info("已新增 question_chapter_idx 索引")
                 except Exception as e:
                     logger.warning(f"新增題號章節索引時出現錯誤: {e}")
-        
+
         # 提交事務
         connection.commit()
         logger.info("資料表結構修正完成")
-        
+
         # 關閉連接
         connection.close()
         return True
-        
+
     except Exception as e:
         logger.error(f"應用資料庫修正時發生錯誤: {e}")
         return False
 
+
 if __name__ == "__main__":
     logger.info("開始執行資料庫遷移")
-    
+
     # 步驟 1: 創建資料庫
     if create_database():
         # 步驟 2: 創建資料表
