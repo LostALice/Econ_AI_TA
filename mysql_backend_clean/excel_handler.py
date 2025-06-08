@@ -1042,3 +1042,4 @@ class ExcelHandler:
         except Exception as e:
             logger.error(f"解析 Excel 檔案時發生錯誤: {str(e)}", exc_info=True)
             raise e
+
