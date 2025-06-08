@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# Code by wonmeow
+
 """
 主程式入口點 - 經濟腦TA 後端服務
 連接前端和 MySQL 資料庫，提供 Excel 檔案上傳與管理的功能
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +16,9 @@ import os
 import sys
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
+
+from mysql_backend_clean.api import router as api_router
+from mysql_backend_clean.db_connection import DBConnection
 
 # 添加當前目錄到系統路徑，以便正確導入本地模組
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,14 +38,6 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger("經濟腦TA-API")
-
-# 導入路由
-try:
-    from api import router as api_router
-    from db_connection import DBConnection
-except ImportError as e:
-    logger.error(f"導入模組錯誤: {e}")
-    sys.exit(1)
 
 
 # 檢查資料庫連接

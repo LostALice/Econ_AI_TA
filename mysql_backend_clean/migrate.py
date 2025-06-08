@@ -1,5 +1,7 @@
+# Code by wonmeow
+
 # 資料庫遷移腳本（使用 PyMySQL）
-import pymysql
+import pymysql  # type: ignore[import-untyped]
 import os
 import logging
 from dotenv import load_dotenv

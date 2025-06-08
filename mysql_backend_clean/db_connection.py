@@ -1,9 +1,14 @@
-import pymysql
-from typing import Dict, List, Any, Optional, Tuple
+# Code by wonmeow
+
+import pymysql  # type: ignore[import-untyped]
 import os
 import logging
 import base64
+
+from collections import Counter
 from dotenv import load_dotenv
+from typing import Dict, List, Any, Tuple
+from mysql_backend_clean.model.db_connection import ResultModel
 
 # 載入環境變數
 load_dotenv()
@@ -67,7 +72,7 @@ class DBConnection:
         """
         successful_inserts = 0
         failed_inserts = 0
-        failures = {}
+        failures: Counter = Counter()
 
         try:
             with self.connection.cursor() as cursor:
@@ -224,7 +229,7 @@ class DBConnection:
                             )
                             failed_inserts += 1
                             error_type = str(type(insert_error).__name__)
-                            failures[error_type] = failures.get(error_type, 0) + 1
+                            failures[error_type] += 1
 
                     # 批次完成後提交
                     try:
@@ -246,8 +251,9 @@ class DBConnection:
                 )
 
                 # 如果有失敗，記錄各類型錯誤數量
+                # if i were you, i will log error in each statement
                 if failed_inserts > 0:
-                    logger.error(f"插入失敗類型統計:")
+                    logger.error("插入失敗類型統計:")
                     for error_type, count in failures.items():
                         logger.error(f"- {error_type}: {count} 題")
 
@@ -395,7 +401,7 @@ class DBConnection:
             self.connection.rollback()
             return False
 
-    def get_file_list(self, doc_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_file_list(self, doc_type: str | None = None) -> List[Dict[str, Any]]:
         """
         獲取檔案列表
 
@@ -715,7 +721,7 @@ class DBConnection:
 
     def update_questions(
         self, file_id: str, questions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    ) -> ResultModel:
         """
         更新題目內容
 
@@ -731,7 +737,12 @@ class DBConnection:
                 'error': str
             }
         """
-        result = {"success": False, "updated_count": 0, "deleted_count": 0, "error": ""}
+        result: ResultModel = ResultModel(
+            success=False,
+            updated_count=0,
+            deleted_count=0,
+            error="",
+        )
 
         try:
             with self.connection.cursor() as cursor:
@@ -743,7 +754,7 @@ class DBConnection:
                 file_result = cursor.fetchone()
 
                 if not file_result:
-                    result["error"] = f"找不到檔案ID: {file_id}"
+                    result.error = f"找不到檔案ID: {file_id}"
                     return result
 
                 file_name = file_result["file_name"]
@@ -764,7 +775,7 @@ class DBConnection:
                             continue
 
                         # 檢查題目是否標記為刪除
-                        if question.get("deleted") == True:
+                        if question.get("deleted"):
                             # 如果題目被標記為刪除，將其ID加入刪除列表
                             try:
                                 deleted_ids.append(int(question_id))
@@ -843,7 +854,7 @@ class DBConnection:
                             )
 
                         if cursor.rowcount > 0:
-                            result["updated_count"] += 1
+                            result.updated_count += 1
                     except Exception as e:
                         logger.error(f"更新題目 {question.get('id')} 失敗: {e}")
                         continue
@@ -853,9 +864,11 @@ class DBConnection:
                         ["%s"] * len(deleted_ids)
                     )
                     cursor.execute(delete_sql, deleted_ids)
-                    result["deleted_count"] = len(deleted_ids)
+                    result.deleted_count = len(deleted_ids)
                     logger.info(
-                        f"已刪除 {result['deleted_count']} 個題目：{deleted_ids}"
+                        "已刪除 %s 個題目：%s",
+                        result.deleted_count,
+                        deleted_ids,
                     )
 
                 # 更新檔案的題目數量
@@ -867,9 +880,9 @@ class DBConnection:
 
                 # 提交所有更改
                 self.connection.commit()
-                result["success"] = True
+                result.success = True
                 logger.info(
-                    f"成功更新檔案 {file_id} 的題目：更新 {result['updated_count']}，刪除 {result['deleted_count']}"
+                    f"成功更新檔案 {file_id} 的題目：更新 {result.updated_count}，刪除 {result.deleted_count}"
                 )
 
                 return result
@@ -878,5 +891,5 @@ class DBConnection:
             self.connection.rollback()
             error_msg = str(e)
             logger.error(f"更新題目時發生錯誤: {error_msg}")
-            result["error"] = error_msg
+            result.error = error_msg
             return result

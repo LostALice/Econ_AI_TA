@@ -1,20 +1,22 @@
-from typing import Dict, List, Any, Optional, Tuple
+# Code by wonmeow
+
 import base64
-import pandas as pd
+import pandas as pd  # type: ignore[import-untyped]
 import logging
 import io
-import re
 import zipfile
 import tempfile
 import os
 import shutil
+
+from collections import Counter
 from pathlib import Path
+from typing import Dict, List, Any, Tuple
 from xml.etree import ElementTree as ET
 
-try:
-    from .db_connection import DBConnection
-except ImportError:
-    from db_connection import DBConnection
+from mysql_backend_clean.db_connection import DBConnection
+from mysql_backend_clean.model.db_connection import ResultModel
+from mysql_backend_clean.model.excel_handler import ValidatedQuestionModel
 
 logger = logging.getLogger(__name__)
 
@@ -485,7 +487,7 @@ class ExcelHandler:
             return False
 
     @staticmethod
-    def get_file_list(doc_type: str = None) -> List[Dict[str, Any]]:
+    def get_file_list(doc_type: str | None = None) -> List[Dict[str, Any]]:
         """獲取檔案列表
 
         Args:
@@ -542,9 +544,7 @@ class ExcelHandler:
             return False
 
     @staticmethod
-    def update_questions(
-        file_id: str, questions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def update_questions(file_id: str, questions: List[Dict[str, Any]]) -> ResultModel:
         """更新題目內容
 
         Args:
@@ -561,17 +561,17 @@ class ExcelHandler:
             return result
         except Exception as e:
             logger.error(f"更新題目時發生錯誤: {str(e)}")
-            return {
-                "success": False,
-                "updated_count": 0,
-                "deleted_count": 0,
-                "error": str(e),
-            }
+            return ResultModel(
+                success=False,
+                updated_count=0,
+                deleted_count=0,
+                error=str(e),
+            )
 
     @staticmethod
     def parse_excel_to_questions(
         file_content: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> List[ValidatedQuestionModel]:
         """解析 Excel 檔案內容為題目列表
 
         Args:
@@ -583,29 +583,42 @@ class ExcelHandler:
         """
 
         def validate_and_fix_question(
-            question_data: Dict[str, Any], row_index: int
-        ) -> Dict[str, Any]:
+            question_data: ValidatedQuestionModel, row_index: int
+        ) -> ValidatedQuestionModel:
             """驗證並修正題目資料"""
             # 確保所有必要欄位都存在
-            validated_question = {
-                "question_no": str(question_data.get("question_no", row_index + 1)),
-                "chapter_no": str(question_data.get("chapter_no", "未分類")),
-                "question_text": str(question_data.get("question_text", "未定義題目")),
-                "option_a": "",
-                "option_b": "",
-                "option_c": "",
-                "option_d": "",
-                "correct_answer": str(question_data.get("correct_answer", "")),
-                "explanation": str(question_data.get("explanation", "無解釋")),
-                "picture": question_data.get("picture"),
-            }
+            # validated_question = {
+            #     "question_no": str(question_data.get("question_no", row_index + 1)),
+            #     "chapter_no": str(question_data.get("chapter_no", "未分類")),
+            #     "question_text": str(question_data.get("question_text", "未定義題目")),
+            #     "option_a": "",
+            #     "option_b": "",
+            #     "option_c": "",
+            #     "option_d": "",
+            #     "correct_answer": str(question_data.get("correct_answer", "")),
+            #     "explanation": str(question_data.get("explanation", "無解釋")),
+            #     "picture": question_data.get("picture"),
+            # }
+
+            validated_question = ValidatedQuestionModel(
+                question_no=question_data.question_no or row_index + 1,
+                chapter_no=question_data.chapter_no or "未分類",
+                question_text=question_data.question_text or "未定義題目",
+                option_a="",
+                option_b="",
+                option_c="",
+                option_d="",
+                correct_answer=question_data.correct_answer,
+                explanation=question_data.explanation or "無解釋",
+                picture=question_data.picture,
+            )
 
             # 驗證並修正選項
             options = [
-                question_data.get("option_a", ""),
-                question_data.get("option_b", ""),
-                question_data.get("option_c", ""),
-                question_data.get("option_d", ""),
+                question_data.option_a,
+                question_data.option_b,
+                question_data.option_c,
+                question_data.option_d,
             ]
 
             # 確保每個選項都是有效字串
@@ -613,15 +626,15 @@ class ExcelHandler:
                 if not option or not isinstance(option, str) or option.strip() == "":
                     options[i] = f"選項 {chr(65 + i)}"
                     logger.warning(
-                        f"題目 {validated_question['question_no']} 的選項 {chr(65 + i)} 為空，使用預設值"
+                        f"題目 {validated_question.question_no} 的選項 {chr(65 + i)} 為空，使用預設值"
                     )
                 else:
                     options[i] = str(option).strip()
 
-            validated_question["option_a"] = options[0]
-            validated_question["option_b"] = options[1]
-            validated_question["option_c"] = options[2]
-            validated_question["option_d"] = options[3]
+            validated_question.option_a = options[0]
+            validated_question.option_b = options[1]
+            validated_question.option_c = options[2]
+            validated_question.option_d = options[3]
 
             return validated_question
 
@@ -654,7 +667,7 @@ class ExcelHandler:
             df.columns = [col.strip() for col in df.columns]
 
             # 輸出詳細的檔案結構調試信息
-            logger.info(f"=== Excel 檔案結構分析 ===")
+            logger.info("=== Excel 檔案結構分析 ===")
             logger.info(f"Excel 檔案的欄位名稱: {list(df.columns)}")
             logger.info(f"總行數: {len(df)}")
 
@@ -676,9 +689,6 @@ class ExcelHandler:
                 "CorrectAnswer",
                 "AnswerExplainInChinese",
             ]
-
-            # 添加可選欄位
-            optional_fields = ["Picture", "PIC"]
 
             column_mapping = {}
 
@@ -874,7 +884,7 @@ class ExcelHandler:
                     f"Excel 檔案格式不正確，無法找到題目欄位。可用欄位: {list(df.columns)}"
                 )
                 logger.error(f"欄位映射結果: {column_mapping}")
-                raise ValueError(f"Excel 檔案格式不正確，請確保包含題目欄位")
+                raise ValueError("Excel 檔案格式不正確，請確保包含題目欄位")
 
             # 重命名欄位以符合標準格式
             logger.info(f"應用欄位映射: {column_mapping}")
@@ -884,7 +894,8 @@ class ExcelHandler:
             total_rows = len(df)
             valid_rows = 0
             skipped_rows = 0
-            skipped_reasons = {}  # 用於記錄跳過的原因
+            # 用於記錄跳過的原因
+            skipped_reasons: Counter = Counter()
 
             logger.info(f"開始處理 Excel 檔案，總計 {total_rows} 行數據")
 
@@ -947,25 +958,37 @@ class ExcelHandler:
                     return default
 
                 # 構建題目資料
-                question = {
-                    "question_no": safe_get("QuestionNo.", str(idx + 1)),
-                    "chapter_no": safe_get("ChapterNo", "未分類"),
-                    "question_text": str(row["QuestionInChinese"]).strip(),
-                    "option_a": safe_get("AnswerAInChinese", "選項 A"),
-                    "option_b": safe_get("AnswerBInChinese", "選項 B"),
-                    "option_c": safe_get("AnswerCInChinese", "選項 C"),
-                    "option_d": safe_get("AnswerDInChinese", "選項 D"),
-                    "correct_answer": correct_answer_text,
-                    "explanation": safe_get("AnswerExplainInChinese", "無解釋"),
-                    "picture": None,
-                }
+                # question = {
+                #     "question_no": safe_get("QuestionNo.", str(idx + 1)),
+                #     "chapter_no": safe_get("ChapterNo", "未分類"),
+                #     "question_text": str(row["QuestionInChinese"]).strip(),
+                #     "option_a": safe_get("AnswerAInChinese", "選項 A"),
+                #     "option_b": safe_get("AnswerBInChinese", "選項 B"),
+                #     "option_c": safe_get("AnswerCInChinese", "選項 C"),
+                #     "option_d": safe_get("AnswerDInChinese", "選項 D"),
+                #     "correct_answer": correct_answer_text,
+                #     "explanation": safe_get("AnswerExplainInChinese", "無解釋"),
+                #     "picture": None,
+                # }
+                temp_question = ValidatedQuestionModel(
+                    question_no=int(safe_get("QuestionNo.", str(idx + 1))),
+                    chapter_no=safe_get("ChapterNo", "未分類"),
+                    question_text=str(row["QuestionInChinese"]).strip(),
+                    option_a=safe_get("AnswerAInChinese", "選項 A"),
+                    option_b=safe_get("AnswerBInChinese", "選項 B"),
+                    option_c=safe_get("AnswerCInChinese", "選項 C"),
+                    option_d=safe_get("AnswerDInChinese", "選項 D"),
+                    correct_answer=correct_answer_text,
+                    explanation=safe_get("AnswerExplainInChinese", "無解釋"),
+                    picture=None,
+                )
 
                 # 驗證並修正題目資料
-                question = validate_and_fix_question(question, idx)
+                question = validate_and_fix_question(temp_question, idx)
 
                 # 從提取的圖片中關聯題目與圖片
-                chapter_no = question["chapter_no"]
-                question_no = question["question_no"]
+                chapter_no = question.chapter_no
+                question_no = question.question_no
                 unique_id = f"{chapter_no}_{question_no}"
 
                 # 查找對應的圖片
@@ -975,24 +998,25 @@ class ExcelHandler:
                         image_path = extractor.output_dir / image_name
                         if image_path.exists():
                             with open(image_path, "rb") as img_file:
-                                question["picture"] = img_file.read()
+                                question.picture = img_file.read()
                             logger.info(
-                                f"題目 {chapter_no}.{question_no} 已關聯圖片 {image_name}, 大小: {len(question['picture'])} 位元組"
+                                f"題目 {chapter_no}.{question_no} 已關聯圖片 {image_name}, 大小: {question.picture.__sizeof__()} 位元組"
                             )
                             break
 
                 # 檢查圖片是否成功處理
-                if question["picture"] is not None:
+                if question.picture is not None:
                     logger.info(
-                        f"題目 {question['question_no']} 成功添加圖片，大小: {len(question['picture'])} 位元組"
+                        f"題目 {question.question_no} 成功添加圖片，大小: {question.picture.__sizeof__()} 位元組"
                     )
                 else:
-                    logger.info(f"題目 {question['question_no']} 沒有圖片")
+                    logger.info(f"題目 {question.question_no} 沒有圖片")
 
                 # 輸出調試信息，檢查每個題目的欄位
-                logger.info(
-                    f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項: A={question['option_a'][:10]}..., B={question['option_b'][:10]}..., C={question['option_c'][:10]}..., D={question['option_d'][:10]}..., 答案: {question['correct_answer'][:30]}..."
-                )
+                # logged
+                # logger.info(
+                #     f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項: A={question['option_a'][:10]}..., B={question['option_b'][:10]}..., C={question['option_c'][:10]}..., D={question['option_d'][:10]}..., 答案: {question['correct_answer'][:30]}..."
+                # )
 
                 questions.append(question)
                 valid_rows += 1

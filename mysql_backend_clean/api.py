@@ -1,66 +1,26 @@
+# Code by wonmeow
+
 # Excel 處理 API
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
 import uuid
-import json
 import logging
 import base64
-import io
-import tempfile
-import os
-from pathlib import Path
-
-try:
-    from .excel_handler import ExcelHandler, XlsxImageExtractor
-    from .db_connection import DBConnection
-except ImportError:
-    from excel_handler import ExcelHandler, XlsxImageExtractor
-    from db_connection import DBConnection
 import datetime
+
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from mysql_backend_clean.model.api import (
+    FileUploadSuccessModel,
+    FileListSuccessModel,
+    FileDeleteSuccessModel,
+    QuestionsSuccessModel,
+    QuestionsUpdateModel,
+    QuestionsUpdateSuccessModel,
+)
+
+from .excel_handler import ExcelHandler
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-class FileUploadSuccessModel(BaseModel):
-    file_id: str
-    file_name: str
-    last_update: str
-    message: str
-    status_code: int = 200
-
-
-class FileListSuccessModel(BaseModel):
-    docs_list: List[Dict[str, Any]]
-    status_code: int = 200
-
-
-class FileDeleteSuccessModel(BaseModel):
-    file_id: str
-    message: str
-    status_code: int = 200
-
-
-class QuestionsSuccessModel(BaseModel):
-    file_id: str
-    file_name: str
-    questions: List[Dict[str, Any]]
-    status_code: int = 200
-
-
-class QuestionsUpdateModel(BaseModel):
-    file_id: str
-    questions: List[Dict[str, Any]]
-
-
-class QuestionsUpdateSuccessModel(BaseModel):
-    file_id: str
-    updated_count: int
-    deleted_count: int
-    message: str
-    status_code: int = 200
 
 
 @router.post("/excel/upload/", response_model=FileUploadSuccessModel)
@@ -80,8 +40,12 @@ async def upload_excel_file(
     Raises:
         HTTPException: 檔案格式不正確或儲存失敗時拋出
     """
+    if excel_file.filename is None:
+        raise HTTPException(422, "No Excel file given")
+
     try:
         # 檢查是否為 Excel 檔案
+
         if not excel_file.filename.endswith((".xlsx", ".xls")):
             raise HTTPException(
                 status_code=400, detail="只接受 Excel 檔案 (.xlsx, .xls)"
@@ -94,6 +58,9 @@ async def upload_excel_file(
 
         # 將檔案內容轉換為 base64
         content_b64 = base64.b64encode(contents).decode("utf-8")
+
+        if excel_file.content_type is None:
+            raise HTTPException(status_code=422, detail="Unexpected file type")
 
         # 解析 Excel 內容為題目資料
         try:
@@ -247,11 +214,11 @@ async def get_questions(file_id: str):
             }
 
             # 調試輸出：檢查最終格式化結果
-            logger.info(f"  最終格式化結果:")
-            logger.info(f"    question: {formatted_question['question']}")
-            logger.info(f"    options: {formatted_question['options']}")
-            logger.info(f"    answer: {formatted_question['answer']}")
-            logger.info(f"    category: {formatted_question['category']}")
+            logger.info("\t最終格式化結果:")
+            logger.info("\t\tquestion: %s", formatted_question["question"])
+            logger.info("\t\toptions: %s", formatted_question["options"])
+            logger.info("\t\tanswer: %s", formatted_question["answer"])
+            logger.info("\t\tcategory: %s", formatted_question["category"])
 
             formatted_questions.append(formatted_question)
 
