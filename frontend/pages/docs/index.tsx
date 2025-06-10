@@ -29,6 +29,7 @@ import {
   Select,
   SelectItem,
   Textarea,
+  Image
 } from "@heroui/react";
 
 import { LanguageTable } from "@/i18n";
@@ -107,14 +108,12 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {safeQuestion.pictures.map((picSrc, index) => (
                 <div key={index} className="flex justify-center">
-                  <img
+                  <Image
                     src={picSrc}
                     alt={`題目圖片 ${index + 1}`}
                     className="max-w-full max-h-64 object-contain border border-divider rounded-md"
-                    onError={(e) => {
-                      console.warn(`圖片載入失敗: ${picSrc}`);
-                      e.currentTarget.style.display = 'none';
-                    }}
+                    onError={() => console.warn(`圖片載入失敗: ${picSrc}`)
+                    }
                   />
                 </div>
               ))}
@@ -122,14 +121,11 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
           ) : (
             /* 僅有單張圖片 - 向後兼容 */
             safeQuestion.picture && (
-              <img
+              <Image
                 src={safeQuestion.picture}
                 alt="題目圖片"
                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
-                onError={(e) => {
-                  console.warn(`圖片載入失敗: ${safeQuestion.picture}`);
-                  e.currentTarget.style.display = 'none';
-                }}
+                onError={() => console.warn(`圖片載入失敗: ${safeQuestion.picture}`)}
               />
             )
           )}
@@ -376,6 +372,97 @@ export default function DocsPage() {
       return;
     }
 
+    const manageCacheAutomatically = () => {
+      try {
+        const lastSync = localStorage.getItem('last_cache_sync');
+        const now = Date.now();
+        const twoHours = 2 * 60 * 60 * 1000; // 2小時檢查一次
+
+        if (!lastSync || (now - parseInt(lastSync)) > twoHours) {
+          // 自動清理過期快取
+          clearExpiredCache();
+          localStorage.setItem('last_cache_sync', now.toString());
+
+          // 檢查本地存儲使用量
+          const storageUsage = JSON.stringify(localStorage).length;
+          const maxStorage = 5 * 1024 * 1024; // 5MB限制
+
+          if (storageUsage > maxStorage) {
+            console.warn("本地存儲使用量過大，執行清理");
+            // 清理最舊的快取項目
+            clearOldestCache();
+          }
+        }
+      } catch (error) {
+        console.error("自動快取管理失敗:", error);
+      }
+    };
+
+    const loadFileList = async (documentationType: string) => {
+      setIsLoading(true);
+      setCurrentDocType(documentationType);
+      setViewMode('list'); // 重置視圖模式
+
+      try {
+        // 先嘗試從資料庫取得檔案列表
+        const dbDocs = await fetchExcelFileList(documentationType);
+
+        if (dbDocs && dbDocs.length > 0) {
+          // 使用資料庫資料
+          setFileList(dbDocs);
+          addToast({
+            color: "success",
+            title: TOAST_MESSAGES.SUCCESS.LOAD,
+            description: `已成功載入 ${dbDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+          });
+        } else {
+          // 尚無資料，也可以嘗試載入本地緩存的資料作為備用
+          const localDocs = loadLocalStorageDocsList(documentationType);
+
+          if (localDocs && localDocs.length > 0) {
+            setFileList(localDocs);
+            addToast({
+              color: "success",
+              title: TOAST_MESSAGES.SUCCESS.LOAD,
+              description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+            });
+          } else {
+            // 完全沒有資料
+            setFileList([]);
+            addToast({
+              color: "primary",
+              title: TOAST_MESSAGES.WARNING.NO_CONTENT,
+              description: `請上傳${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading file list:", error);
+
+        // 嘗試從本地緩存載入資料作為備用
+        const localDocs = loadLocalStorageDocsList(documentationType);
+
+        if (localDocs && localDocs.length > 0) {
+          setFileList(localDocs);
+          addToast({
+            color: "warning",
+            title: TOAST_MESSAGES.WARNING.FILE_NOT_FOUND,
+            description: "使用本地緩存資料替代",
+          });
+        } else {
+          // 完全沒有資料
+          setFileList([]);
+          addToast({
+            color: "danger",
+            title: TOAST_MESSAGES.ERROR.LOAD,
+            description: "無法載入文件列表，請稍後再試",
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
     // 自動管理快取
     manageCacheAutomatically();
 
@@ -389,10 +476,36 @@ export default function DocsPage() {
       loadFileList(currentDocType);
       console.log("頁面載入，自動載入文件列表:", currentDocType);
     }
-  }, [isStudent, isUnsigned]);
+  }, [isStudent, isUnsigned, currentDocType]);
 
   // 定期檢查快取（每30分鐘）
   useEffect(() => {
+    const manageCacheAutomatically = () => {
+      try {
+        const lastSync = localStorage.getItem('last_cache_sync');
+        const now = Date.now();
+        const twoHours = 2 * 60 * 60 * 1000; // 2小時檢查一次
+
+        if (!lastSync || (now - parseInt(lastSync)) > twoHours) {
+          // 自動清理過期快取
+          clearExpiredCache();
+          localStorage.setItem('last_cache_sync', now.toString());
+
+          // 檢查本地存儲使用量
+          const storageUsage = JSON.stringify(localStorage).length;
+          const maxStorage = 5 * 1024 * 1024; // 5MB限制
+
+          if (storageUsage > maxStorage) {
+            console.warn("本地存儲使用量過大，執行清理");
+            // 清理最舊的快取項目
+            clearOldestCache();
+          }
+        }
+      } catch (error) {
+        console.error("自動快取管理失敗:", error);
+      }
+    };
+
     const interval = setInterval(() => {
       manageCacheAutomatically();
     }, 30 * 60 * 1000); // 30分鐘
@@ -3468,14 +3581,11 @@ export default function DocsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {editingQuestion.pictures.map((picSrc, index) => (
                               <div key={index} className="flex justify-center">
-                                <img
+                                <Image
                                   src={picSrc}
                                   alt={`題目圖片 ${index + 1}`}
                                   className="max-w-full max-h-64 object-contain border border-divider rounded-md"
-                                  onError={(e) => {
-                                    console.warn(`圖片載入失敗: ${picSrc}`);
-                                    e.currentTarget.style.display = 'none';
-                                  }}
+                                  onError={() => console.warn(`圖片載入失敗: ${picSrc}`)}
                                 />
                               </div>
                             ))}
@@ -3484,14 +3594,11 @@ export default function DocsPage() {
                           /* 僅有單張圖片 - 向後兼容 */
                           editingQuestion.picture && (
                             <div className="flex justify-center">
-                              <img
+                              <Image
                                 src={editingQuestion.picture}
                                 alt="題目圖片"
                                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
-                                onError={(e) => {
-                                  console.warn(`圖片載入失敗: ${editingQuestion.picture}`);
-                                  e.currentTarget.style.display = 'none';
-                                }}
+                                onError={() => console.warn(`圖片載入失敗: ${editingQuestion.picture}`)}
                               />
                             </div>
                           )
