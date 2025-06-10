@@ -26,15 +26,9 @@ import {
   ModalFooter,
   Input,
   useDisclosure,
-  Tabs,
-  Tab,
   Select,
   SelectItem,
   Textarea,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
 } from "@heroui/react";
 
 import { LanguageTable } from "@/i18n";
@@ -48,13 +42,13 @@ import { FileUploadButton } from "@/components/upload/fileUpload-btn";
 // 導入 Excel API 函數
 import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFile, updateExcelQuestions } from "@/api/excel";
 
-import { validateQuestion, validateQuestions, repairQuestions } from "@/utils/dataValidation";
+import { validateQuestion } from "@/utils/dataValidation";
 
 // 統一的 Toast 消息管理
 const TOAST_MESSAGES = {
   SUCCESS: {
     LOAD: "載入成功",
-    UPLOAD: "上傳成功", 
+    UPLOAD: "上傳成功",
     SAVE: "儲存成功",
     DELETE: "刪除成功",
     UPDATE: "更新成功",
@@ -86,7 +80,7 @@ const LOCAL_STORAGE_DOCS_CONTENT_KEY = "mock_docs_content";
 const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
   // 確保 question 資料安全性
   const safeQuestion = validateQuestion(question);
-  
+
   return (
     <div className="bg-content1 shadow-md p-4 rounded-lg mb-4">
       {/* 顯示題目來源檔案 */}
@@ -97,25 +91,25 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
           </div>
         </div>
       )}
-      
+
       <div className="mb-4">
         <div className="font-semibold mb-2">題目：</div>
         <div>{safeQuestion.question}</div>
       </div>
-      
+
       {/* 支援多圖片顯示，優先使用新的 pictures 屬性 */}
       {((safeQuestion.pictures?.length ?? 0) > 0 || safeQuestion.picture) && (
         <div className="mb-4">
           <div className="font-semibold mb-2">圖片：</div>
-          
+
           {/* 有多張圖片的情況 */}
           {safeQuestion.pictures && safeQuestion.pictures.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {safeQuestion.pictures.map((picSrc, index) => (
                 <div key={index} className="flex justify-center">
-                  <img 
-                    src={picSrc} 
-                    alt={`題目圖片 ${index+1}`} 
+                  <img
+                    src={picSrc}
+                    alt={`題目圖片 ${index + 1}`}
                     className="max-w-full max-h-64 object-contain border border-divider rounded-md"
                     onError={(e) => {
                       console.warn(`圖片載入失敗: ${picSrc}`);
@@ -128,9 +122,9 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
           ) : (
             /* 僅有單張圖片 - 向後兼容 */
             safeQuestion.picture && (
-              <img 
-                src={safeQuestion.picture} 
-                alt="題目圖片" 
+              <img
+                src={safeQuestion.picture}
+                alt="題目圖片"
                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
                 onError={(e) => {
                   console.warn(`圖片載入失敗: ${safeQuestion.picture}`);
@@ -141,7 +135,7 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
           )}
         </div>
       )}
-      
+
       <div className="mb-4">
         <div className="font-semibold mb-2">選項：</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -157,12 +151,12 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
           )}
         </div>
       </div>
-      
+
       <div className="mb-4">
         <div className="font-semibold mb-2">答案：</div>
         <div>{safeQuestion.answer}</div>
       </div>
-      
+
       <div>
         <div className="font-semibold mb-2">章節：</div>
         <div>{safeQuestion.category}</div>
@@ -197,7 +191,7 @@ export default function DocsPage() {
 
   // 新增：學生題庫選擇狀態
   const [selectedQuestionBank, setSelectedQuestionBank] = useState<string>("TESTING");
-  
+
   // 新增：學生章節選擇相關狀態
   const [availableStudentChapters, setAvailableStudentChapters] = useState<string[]>([]);
   const [selectedStudentChapter, setSelectedStudentChapter] = useState<string>("");
@@ -220,17 +214,17 @@ export default function DocsPage() {
 
   // 根據 userInfo.role 判斷是否為教師或助教，注意使用原始角色值而非轉換後的顯示名稱
   // 修改為使用顯示角色判斷，因為原始角色值可能不正確
-  const isTeacherOrTA = userInfo?.role === 'teacher' || userInfo?.role === 'ta' || userInfo?.role === 'admin' || 
-                         role === LanguageTable.login.role.teacher[language] || 
-                         role === LanguageTable.login.role.ta[language] || 
-                         role === LanguageTable.nav.role.admin[language];
-  
+  const isTeacherOrTA = userInfo?.role === 'teacher' || userInfo?.role === 'ta' || userInfo?.role === 'admin' ||
+    role === LanguageTable.login.role.teacher[language] ||
+    role === LanguageTable.login.role.ta[language] ||
+    role === LanguageTable.nav.role.admin[language];
+
   // 新增：判斷是否為學生
   const isStudent = userInfo?.role === 'student' || role === LanguageTable.login.role.student[language];
-  
+
   // 檢查是否未登入
   const isUnsigned = role === LanguageTable.nav.role.unsigned[language];
-  
+
   // 新增：學生題庫選項
   const studentQuestionBanks = [
     {
@@ -239,12 +233,12 @@ export default function DocsPage() {
       description: "公務員考試相關題目"
     },
     {
-      key: "THEOREM", 
+      key: "THEOREM",
       label: "大一經濟學原理",
       description: "基礎經濟學理論題目"
     }
   ];
-  
+
   // 輸出調試信息，幫助排查問題
   useEffect(() => {
     console.log("====== 角色狀態檢查 ======");
@@ -264,19 +258,19 @@ export default function DocsPage() {
     });
     console.log("==========================");
   }, [role, userInfo, isTeacherOrTA, isStudent, isLoggedIn]);
-  
+
   // 自動清理過期快取
   const clearExpiredCache = () => {
     try {
       const now = Date.now();
       const oneDay = 24 * 60 * 60 * 1000; // 24小時
-      
+
       // 檢查文件列表快取
       const docsData = localStorage.getItem(LOCAL_STORAGE_DOCS_KEY);
       if (docsData) {
         const parsedDocs = JSON.parse(docsData);
         let hasExpired = false;
-        
+
         // 檢查每個文件類型的快取時間
         for (const docType in parsedDocs) {
           if (Array.isArray(parsedDocs[docType])) {
@@ -288,33 +282,33 @@ export default function DocsPage() {
             });
           }
         }
-        
+
         if (hasExpired) {
           localStorage.setItem(LOCAL_STORAGE_DOCS_KEY, JSON.stringify(parsedDocs));
           console.log("已清理過期的文件列表快取");
         }
       }
-      
+
       // 檢查文件內容快取
       const contentData = localStorage.getItem(LOCAL_STORAGE_DOCS_CONTENT_KEY);
       if (contentData) {
         const parsedContent = JSON.parse(contentData);
         const validContent: any = {};
-        
+
         for (const fileId in parsedContent) {
           const content = parsedContent[fileId];
           const contentTime = content.lastModified || content.uploadTime || 0;
           const isExpired = (now - contentTime) > oneDay;
-          
+
           if (!isExpired) {
             validContent[fileId] = content;
           }
         }
-        
+
         localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(validContent));
         console.log("已清理過期的文件內容快取");
       }
-      
+
     } catch (error) {
       console.error("清理過期快取時發生錯誤:", error);
     }
@@ -326,16 +320,16 @@ export default function DocsPage() {
       const lastSync = localStorage.getItem('last_cache_sync');
       const now = Date.now();
       const twoHours = 2 * 60 * 60 * 1000; // 2小時檢查一次
-      
+
       if (!lastSync || (now - parseInt(lastSync)) > twoHours) {
         // 自動清理過期快取
         clearExpiredCache();
         localStorage.setItem('last_cache_sync', now.toString());
-        
+
         // 檢查本地存儲使用量
         const storageUsage = JSON.stringify(localStorage).length;
         const maxStorage = 5 * 1024 * 1024; // 5MB限制
-        
+
         if (storageUsage > maxStorage) {
           console.warn("本地存儲使用量過大，執行清理");
           // 清理最舊的快取項目
@@ -354,20 +348,20 @@ export default function DocsPage() {
       if (contentData) {
         const parsedContent = JSON.parse(contentData);
         const contentEntries = Object.entries(parsedContent);
-        
+
         // 按時間排序，保留最新的50%
         contentEntries.sort((a: any, b: any) => {
           const timeA = a[1].lastModified || a[1].uploadTime || 0;
           const timeB = b[1].lastModified || b[1].uploadTime || 0;
           return timeB - timeA;
         });
-        
+
         const keepCount = Math.floor(contentEntries.length * 0.5);
         const keptEntries = contentEntries.slice(0, keepCount);
-        
+
         const newContent = Object.fromEntries(keptEntries);
         localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(newContent));
-        
+
         console.log(`已清理 ${contentEntries.length - keepCount} 個舊的快取項目`);
       }
     } catch (error) {
@@ -381,10 +375,10 @@ export default function DocsPage() {
     if (isUnsigned) {
       return;
     }
-    
+
     // 自動管理快取
     manageCacheAutomatically();
-    
+
     // 如果是學生，顯示題庫選擇頁面
     if (isStudent) {
       // 學生初始時顯示題庫選擇頁面
@@ -436,7 +430,7 @@ export default function DocsPage() {
     try {
       const storedData = localStorage.getItem(LOCAL_STORAGE_DOCS_KEY);
       const parsedData = storedData ? JSON.parse(storedData) : {};
-      
+
       parsedData[docType] = docs;
       localStorage.setItem(LOCAL_STORAGE_DOCS_KEY, JSON.stringify(parsedData));
     } catch (error) {
@@ -448,11 +442,11 @@ export default function DocsPage() {
     setIsLoading(true);
     setCurrentDocType(documentationType);
     setViewMode('list'); // 重置視圖模式
-    
+
     try {
       // 先嘗試從資料庫取得檔案列表
       const dbDocs = await fetchExcelFileList(documentationType);
-      
+
       if (dbDocs && dbDocs.length > 0) {
         // 使用資料庫資料
         setFileList(dbDocs);
@@ -464,7 +458,7 @@ export default function DocsPage() {
       } else {
         // 尚無資料，也可以嘗試載入本地緩存的資料作為備用
         const localDocs = loadLocalStorageDocsList(documentationType);
-        
+
         if (localDocs && localDocs.length > 0) {
           setFileList(localDocs);
           addToast({
@@ -484,10 +478,10 @@ export default function DocsPage() {
       }
     } catch (error) {
       console.error("Error loading file list:", error);
-      
+
       // 嘗試從本地緩存載入資料作為備用
       const localDocs = loadLocalStorageDocsList(documentationType);
-      
+
       if (localDocs && localDocs.length > 0) {
         setFileList(localDocs);
         addToast({
@@ -521,17 +515,17 @@ export default function DocsPage() {
         content.questions = content.questions.map((q: any) => validateQuestion(q));
         console.log(`驗證並修正了 ${content.questions.length} 個題目的資料格式`);
       }
-      
+
       const contentData = getFileContent("") || {};
       contentData[fileID] = content;
-      
+
       // 簡單保存，如果失敗則記錄警告但不影響上傳流程
       try {
         localStorage.setItem(LOCAL_STORAGE_DOCS_CONTENT_KEY, JSON.stringify(contentData));
         console.log(`已臨時保存文件內容: ${fileID}`);
       } catch (error) {
         console.warn('localStorage 保存失敗，但不影響上傳:', error);
-        
+
         // 如果是存儲配額錯誤，給用戶友好的提示
         if (error instanceof DOMException && error.name === 'QuotaExceededError') {
           addToast({
@@ -541,7 +535,7 @@ export default function DocsPage() {
           });
         }
       }
-      
+
     } catch (error) {
       console.error("處理文件內容失敗:", error);
     }
@@ -596,23 +590,23 @@ export default function DocsPage() {
       // 假設第一個工作表包含題目
       const firstSheetName = data.SheetNames[0];
       const worksheet = data.Sheets[firstSheetName];
-      
+
       // 將工作表轉換為JSON
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
-      
+
       // 檢查是否為空
       if (!jsonData || jsonData.length === 0) {
         console.error("Excel 檔案中沒有找到任何數據");
         return [];
       }
-      
+
       // 檢測檔案格式，輸出首行做為調試資訊
       console.log("=== Excel 解析調試信息 ===");
       console.log("工作表名稱:", firstSheetName);
       console.log("總行數:", jsonData.length);
       console.log("Excel 首行資料:", jsonData[0]);
       console.log("所有欄位名稱:", Object.keys(jsonData[0] || {}));
-      
+
       // 檢查前幾行的資料結構
       if (jsonData.length > 1) {
         console.log("第二行資料:", jsonData[1]);
@@ -620,22 +614,22 @@ export default function DocsPage() {
       if (jsonData.length > 2) {
         console.log("第三行資料:", jsonData[2]);
       }
-      
+
       // 將JSON資料轉換為題目格式，根據檢測到的欄位進行適配
       const questions: IExcelQuestion[] = jsonData.map((row: any, index: number) => {
         console.log(`=== 處理第 ${index + 1} 行資料 ===`);
         console.log("原始行資料:", row);
-        
+
         // 檢測並適配特定的欄位格式
         // 支援以下欄位：
         // QuestionNo. ChapterNo QuestionInChinese AnswerAInChinese AnswerBInChinese AnswerCInChinese AnswerDInChinese CorrectAnswer AnswerExplainInChinese
-        
+
         // 優先檢查指定的欄位格式
         if (row.QuestionInChinese !== undefined) {
           console.log("使用 QuestionInChinese 格式解析");
           // 獲取所有可能的選項欄位，確保始終返回陣列
           const options = [];
-          
+
           // 嚴格驗證每個選項
           const optionFields = [
             { key: 'AnswerAInChinese', label: 'A' },
@@ -643,7 +637,7 @@ export default function DocsPage() {
             { key: 'AnswerCInChinese', label: 'C' },
             { key: 'AnswerDInChinese', label: 'D' }
           ];
-          
+
           for (const field of optionFields) {
             const value = row[field.key];
             console.log(`選項 ${field.label} (${field.key}):`, value);
@@ -655,22 +649,22 @@ export default function DocsPage() {
               console.warn(`題目 ${index + 1} 的選項 ${field.label} 為空，使用預設值`);
             }
           }
-          
+
           // 確保至少有4個選項
           while (options.length < 4) {
             options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
           }
-          
+
           // 獲取正確答案
           let correctAnswer = row.CorrectAnswer || "";
           console.log("原始正確答案:", correctAnswer);
-          
+
           // 如果正確答案是選項代號 (A, B, C, D) 而不是選項內容本身，則將其轉換為選項內容
           if (correctAnswer === "A" && row.AnswerAInChinese) correctAnswer = row.AnswerAInChinese;
           else if (correctAnswer === "B" && row.AnswerBInChinese) correctAnswer = row.AnswerBInChinese;
           else if (correctAnswer === "C" && row.AnswerCInChinese) correctAnswer = row.AnswerCInChinese;
           else if (correctAnswer === "D" && row.AnswerDInChinese) correctAnswer = row.AnswerDInChinese;
-          
+
           const parsedQuestion = {
             id: (row.QuestionNo || index + 1).toString(),
             question: row.QuestionInChinese || "未定義題目",
@@ -680,18 +674,18 @@ export default function DocsPage() {
             difficulty: "普通",
             modified: false
           };
-          
+
           console.log("解析結果:", parsedQuestion);
           return parsedQuestion;
-        } 
+        }
         // 新增：檢查可能的大一經濟學原理格式（可能使用不同的欄位名稱）
         else if (row['題目'] !== undefined || row['問題'] !== undefined || row['題目內容'] !== undefined) {
           console.log("使用中文欄位格式解析");
-          
+
           // 檢查中文欄位名稱
           const questionContent = row['題目'] || row['問題'] || row['題目內容'] || "未定義題目";
           console.log("題目內容:", questionContent);
-          
+
           // 檢查中文選項欄位
           const options = [];
           const chineseOptionFields = [
@@ -700,7 +694,7 @@ export default function DocsPage() {
             { keys: ['選項C', '選項 C', 'C選項', 'C', '(C)', '（C）'], label: 'C' },
             { keys: ['選項D', '選項 D', 'D選項', 'D', '(D)', '（D）'], label: 'D' }
           ];
-          
+
           for (const field of chineseOptionFields) {
             let optionValue = null;
             // 嘗試多種可能的欄位名稱
@@ -711,7 +705,7 @@ export default function DocsPage() {
                 break;
               }
             }
-            
+
             if (optionValue && typeof optionValue === 'string' && optionValue.trim() !== '') {
               options.push(optionValue.trim());
             } else {
@@ -719,16 +713,16 @@ export default function DocsPage() {
               console.warn(`題目 ${index + 1} 的選項 ${field.label} 為空，使用預設值`);
             }
           }
-          
+
           // 確保至少有4個選項
           while (options.length < 4) {
             options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
           }
-          
+
           // 檢查中文答案欄位
           let correctAnswer = row['正確答案'] || row['答案'] || row['正解'] || row['解答'] || "";
           console.log("原始正確答案:", correctAnswer);
-          
+
           // 如果正確答案是選項代號，轉換為選項內容
           if (correctAnswer === "A" || correctAnswer === "(A)" || correctAnswer === "（A）") {
             correctAnswer = options[0];
@@ -739,7 +733,7 @@ export default function DocsPage() {
           } else if (correctAnswer === "D" || correctAnswer === "(D)" || correctAnswer === "（D）") {
             correctAnswer = options[3];
           }
-          
+
           const parsedQuestion = {
             id: (row['題號'] || row['編號'] || row['序號'] || index + 1).toString(),
             question: questionContent,
@@ -749,7 +743,7 @@ export default function DocsPage() {
             difficulty: "普通",
             modified: false
           };
-          
+
           console.log("解析結果:", parsedQuestion);
           return parsedQuestion;
         }
@@ -758,7 +752,7 @@ export default function DocsPage() {
           console.log("使用通用 Question 格式解析");
           // 檢查常見的問題欄位命名
           const questionContent = row.Question || row.question || row.QuestionContent || row.Content || "未定義題目";
-          
+
           // 檢查各種可能的選項欄位命名
           const optionFields = [
             // 常見的選項欄位命名
@@ -767,9 +761,9 @@ export default function DocsPage() {
             { field: 'option3', fallbacks: ['Option3', 'OptionC', 'optionC', 'AnswerC', 'answerC', 'C'] },
             { field: 'option4', fallbacks: ['Option4', 'OptionD', 'optionD', 'AnswerD', 'answerD', 'D'] },
           ];
-          
+
           const options = [];
-          
+
           for (const optionField of optionFields) {
             // 檢查主欄位和備用欄位
             let optionValue = row[optionField.field];
@@ -783,7 +777,7 @@ export default function DocsPage() {
                 }
               }
             }
-            
+
             // 確保選項值是有效的字串
             if (optionValue && typeof optionValue === 'string' && optionValue.trim() !== '') {
               options.push(optionValue.trim());
@@ -792,15 +786,15 @@ export default function DocsPage() {
               options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
             }
           }
-          
+
           // 確保至少有4個選項
           while (options.length < 4) {
             options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
           }
-          
+
           // 檢查各種可能的答案欄位命名
           const answerField = row.answer || row.Answer || row.correctAnswer || row.CorrectAnswer || '';
-          
+
           const parsedQuestion = {
             id: row.id?.toString() || row.ID?.toString() || row.QuestionNo?.toString() || (index + 1).toString(),
             question: questionContent,
@@ -810,7 +804,7 @@ export default function DocsPage() {
             difficulty: row.difficulty || row.Difficulty || "普通",
             modified: false
           };
-          
+
           console.log("解析結果:", parsedQuestion);
           return parsedQuestion;
         } else {
@@ -818,57 +812,57 @@ export default function DocsPage() {
           // 如果找不到任何已知格式，用欄位名稱來猜測
           const columns = Object.keys(row);
           console.log("可用欄位:", columns);
-          
+
           // 尋找可能是問題的欄位（包含 'question'、'題目'、'問題' 等字樣）
-          const questionColumns = columns.filter(col => 
-            col.toLowerCase().includes('question') || 
-            col.includes('題目') || 
+          const questionColumns = columns.filter(col =>
+            col.toLowerCase().includes('question') ||
+            col.includes('題目') ||
             col.includes('問題') ||
             col.includes('Chinese')
           );
           console.log("可能的題目欄位:", questionColumns);
-          
+
           // 尋找可能是選項的欄位（包含 'option'、'answer'、'選項' 等字樣）
-          const optionColumns = columns.filter(col => 
-            col.toLowerCase().includes('option') || 
-            col.toLowerCase().includes('answer') || 
+          const optionColumns = columns.filter(col =>
+            col.toLowerCase().includes('option') ||
+            col.toLowerCase().includes('answer') ||
             col.includes('選項') ||
             col.match(/[A-D]/) // 包含 A、B、C、D 的欄位可能是選項
           );
           console.log("可能的選項欄位:", optionColumns);
-          
+
           // 尋找可能是正確答案的欄位（包含 'correct'、'正確' 等字樣）
-          const correctColumns = columns.filter(col => 
-            col.toLowerCase().includes('correct') || 
+          const correctColumns = columns.filter(col =>
+            col.toLowerCase().includes('correct') ||
             col.includes('正確')
           );
           console.log("可能的答案欄位:", correctColumns);
-          
+
           // 取第一個可能是問題的欄位
           const questionField = questionColumns.length > 0 ? questionColumns[0] : '';
-          
+
           // 確保選項始終為陣列且有足夠數量
           const options = optionColumns
             .map(col => row[col])
             .filter((val: any) => val !== undefined && val !== null && val !== '' && typeof val === 'string')
             .map((val: any) => val.trim());
-          
+
           console.log("提取的選項:", options);
-          
+
           // 確保至少有4個選項
           while (options.length < 4) {
             options.push(`選項 ${String.fromCharCode(65 + options.length)}`);
           }
-          
+
           // 如果沒有找到任何選項，提供預設選項
           if (options.length === 0) {
             options.push("選項 A", "選項 B", "選項 C", "選項 D");
             console.warn(`題目 ${index + 1} 沒有找到有效選項，使用預設選項`);
           }
-          
+
           // 取第一個可能是正確答案的欄位
           const correctField = correctColumns.length > 0 ? correctColumns[0] : '';
-          
+
           const parsedQuestion = {
             id: (index + 1).toString(),
             question: questionField ? row[questionField] : "未定義題目",
@@ -878,18 +872,18 @@ export default function DocsPage() {
             difficulty: "普通",
             modified: false
           };
-          
+
           console.log("解析結果:", parsedQuestion);
           return parsedQuestion;
         }
       });
-      
+
       // 過濾掉沒有題目內容的題目，並確保每個題目都有有效的選項陣列
       const validQuestions = questions.filter(q => {
         // 使用驗證函數確保資料完整性
         return q.question && q.question !== "未定義題目";
       }).map(q => validateQuestion(q));
-      
+
       console.log(`成功解析 ${validQuestions.length} 個題目`);
       return validQuestions;
     } catch (error) {
@@ -906,7 +900,7 @@ export default function DocsPage() {
       const firstSheetName = data.SheetNames[0];
       const worksheet = data.Sheets[firstSheetName];
       const originalData = XLSX.utils.sheet_to_json(worksheet);
-      
+
       // 如果沒有原始數據，使用預設的欄位結構
       if (!originalData || originalData.length === 0) {
         // 將題目轉換為工作表數據
@@ -921,37 +915,37 @@ export default function DocsPage() {
           category: q.category,
           difficulty: q.difficulty
         }));
-        
+
         // 創建工作表
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-        
+
         // 創建工作簿並添加工作表
         const workbook = fileContent.originalContent || XLSX.utils.book_new();
         const sheetName = workbook.SheetNames && workbook.SheetNames[0] ? workbook.SheetNames[0] : "Sheet1";
-        
+
         // 替換現有工作表或添加新工作表
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName, true);
-        
+
         return {
           ...fileContent,
           originalContent: workbook
         };
       }
-      
+
       // 檢查原始檔案的欄位結構
       const sampleRow = originalData[0] as Record<string, any>;
-      
+
       // 如果檢測到特定欄位格式 (QuestionInChinese 等)
       if (sampleRow.QuestionInChinese !== undefined) {
         const worksheetData = questions.map(q => {
           // 找出對應原始選項的答案字母 (A, B, C, D)
           let correctAnswerLetter = "";
-          
+
           if (q.options[0] === q.answer) correctAnswerLetter = "A";
           else if (q.options[1] === q.answer) correctAnswerLetter = "B";
           else if (q.options[2] === q.answer) correctAnswerLetter = "C";
           else if (q.options[3] === q.answer) correctAnswerLetter = "D";
-          
+
           return {
             QuestionNo: q.id,
             ChapterNo: q.category,
@@ -964,17 +958,17 @@ export default function DocsPage() {
             AnswerExplainInChinese: sampleRow.AnswerExplainInChinese || "" // 保留原始解析，如果有的話
           };
         });
-        
+
         // 創建工作表
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-        
+
         // 創建工作簿並添加工作表
         const workbook = fileContent.originalContent || XLSX.utils.book_new();
         const sheetName = workbook.SheetNames && workbook.SheetNames[0] ? workbook.SheetNames[0] : "Sheet1";
-        
+
         // 替換現有工作表或添加新工作表
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName, true);
-        
+
         return {
           ...fileContent,
           originalContent: workbook
@@ -992,17 +986,17 @@ export default function DocsPage() {
           category: q.category,
           difficulty: q.difficulty
         }));
-        
+
         // 創建工作表
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-        
+
         // 創建工作簿並添加工作表
         const workbook = fileContent.originalContent || XLSX.utils.book_new();
         const sheetName = workbook.SheetNames && workbook.SheetNames[0] ? workbook.SheetNames[0] : "Sheet1";
-        
+
         // 替換現有工作表或添加新工作表
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName, true);
-        
+
         return {
           ...fileContent,
           originalContent: workbook
@@ -1017,7 +1011,7 @@ export default function DocsPage() {
   const handleFileUpload = async (file: File): Promise<void> => {
     try {
       setIsLoading(true);
-      
+
       // 檢查是否為 Excel 檔案
       if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
         addToast({
@@ -1028,14 +1022,14 @@ export default function DocsPage() {
         setIsLoading(false);
         return;
       }
-      
+
       // 提供更詳細的上傳狀態提示
       addToast({
         color: "primary",
         title: TOAST_MESSAGES.INFO.PROCESSING,
         description: "",
       });
-      
+
       // 上傳檔案至後端 MySQL 資料庫
       const result = await uploadExcelFile(file, currentDocType);
       // 創建新的檔案記錄
@@ -1046,7 +1040,7 @@ export default function DocsPage() {
         docType: currentDocType,
         questionCount: 0  // 初始化為0，後續可根據實際題目數量更新
       };
-      
+
       // 讀取文件內容以在本地進行備份 (以支援離線操作)
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1065,20 +1059,20 @@ export default function DocsPage() {
             lastModified: file.lastModified,
             content: e.target?.result
           };
-          
+
           // 處理 Excel 文件
           if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
             const arrayBuffer = e.target?.result;
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             fileContent.originalContent = workbook;
           }
-          
+
           // 嘗試在本地備份文件內容，如果失敗也不影響上傳成功
           try {
             saveFileContent(result.file_id, fileContent);
           } catch (storageError) {
             console.warn("本地備份失敗，但檔案已成功上傳到資料庫:", storageError);
-            
+
             if (storageError instanceof DOMException && storageError.name === 'QuotaExceededError') {
               addToast({
                 color: "warning",
@@ -1091,16 +1085,16 @@ export default function DocsPage() {
           console.error("Error processing file for local backup:", error);
         }
       };
-      
+
       reader.readAsArrayBuffer(file);
-      
+
       // 獲取上傳後的題目，包含圖片信息
       try {
         const questionsResult = await fetchExcelQuestions(result.file_id);
-        
+
         // 更新題目數量
         newFile.questionCount = questionsResult.questions.length;
-        
+
         // 檢查是否有圖片
         const hasImages = questionsResult.questions.some(q => q.picture);
         if (hasImages) {
@@ -1113,14 +1107,14 @@ export default function DocsPage() {
       } catch (error) {
         console.error("Failed to fetch questions after upload:", error);
       }
-      
+
       // 更新文件列表
       const updatedList = [...fileList, newFile];
       setFileList(updatedList);
-      
+
       // 同時更新本地存儲作為備份
       saveLocalStorageDocsList(currentDocType, updatedList);
-      
+
       // 上傳成功後，清理 localStorage 中的檔案內容以節省空間
       try {
         const contentData = getFileContent("") || {};
@@ -1132,17 +1126,17 @@ export default function DocsPage() {
       } catch (error) {
         console.warn("清理 localStorage 檔案內容時發生錯誤:", error);
       }
-      
+
       addToast({
         color: "success",
         title: TOAST_MESSAGES.SUCCESS.UPLOAD,
         description: `文件已成功上傳至資料庫，包含 ${newFile.questionCount} 個題目`,
       });
-      
+
       setIsLoading(false);
     } catch (error) {
       console.error("Error uploading file:", error);
-      
+
       // 如果上傳到資料庫失敗，嘗試僅儲存到本地端
       try {
         // 創建一個新的文件記錄
@@ -1154,7 +1148,7 @@ export default function DocsPage() {
           docType: currentDocType,
           questionCount: 0  // 本地檔案初始化為0，解析成功後可以更新
         };
-        
+
         const reader = new FileReader();
         reader.onload = (e) => {
           const fileContent: {
@@ -1174,18 +1168,18 @@ export default function DocsPage() {
             parsedContent: undefined,
             originalContent: undefined
           };
-          
+
           // 處理 Excel 文件
           if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
             const arrayBuffer = e.target?.result;
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            
+
             const questions = parseExcelContent({
               content: e.target?.result,
               type: file.type,
               originalContent: workbook
             });
-            
+
             const docContent: IDocContent = {
               fileID: newFileID,
               fileName: file.name,
@@ -1193,30 +1187,30 @@ export default function DocsPage() {
               questions: questions,
               originalContent: workbook
             };
-            
+
             fileContent.parsedContent = docContent;
-            
+
             // 更新題目數量
             newFile.questionCount = questions.length;
           }
-          
+
           // 保存文件內容
           saveFileContent(newFileID, fileContent);
-          
+
           // 更新文件列表
           const updatedList = [...fileList, newFile];
           setFileList(updatedList);
           saveLocalStorageDocsList(currentDocType, updatedList);
-          
+
           addToast({
             color: "warning",
             title: "上傳至本地成功",
             description: `資料庫連接失敗，檔案已暫存在本機，包含 ${newFile.questionCount} 個題目`,
           });
-          
+
           setIsLoading(false);
         };
-        
+
         reader.onerror = () => {
           console.error("Error reading file:", reader.error);
           addToast({
@@ -1226,7 +1220,7 @@ export default function DocsPage() {
           });
           setIsLoading(false);
         };
-        
+
         reader.readAsArrayBuffer(file);
       } catch (localError) {
         console.error("Error on local backup:", localError);
@@ -1248,7 +1242,7 @@ export default function DocsPage() {
         try {
           setIsLoading(true);
           const result = await fetchExcelQuestions(item.fileID);
-          
+
           const docContent: IDocContent = {
             fileID: item.fileID,
             fileName: item.fileName,
@@ -1256,18 +1250,18 @@ export default function DocsPage() {
             questions: result.questions,
             originalContent: null // 我們不需要在前端保存原始工作簿
           };
-          
+
           setCurrentContent(docContent);
           setViewMode('questions');
         } catch (dbError) {
           console.error("Error fetching questions from database:", dbError);
-          
+
           // 嘗試從本地緩存獲取，如果有的話
           const fileContent = getFileContent(item.fileID);
           if (fileContent && fileContent.parsedContent) {
             setCurrentContent(fileContent.parsedContent);
             setViewMode('questions');
-            
+
             addToast({
               color: "warning",
               title: "使用本地緩存",
@@ -1284,12 +1278,12 @@ export default function DocsPage() {
       // 檢查是否為本地上傳的文件
       else if (item.fileID.startsWith("local-")) {
         const fileContent = getFileContent(item.fileID);
-        
+
         if (fileContent) {
           // 如果是Excel檔案，解析並顯示題目
           if (item.fileName.endsWith('.xlsx') || item.fileName.endsWith('.xls')) {
             const questions = parseExcelContent(fileContent);
-            
+
             const docContent: IDocContent = {
               fileID: item.fileID,
               fileName: item.fileName,
@@ -1297,17 +1291,17 @@ export default function DocsPage() {
               questions: questions,
               originalContent: fileContent.originalContent
             };
-            
+
             setCurrentContent(docContent);
             setViewMode('questions');
             return;
           }
-          
+
           // 對於其他類型的檔案，仍然下載
           const contentType = fileContent.type || "application/octet-stream";
           const blob = dataURLtoBlob(fileContent.content as string, contentType);
           const url = URL.createObjectURL(blob);
-          
+
           const link = document.createElement("a");
           link.href = url;
           link.download = fileContent.name || item.fileName;
@@ -1322,7 +1316,7 @@ export default function DocsPage() {
             description: "",
           });
         }
-        
+
         return;
       }
 
@@ -1353,17 +1347,17 @@ export default function DocsPage() {
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    
+
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n);
     }
-    
+
     return new Blob([u8arr], { type: contentType });
   };
 
   // 處理題目編輯
   const handleEditQuestion = (question: IExcelQuestion) => {
-    setEditingQuestion({...question});
+    setEditingQuestion({ ...question });
     setEditQuestionModal(true);
   };  // 將修改後的題目保存回資料庫
   const syncDatabaseQuestions = async (fileId: string, questions: IExcelQuestion[]) => {
@@ -1376,18 +1370,18 @@ export default function DocsPage() {
         // 只保留明確標記為已刪除的題目的deleted標記，其他都設為undefined
         deleted: q.deleted === true ? true : undefined
       }));
-      
+
       console.log("同步到資料庫的題目:", questionsToSync);
-      
+
       const result = await updateExcelQuestions(fileId, questionsToSync);
       console.log("資料庫更新結果:", result);
-      
+
       addToast({
         color: "success",
         title: TOAST_MESSAGES.SUCCESS.UPDATE,
         description: `已更新 ${result.updated_count} 個題目，刪除 ${result.deleted_count} 個題目`
       });
-      
+
     } catch (error) {
       console.error("同步資料庫失敗:", error);
       addToast({
@@ -1404,8 +1398,8 @@ export default function DocsPage() {
   const saveEditedQuestion = async () => {
     if (!editingQuestion || !currentContent) return;
 
-    const updatedQuestions = currentContent.questions.map(q => 
-      q.id === editingQuestion.id ? {...editingQuestion, modified: true} : q
+    const updatedQuestions = currentContent.questions.map(q =>
+      q.id === editingQuestion.id ? { ...editingQuestion, modified: true } : q
     );
 
     const updatedContent: IDocContent = {
@@ -1415,9 +1409,9 @@ export default function DocsPage() {
     };
 
     // 更新文件列表中的最後更新時間
-    const updatedFileList = fileList.map(file => 
-      file.fileID === currentContent.fileID 
-        ? {...file, lastUpdate: updatedContent.lastUpdate} 
+    const updatedFileList = fileList.map(file =>
+      file.fileID === currentContent.fileID
+        ? { ...file, lastUpdate: updatedContent.lastUpdate }
         : file
     );
 
@@ -1451,7 +1445,7 @@ export default function DocsPage() {
     // 找到要刪除的題目
     const questionToDelete = currentContent.questions.find(q => q.id === questionId);
     if (!questionToDelete) return;
-    
+
     // 更新所有題目，標記要刪除的題目
     const updatedQuestions = currentContent.questions.map(q => {
       if (q.id === questionId) {
@@ -1463,12 +1457,12 @@ export default function DocsPage() {
       }
       return q;
     });
-    
+
     // 如果是資料庫中的題目，同步到資料庫
     if (currentContent.fileID.startsWith('db-')) {
       await syncDatabaseQuestions(currentContent.fileID, updatedQuestions);
     }
-    
+
     // 從本地顯示移除已刪除的題目，保留在數據中用於同步操作
     const visibleQuestions = updatedQuestions.filter(q => !q.deleted);
 
@@ -1479,9 +1473,9 @@ export default function DocsPage() {
     };
 
     // 更新文件列表中的最後更新時間
-    const updatedFileList = fileList.map(file => 
-      file.fileID === currentContent.fileID 
-        ? {...file, lastUpdate: updatedContent.lastUpdate} 
+    const updatedFileList = fileList.map(file =>
+      file.fileID === currentContent.fileID
+        ? { ...file, lastUpdate: updatedContent.lastUpdate }
         : file
     );
 
@@ -1508,10 +1502,10 @@ export default function DocsPage() {
 
     try {
       setIsLoading(true);
-      
+
       // 找出所有已修改的題目
       const modifiedQuestions = currentContent.questions.filter(q => q.modified);
-        if (modifiedQuestions.length === 0) {
+      if (modifiedQuestions.length === 0) {
         addToast({
           color: "primary",
           title: TOAST_MESSAGES.INFO.NO_CHANGES,
@@ -1520,10 +1514,10 @@ export default function DocsPage() {
         setIsLoading(false);
         return;
       }
-      
+
       // 同步到資料庫
       await syncDatabaseQuestions(currentContent.fileID, modifiedQuestions);
-      
+
       // 成功後清除修改標記
       const clearedQuestions = currentContent.questions.map(q => {
         if (q.modified) {
@@ -1531,14 +1525,14 @@ export default function DocsPage() {
         }
         return q;
       });
-      
+
       const updatedContent = {
         ...currentContent,
         questions: clearedQuestions
       };
-      
+
       setCurrentContent(updatedContent);
-      
+
     } catch (error) {
       console.error("保存所有修改失敗:", error);
       addToast({
@@ -1550,7 +1544,7 @@ export default function DocsPage() {
       setIsLoading(false);
     }
   };
-  
+
   // 新增題目
   const handleAddQuestion = () => {
     if (!currentContent) return;
@@ -1587,9 +1581,9 @@ export default function DocsPage() {
     };
 
     // 更新文件列表中的最後更新時間
-    const updatedFileList = fileList.map(file => 
-      file.fileID === currentContent.fileID 
-        ? {...file, lastUpdate: updatedContent.lastUpdate} 
+    const updatedFileList = fileList.map(file =>
+      file.fileID === currentContent.fileID
+        ? { ...file, lastUpdate: updatedContent.lastUpdate }
         : file
     );
 
@@ -1648,7 +1642,7 @@ export default function DocsPage() {
     try {
       let updatedList = [...fileList];
       const fileIndex = updatedList.findIndex(f => f.fileID === editingFile.fileID);
-      
+
       if (fileIndex >= 0) {
         // 更新文件名稱
         if (editFileName !== editingFile.fileName) {
@@ -1657,14 +1651,14 @@ export default function DocsPage() {
             fileName: editFileName,
             lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
           };
-          
+
           addToast({
             color: "success",
             title: TOAST_MESSAGES.SUCCESS.UPDATE,
             description: "文件名稱已成功更新",
           });
         }
-        
+
         // 更新文件內容
         if (selectedFile) {
           // 讀取新文件內容
@@ -1685,18 +1679,18 @@ export default function DocsPage() {
               lastModified: selectedFile.lastModified,
               content: e.target?.result,
             };
-            
+
             // 處理 Excel 文件
             if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
               const arrayBuffer = e.target?.result;
               const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-              
+
               const questions = parseExcelContent({
                 content: e.target?.result,
                 type: selectedFile.type,
                 originalContent: workbook
               });
-              
+
               const docContent: IDocContent = {
                 fileID: editingFile.fileID,
                 fileName: selectedFile.name,
@@ -1704,34 +1698,34 @@ export default function DocsPage() {
                 questions: questions,
                 originalContent: workbook
               };
-              
+
               fileContent.parsedContent = docContent;
             }
-            
+
             // 保存新文件內容
             saveFileContent(editingFile.fileID, fileContent);
-            
+
             // 更新列表中的文件名稱為上傳的文件名稱
             updatedList[fileIndex] = {
               ...updatedList[fileIndex],
               fileName: selectedFile.name,
               lastUpdate: new Date().toISOString().replace("T", " ").substring(0, 19),
             };
-            
+
             // 保存更新後的文件列表
             setFileList(updatedList);
             saveLocalStorageDocsList(currentDocType, updatedList);
-            
+
             addToast({
               color: "success",
               title: TOAST_MESSAGES.SUCCESS.UPDATE,
               description: "文件內容已成功替換",
             });
-            
+
             onOpenChange();
             setIsEditing(false);
           };
-          
+
           reader.onerror = () => {
             console.error("Error reading file:", reader.error);
             addToast({
@@ -1741,11 +1735,11 @@ export default function DocsPage() {
             });
             setIsEditing(false);
           };
-          
+
           reader.readAsArrayBuffer(selectedFile);
           return;
         }
-        
+
         // 保存更新後的文件列表
         setFileList(updatedList);
         saveLocalStorageDocsList(currentDocType, updatedList);
@@ -1756,7 +1750,7 @@ export default function DocsPage() {
           description: "找不到要更新的文件",
         });
       }
-      
+
       onOpenChange();
     } catch (error) {
       console.error("Error updating document:", error);
@@ -1776,7 +1770,7 @@ export default function DocsPage() {
 
     try {
       let successMessage = "文件已成功從本地存儲中刪除";
-      
+
       // 檢查檔案是否來自資料庫還是本地
       if (editingFile.fileID.startsWith("db-")) {
         // 從資料庫刪除
@@ -1792,7 +1786,7 @@ export default function DocsPage() {
           });
         }
       }
-      
+
       // 無論是資料庫還是本地檔案，都執行徹底的本地清理
       try {
         // 1. 刪除文件內容
@@ -1805,12 +1799,12 @@ export default function DocsPage() {
             console.log(`已從本地存儲中刪除檔案內容: ${editingFile.fileID}`);
           }
         }
-        
+
         // 2. 從所有文檔類型的列表中刪除引用
         const listData = localStorage.getItem(LOCAL_STORAGE_DOCS_KEY);
         if (listData) {
           const parsedLists = JSON.parse(listData);
-          
+
           // 檢查每個文檔類型列表
           let updated = false;
           for (const docType in parsedLists) {
@@ -1819,23 +1813,23 @@ export default function DocsPage() {
               parsedLists[docType] = parsedLists[docType].filter(
                 (file: any) => file.fileID !== editingFile.fileID
               );
-              
+
               if (parsedLists[docType].length < initialLength) {
                 updated = true;
                 console.log(`已從 ${docType} 列表中刪除檔案: ${editingFile.fileID}`);
               }
             }
           }
-          
+
           if (updated) {
             localStorage.setItem(LOCAL_STORAGE_DOCS_KEY, JSON.stringify(parsedLists));
           }
         }
-        
+
         // 3. 更新當前的顯示列表
         const updatedList = fileList.filter(file => file.fileID !== editingFile.fileID);
         setFileList(updatedList);
-        
+
         // 如果正在查看被刪除的文件的內容，則回到列表視圖
         if (currentContent && currentContent.fileID === editingFile.fileID) {
           setCurrentContent(null);
@@ -1844,25 +1838,25 @@ export default function DocsPage() {
       } catch (error) {
         console.error("Error removing file from localStorage:", error);
         addToast({
-          color: "warning", 
+          color: "warning",
           title: "本地清理不完全",
           description: "無法完全清理本地存儲，系統將自動處理"
         });
       }
-      
+
       // 重新載入文件列表以確保 UI 保持同步
       if (editingFile.docType) {
         loadFileList(editingFile.docType);
       } else {
         loadFileList(currentDocType);
       }
-      
+
       addToast({
         color: "success",
         title: TOAST_MESSAGES.SUCCESS.DELETE,
         description: successMessage,
       });
-      
+
       onOpenChange();
     } catch (error) {
       console.error("Error deleting document:", error);
@@ -1881,8 +1875,8 @@ export default function DocsPage() {
     return (
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">
-          {currentDocType === "TESTING" 
-            ? LanguageTable.docs.page.testing[language] 
+          {currentDocType === "TESTING"
+            ? LanguageTable.docs.page.testing[language]
             : LanguageTable.docs.page.theorem[language]}
         </h2>
       </div>
@@ -1892,7 +1886,7 @@ export default function DocsPage() {
   // 新增渲染題目列表的函數，支援圖片顯示
   const renderQuestionList = () => {
     if (!currentContent) return null;
-    
+
     // 對於學生模式，直接顯示所有題目（已經在載入時篩選過章節）
     if (isStudent) {
       const sortedQuestions = [...currentContent.questions]
@@ -1911,17 +1905,17 @@ export default function DocsPage() {
           // 如果無法轉為數字，則按照原始ID排序
           return a.id.localeCompare(b.id);
         });
-      
+
       // 計算有圖片的題目數量
       const questionsWithImages = sortedQuestions.filter(q => q.picture).length;
-      
+
       // 計算來源檔案數量
       const sourceFiles = [...new Set(currentContent.questions
         .filter(q => !q.deleted)
         .map(q => q.sourceFile)
         .filter(file => file)
       )];
-      
+
       return (
         <div>
           {/* 學生模式的簡化題目摘要 */}
@@ -1937,7 +1931,7 @@ export default function DocsPage() {
               <p>最後更新: {currentContent.lastUpdate}</p>
             </div>
           </div>
-          
+
           {sortedQuestions.length === 0 ? (
             <div className="text-center p-8">
               <p className="text-xl font-medium mb-2">沒有題目</p>
@@ -1953,7 +1947,7 @@ export default function DocsPage() {
         </div>
       );
     }
-    
+
     // 教師/助教模式的完整功能（保持原有邏輯）
     // 獲取所有可用的章節
     const allChapters = [...new Set(currentContent.questions
@@ -1974,12 +1968,12 @@ export default function DocsPage() {
     if (JSON.stringify(allChapters) !== JSON.stringify(availableChapters)) {
       setAvailableChapters(allChapters);
     }
-    
+
     // 根據選擇的章節篩選題目
     const filteredQuestions = currentContent.questions
       .filter(q => !q.deleted)
       .filter(q => selectedChapter === "all" || q.category === selectedChapter);
-    
+
     // 按照題號和章節排序
     const sortedQuestions = [...filteredQuestions]
       .sort((a, b) => {
@@ -1996,13 +1990,13 @@ export default function DocsPage() {
         // 如果無法轉為數字，則按照原始ID排序
         return a.id.localeCompare(b.id);
       });
-    
+
     // 計算有圖片的題目數量
     const questionsWithImages = sortedQuestions.filter(q => q.picture).length;
-    
+
     // 檢查是否為章節瀏覽模式（根據檔案名稱包含 "章節瀏覽" 來判斷）
     const isChapterBrowseMode = currentContent.fileName.includes('章節瀏覽');
-    
+
     return (
       <div>
         {/* 根據模式顯示不同的題目摘要 */}
@@ -2040,7 +2034,7 @@ export default function DocsPage() {
                   <p>最後更新: {currentContent.lastUpdate}</p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">篩選章節：</label>
                 <Select
@@ -2067,15 +2061,15 @@ export default function DocsPage() {
             </div>
           </div>
         )}
-        
+
         {sortedQuestions.length === 0 ? (
           <div className="text-center p-8">
             <p className="text-xl font-medium mb-2">
               {selectedChapter === "all" ? "沒有題目" : `第 ${selectedChapter} 章沒有題目`}
             </p>
             <p className="text-default-500">
-              {selectedChapter === "all" 
-                ? "此文件不包含可顯示的題目" 
+              {selectedChapter === "all"
+                ? "此文件不包含可顯示的題目"
                 : "請選擇其他章節或查看全部章節"
               }
             </p>
@@ -2086,17 +2080,17 @@ export default function DocsPage() {
               <div key={question.id} className="relative">
                 {isTeacherOrTA && (
                   <div className="absolute top-2 right-2 flex gap-2">
-                    <Button 
-                      size="sm" 
-                      color="primary" 
+                    <Button
+                      size="sm"
+                      color="primary"
                       variant="light"
                       onPress={() => handleEditQuestion(question)}
                     >
                       編輯
                     </Button>
-                    <Button 
-                      size="sm" 
-                      color="danger" 
+                    <Button
+                      size="sm"
+                      color="danger"
                       variant="light"
                       onPress={() => handleDeleteQuestion(question.id)}
                     >
@@ -2104,7 +2098,7 @@ export default function DocsPage() {
                     </Button>
                   </div>
                 )}
-                
+
                 <QuestionCard question={question} />
               </div>
             ))}
@@ -2120,14 +2114,14 @@ export default function DocsPage() {
     try {
       // 嘗試從資料庫載入指定類型的所有文件
       const dbDocs = await fetchExcelFileList(questionBankType);
-      
+
       if (dbDocs && dbDocs.length > 0) {
         const allChapters = new Set<string>();
-        
+
         for (const file of dbDocs) {
           try {
             const questionsResult = await fetchExcelQuestions(file.fileID);
-            
+
             // 收集所有章節
             questionsResult.questions.forEach(q => {
               if (q.category && q.category.trim() !== "") {
@@ -2138,7 +2132,7 @@ export default function DocsPage() {
             console.error(`載入檔案 ${file.fileName} 的題目失敗:`, error);
           }
         }
-        
+
         // 排序章節
         const sortedChapters = Array.from(allChapters).sort((a, b) => {
           const aNum = parseInt(a);
@@ -2148,11 +2142,11 @@ export default function DocsPage() {
           }
           return a.localeCompare(b);
         });
-        
+
         setAvailableStudentChapters(sortedChapters);
         setSelectedQuestionBank(questionBankType);
         setStudentViewMode('chapterSelection');
-        
+
         const bankLabel = studentQuestionBanks.find(bank => bank.key === questionBankType)?.label || questionBankType;
         addToast({
           color: "success",
@@ -2164,7 +2158,7 @@ export default function DocsPage() {
         const localDocs = loadLocalStorageDocsList(questionBankType);
         if (localDocs && localDocs.length > 0) {
           const allChapters = new Set<string>();
-          
+
           for (const file of localDocs) {
             try {
               const fileContent = getFileContent(file.fileID);
@@ -2180,7 +2174,7 @@ export default function DocsPage() {
               console.error(`載入本地檔案 ${file.fileName} 的題目失敗:`, error);
             }
           }
-          
+
           const sortedChapters = Array.from(allChapters).sort((a, b) => {
             const aNum = parseInt(a);
             const bNum = parseInt(b);
@@ -2189,11 +2183,11 @@ export default function DocsPage() {
             }
             return a.localeCompare(b);
           });
-          
+
           setAvailableStudentChapters(sortedChapters);
           setSelectedQuestionBank(questionBankType);
           setStudentViewMode('chapterSelection');
-          
+
           const bankLabel = studentQuestionBanks.find(bank => bank.key === questionBankType)?.label || questionBankType;
           addToast({
             color: "success",
@@ -2207,7 +2201,7 @@ export default function DocsPage() {
             title: "暫無章節",
             description: `目前沒有可用的${bankLabel}章節`,
           });
-          
+
           setStudentViewMode('bankSelection');
         }
       }
@@ -2219,7 +2213,7 @@ export default function DocsPage() {
         title: "載入失敗",
         description: `無法載入${bankLabel}章節，請稍後再試`,
       });
-      
+
       setStudentViewMode('bankSelection');
     } finally {
       setIsLoading(false);
@@ -2230,7 +2224,7 @@ export default function DocsPage() {
   const loadStudentQuestions = async (questionBankType?: string, chapterFilter?: string) => {
     const bankType = questionBankType || selectedQuestionBank;
     const chapter = chapterFilter || selectedStudentChapter;
-    
+
     if (!chapter) {
       addToast({
         color: "warning",
@@ -2239,23 +2233,23 @@ export default function DocsPage() {
       });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       // 嘗試從資料庫載入指定類型的所有文件
       const dbDocs = await fetchExcelFileList(bankType);
-      
+
       if (dbDocs && dbDocs.length > 0) {
         // 載入所有文件的題目並合併，但只保留指定章節的題目
         const chapterQuestions: IExcelQuestion[] = [];
         let totalFiles = 0;
         let successFiles = 0;
-        
+
         for (const file of dbDocs) {
           try {
             totalFiles++;
             const questionsResult = await fetchExcelQuestions(file.fileID);
-            
+
             // 篩選指定章節的題目，並為每個題目添加來源檔案資訊
             const filteredQuestions = questionsResult.questions
               .filter(q => q.category === chapter)
@@ -2265,7 +2259,7 @@ export default function DocsPage() {
                 sourceFile: file.fileName, // 添加來源檔案名稱
                 sourceFileId: file.fileID // 添加來源檔案ID
               }));
-            
+
             if (filteredQuestions.length > 0) {
               chapterQuestions.push(...filteredQuestions);
               successFiles++;
@@ -2274,7 +2268,7 @@ export default function DocsPage() {
             console.error(`載入檔案 ${file.fileName} 的題目失敗:`, error);
           }
         }
-        
+
         if (chapterQuestions.length > 0) {
           // 創建章節題目內容
           const docContent: IDocContent = {
@@ -2284,10 +2278,10 @@ export default function DocsPage() {
             questions: chapterQuestions,
             originalContent: null
           };
-          
+
           setCurrentContent(docContent);
           setStudentViewMode('questions');
-          
+
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "success",
@@ -2301,7 +2295,7 @@ export default function DocsPage() {
             title: TOAST_MESSAGES.WARNING.NO_CONTENT,
             description: "",
           });
-          
+
           setCurrentContent(null);
           setStudentViewMode('chapterSelection');
         }
@@ -2312,15 +2306,15 @@ export default function DocsPage() {
           const chapterQuestions: IExcelQuestion[] = [];
           let totalFiles = 0;
           let successFiles = 0;
-          
+
           for (const file of localDocs) {
             try {
               totalFiles++;
               const fileContent = getFileContent(file.fileID);
-              
+
               if (fileContent) {
                 const questions = parseExcelContent(fileContent);
-                
+
                 // 篩選指定章節的題目，並為每個題目添加來源檔案資訊
                 const filteredQuestions = questions
                   .filter(q => q.category === chapter)
@@ -2330,7 +2324,7 @@ export default function DocsPage() {
                     sourceFile: file.fileName, // 添加來源檔案名稱
                     sourceFileId: file.fileID // 添加來源檔案ID
                   }));
-                
+
                 if (filteredQuestions.length > 0) {
                   chapterQuestions.push(...filteredQuestions);
                   successFiles++;
@@ -2340,7 +2334,7 @@ export default function DocsPage() {
               console.error(`載入本地檔案 ${file.fileName} 的題目失敗:`, error);
             }
           }
-          
+
           if (chapterQuestions.length > 0) {
             const docContent: IDocContent = {
               fileID: `chapter-local-${bankType}-${chapter}-${Date.now()}`,
@@ -2349,10 +2343,10 @@ export default function DocsPage() {
               questions: chapterQuestions,
               originalContent: null
             };
-            
+
             setCurrentContent(docContent);
             setStudentViewMode('questions');
-            
+
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
             addToast({
               color: "success",
@@ -2366,7 +2360,7 @@ export default function DocsPage() {
               title: TOAST_MESSAGES.WARNING.NO_CONTENT,
               description: "",
             });
-            
+
             setCurrentContent(null);
             setStudentViewMode('chapterSelection');
           }
@@ -2377,7 +2371,7 @@ export default function DocsPage() {
             title: TOAST_MESSAGES.WARNING.NO_CONTENT,
             description: "",
           });
-          
+
           // 如果沒有題目，回到章節選擇頁面
           setCurrentContent(null);
           setStudentViewMode('chapterSelection');
@@ -2391,7 +2385,7 @@ export default function DocsPage() {
         title: TOAST_MESSAGES.ERROR.LOAD,
         description: "",
       });
-      
+
       // 載入失敗時回到章節選擇頁面
       setCurrentContent(null);
       setStudentViewMode('chapterSelection');
@@ -2406,14 +2400,14 @@ export default function DocsPage() {
     try {
       // 嘗試從資料庫載入指定類型的所有文件
       const dbDocs = await fetchExcelFileList(questionBankType);
-      
+
       if (dbDocs && dbDocs.length > 0) {
         const allChapters = new Set<string>();
-        
+
         for (const file of dbDocs) {
           try {
             const questionsResult = await fetchExcelQuestions(file.fileID);
-            
+
             // 收集所有章節
             questionsResult.questions.forEach(q => {
               if (q.category && q.category.trim() !== "") {
@@ -2424,7 +2418,7 @@ export default function DocsPage() {
             console.error(`載入檔案 ${file.fileName} 的題目失敗:`, error);
           }
         }
-        
+
         // 排序章節
         const sortedChapters = Array.from(allChapters).sort((a, b) => {
           const aNum = parseInt(a);
@@ -2434,11 +2428,11 @@ export default function DocsPage() {
           }
           return a.localeCompare(b);
         });
-        
+
         setTeacherAvailableChapters(sortedChapters);
         setTeacherSelectedQuestionBank(questionBankType);
         setTeacherChapterViewMode('chapterSelection');
-        
+
         const bankLabel = studentQuestionBanks.find(bank => bank.key === questionBankType)?.label || questionBankType;
         addToast({
           color: "success",
@@ -2450,7 +2444,7 @@ export default function DocsPage() {
         const localDocs = loadLocalStorageDocsList(questionBankType);
         if (localDocs && localDocs.length > 0) {
           const allChapters = new Set<string>();
-          
+
           for (const file of localDocs) {
             try {
               const fileContent = getFileContent(file.fileID);
@@ -2466,7 +2460,7 @@ export default function DocsPage() {
               console.error(`載入本地檔案 ${file.fileName} 的題目失敗:`, error);
             }
           }
-          
+
           const sortedChapters = Array.from(allChapters).sort((a, b) => {
             const aNum = parseInt(a);
             const bNum = parseInt(b);
@@ -2475,11 +2469,11 @@ export default function DocsPage() {
             }
             return a.localeCompare(b);
           });
-          
+
           setTeacherAvailableChapters(sortedChapters);
           setTeacherSelectedQuestionBank(questionBankType);
           setTeacherChapterViewMode('chapterSelection');
-          
+
           const bankLabel = studentQuestionBanks.find(bank => bank.key === questionBankType)?.label || questionBankType;
           addToast({
             color: "success",
@@ -2493,7 +2487,7 @@ export default function DocsPage() {
             title: "暫無章節",
             description: `目前沒有可用的${bankLabel}章節`,
           });
-          
+
           setTeacherChapterViewMode('bankSelection');
         }
       }
@@ -2505,7 +2499,7 @@ export default function DocsPage() {
         title: "載入失敗",
         description: `無法載入${bankLabel}章節，請稍後再試`,
       });
-      
+
       setTeacherChapterViewMode('bankSelection');
     } finally {
       setIsLoading(false);
@@ -2516,7 +2510,7 @@ export default function DocsPage() {
   const loadTeacherQuestions = async (questionBankType?: string, chapterFilter?: string) => {
     const bankType = questionBankType || teacherSelectedQuestionBank;
     const chapter = chapterFilter || teacherSelectedChapter;
-    
+
     if (!chapter) {
       addToast({
         color: "warning",
@@ -2525,23 +2519,23 @@ export default function DocsPage() {
       });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       // 嘗試從資料庫載入指定類型的所有文件
       const dbDocs = await fetchExcelFileList(bankType);
-      
+
       if (dbDocs && dbDocs.length > 0) {
         // 載入所有文件的題目並合併，但只保留指定章節的題目
         const chapterQuestions: IExcelQuestion[] = [];
         let totalFiles = 0;
         let successFiles = 0;
-        
+
         for (const file of dbDocs) {
           try {
             totalFiles++;
             const questionsResult = await fetchExcelQuestions(file.fileID);
-            
+
             // 篩選指定章節的題目，並為每個題目添加來源檔案資訊
             const filteredQuestions = questionsResult.questions
               .filter(q => q.category === chapter)
@@ -2551,7 +2545,7 @@ export default function DocsPage() {
                 sourceFile: file.fileName, // 添加來源檔案名稱
                 sourceFileId: file.fileID // 添加來源檔案ID
               }));
-            
+
             if (filteredQuestions.length > 0) {
               chapterQuestions.push(...filteredQuestions);
               successFiles++;
@@ -2560,7 +2554,7 @@ export default function DocsPage() {
             console.error(`載入檔案 ${file.fileName} 的題目失敗:`, error);
           }
         }
-        
+
         if (chapterQuestions.length > 0) {
           // 創建章節題目內容
           const docContent: IDocContent = {
@@ -2570,10 +2564,10 @@ export default function DocsPage() {
             questions: chapterQuestions,
             originalContent: null
           };
-          
+
           setCurrentContent(docContent);
           setTeacherChapterViewMode('questions');
-          
+
           const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
           addToast({
             color: "success",
@@ -2587,7 +2581,7 @@ export default function DocsPage() {
             title: "暫無題目",
             description: `第 ${chapter} 章目前沒有可用的${bankLabel}題目`,
           });
-          
+
           setCurrentContent(null);
           setTeacherChapterViewMode('chapterSelection');
         }
@@ -2598,15 +2592,15 @@ export default function DocsPage() {
           const chapterQuestions: IExcelQuestion[] = [];
           let totalFiles = 0;
           let successFiles = 0;
-          
+
           for (const file of localDocs) {
             try {
               totalFiles++;
               const fileContent = getFileContent(file.fileID);
-              
+
               if (fileContent) {
                 const questions = parseExcelContent(fileContent);
-                
+
                 // 篩選指定章節的題目，並為每個題目添加來源檔案資訊
                 const filteredQuestions = questions
                   .filter(q => q.category === chapter)
@@ -2616,7 +2610,7 @@ export default function DocsPage() {
                     sourceFile: file.fileName, // 添加來源檔案名稱
                     sourceFileId: file.fileID // 添加來源檔案ID
                   }));
-                
+
                 if (filteredQuestions.length > 0) {
                   chapterQuestions.push(...filteredQuestions);
                   successFiles++;
@@ -2626,7 +2620,7 @@ export default function DocsPage() {
               console.error(`載入本地檔案 ${file.fileName} 的題目失敗:`, error);
             }
           }
-          
+
           if (chapterQuestions.length > 0) {
             const docContent: IDocContent = {
               fileID: `teacher-chapter-local-${bankType}-${chapter}-${Date.now()}`,
@@ -2635,10 +2629,10 @@ export default function DocsPage() {
               questions: chapterQuestions,
               originalContent: null
             };
-            
+
             setCurrentContent(docContent);
             setTeacherChapterViewMode('questions');
-            
+
             const bankLabel = studentQuestionBanks.find(bank => bank.key === bankType)?.label || bankType;
             addToast({
               color: "success",
@@ -2652,7 +2646,7 @@ export default function DocsPage() {
               title: "暫無題目",
               description: `第 ${chapter} 章目前沒有可用的本地${bankLabel}題目`,
             });
-            
+
             setCurrentContent(null);
             setTeacherChapterViewMode('chapterSelection');
           }
@@ -2663,7 +2657,7 @@ export default function DocsPage() {
             title: "暫無題目",
             description: `目前沒有可用的${bankLabel}題目`,
           });
-          
+
           // 如果沒有題目，回到章節選擇頁面
           setCurrentContent(null);
           setTeacherChapterViewMode('chapterSelection');
@@ -2677,7 +2671,7 @@ export default function DocsPage() {
         title: "載入失敗",
         description: `無法載入${bankLabel}第 ${chapter} 章題目，請稍後再試`,
       });
-      
+
       // 載入失敗時回到章節選擇頁面
       setCurrentContent(null);
       setTeacherChapterViewMode('chapterSelection');
@@ -2722,7 +2716,7 @@ export default function DocsPage() {
                     />
                   </div>
                 )}
-                
+
                 {!isLoading && studentViewMode === 'bankSelection' && (
                   /* 學生題庫選擇頁面 */
                   <div className="max-w-4xl mx-auto">
@@ -2730,7 +2724,7 @@ export default function DocsPage() {
                       <h1 className="text-3xl font-bold mb-4">選擇題庫</h1>
                       <p className="text-lg text-default-600">請選擇您要練習的題庫類型</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {studentQuestionBanks.map((bank) => (
                         <div
@@ -2754,7 +2748,7 @@ export default function DocsPage() {
                         </div>
                       ))}
                     </div>
-                    
+
                     <div className="mt-8 text-center">
                       <p className="text-sm text-default-500">
                         點擊上方卡片選擇題庫，然後選擇章節開始練習
@@ -2762,7 +2756,7 @@ export default function DocsPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {!isLoading && studentViewMode === 'chapterSelection' && (
                   /* 學生章節選擇頁面 */
                   <div className="max-w-2xl mx-auto">
@@ -2770,9 +2764,9 @@ export default function DocsPage() {
                       <h1 className="text-3xl font-bold mb-4">
                         {studentQuestionBanks.find(bank => bank.key === selectedQuestionBank)?.label || "選擇章節"}
                       </h1>
-                      <Button 
-                        color="default" 
-                        variant="solid" 
+                      <Button
+                        color="default"
+                        variant="solid"
                         size="sm"
                         className="mt-2"
                         onPress={() => {
@@ -2784,7 +2778,7 @@ export default function DocsPage() {
                         返回題庫選擇
                       </Button>
                     </div>
-                    
+
                     {availableStudentChapters.length > 0 ? (
                       <div className="bg-content1 shadow-lg rounded-lg p-6">
                         <div className="flex flex-col items-center gap-6">
@@ -2820,7 +2814,7 @@ export default function DocsPage() {
                               ))}
                             </Select>
                           </div>
-                          
+
                           <Button
                             color="primary"
                             size="lg"
@@ -2834,15 +2828,15 @@ export default function DocsPage() {
                           >
                             開始練習
                           </Button>
-                          
+
                         </div>
                       </div>
                     ) : (
                       <div className="text-center p-8">
                         <p className="text-xl font-medium mb-2">暫無可用章節</p>
                         <p className="text-default-500 mb-4">此題庫目前沒有可用的章節</p>
-                        <Button 
-                          color="default" 
+                        <Button
+                          color="default"
                           variant="solid"
                           onPress={() => setStudentViewMode('bankSelection')}
                         >
@@ -2852,7 +2846,7 @@ export default function DocsPage() {
                     )}
                   </div>
                 )}
-                
+
                 {!isLoading && studentViewMode === 'questions' && currentContent && (
                   <div>
                     <div className="flex justify-between items-center mb-4">
@@ -2860,9 +2854,9 @@ export default function DocsPage() {
                         <h2 className="text-xl font-bold">
                           {currentContent.fileName}
                         </h2>
-                        <Button 
-                          color="default" 
-                          variant="solid" 
+                        <Button
+                          color="default"
+                          variant="solid"
                           size="sm"
                           onPress={() => {
                             setStudentViewMode('chapterSelection');
@@ -2878,13 +2872,13 @@ export default function DocsPage() {
                     {renderQuestionList()}
                   </div>
                 )}
-                
+
                 {!isLoading && studentViewMode === 'questions' && !currentContent && (
                   <div className="text-center p-8">
                     <p className="text-xl font-medium mb-2">暫無可用題目</p>
                     <p className="text-default-500 mb-4">請聯繫老師或助教上傳題目</p>
-                    <Button 
-                      color="default" 
+                    <Button
+                      color="default"
                       variant="solid"
                       onPress={() => setStudentViewMode('chapterSelection')}
                     >
@@ -2902,13 +2896,13 @@ export default function DocsPage() {
                       {isTeacherOrTA && (
                         <div className="mb-4">
                           <h3 className="text-md font-medium mb-2">上傳考古題/文件</h3>
-                          <FileUploadButton 
-                            onFileUpload={handleFileUpload} 
-                            acceptedFileTypes=".xlsx,.xls,.docx,.pptx,.pdf" 
+                          <FileUploadButton
+                            onFileUpload={handleFileUpload}
+                            acceptedFileTypes=".xlsx,.xls,.docx,.pptx,.pdf"
                           />
                         </div>
                       )}
-                      
+
                       <Listbox
                         disallowEmptySelection
                         className="h-full w-full mt-2"
@@ -2927,10 +2921,10 @@ export default function DocsPage() {
                         {(item) => <ListboxItem key={item.key}>{item.label}</ListboxItem>}
                       </Listbox>
                     </div>
-                    
+
                     <div className="w-full">
                       {renderTitle()}
-                      
+
                       {/* 新增：檔案管理和章節瀏覽模式切換 */}
                       <div className="mb-4 flex gap-2">
                         <Button
@@ -2958,7 +2952,7 @@ export default function DocsPage() {
                           章節瀏覽
                         </Button>
                       </div>
-                      
+
                       <Table isStriped aria-label="Docs page" className="w-full">
                         <TableHeader>
                           <TableColumn key="name">
@@ -2968,9 +2962,9 @@ export default function DocsPage() {
                             {LanguageTable.docs.page.lastUpdate[language]}
                           </TableColumn>
                           {/* Always include the column but conditionally show content */}
-                          <TableColumn 
-                            key="actions" 
-                            align="center" 
+                          <TableColumn
+                            key="actions"
+                            align="center"
                             width={100}
                           >
                             {isTeacherOrTA ? "操作" : ""}
@@ -3031,14 +3025,14 @@ export default function DocsPage() {
                         />
                       </div>
                     )}
-                    
+
                     {!isLoading && teacherChapterViewMode === 'bankSelection' && (
                       /* 老師/助教題庫選擇頁面 */
                       <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-8">
                           <h1 className="text-3xl font-bold mb-4">章節瀏覽 - 選擇題庫</h1>
                           <p className="text-lg text-default-600">請選擇您要瀏覽的題庫類型</p>
-                          
+
                           {/* 新增：模式切換按鈕 */}
                           <div className="mt-4 mb-4 flex justify-center gap-2">
                             <Button
@@ -3066,7 +3060,7 @@ export default function DocsPage() {
                             </Button>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {studentQuestionBanks.map((bank) => (
                             <div
@@ -3090,7 +3084,7 @@ export default function DocsPage() {
                             </div>
                           ))}
                         </div>
-                        
+
                         <div className="mt-8 text-center">
                           <p className="text-sm text-default-500">
                             點擊上方卡片選擇題庫，然後選擇章節瀏覽題目
@@ -3098,7 +3092,7 @@ export default function DocsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {!isLoading && teacherChapterViewMode === 'chapterSelection' && (
                       /* 老師/助教章節選擇頁面 */
                       <div className="max-w-2xl mx-auto">
@@ -3106,9 +3100,9 @@ export default function DocsPage() {
                           <h1 className="text-3xl font-bold mb-4">
                             {studentQuestionBanks.find(bank => bank.key === teacherSelectedQuestionBank)?.label || "選擇章節"}
                           </h1>
-                          <Button 
-                            color="default" 
-                            variant="solid" 
+                          <Button
+                            color="default"
+                            variant="solid"
                             size="sm"
                             className="mt-2"
                             onPress={() => {
@@ -3120,7 +3114,7 @@ export default function DocsPage() {
                             返回題庫選擇
                           </Button>
                         </div>
-                        
+
                         {teacherAvailableChapters.length > 0 ? (
                           <div className="bg-content1 shadow-lg rounded-lg p-6">
                             <div className="flex flex-col items-center gap-6">
@@ -3156,7 +3150,7 @@ export default function DocsPage() {
                                   ))}
                                 </Select>
                               </div>
-                              
+
                               <Button
                                 color="primary"
                                 size="lg"
@@ -3170,15 +3164,15 @@ export default function DocsPage() {
                               >
                                 瀏覽題目
                               </Button>
-                              
+
                             </div>
                           </div>
                         ) : (
                           <div className="text-center p-8">
                             <p className="text-xl font-medium mb-2">暫無可用章節</p>
                             <p className="text-default-500 mb-4">此題庫目前沒有可用的章節</p>
-                            <Button 
-                              color="primary" 
+                            <Button
+                              color="primary"
                               variant="light"
                               onPress={() => setTeacherChapterViewMode('bankSelection')}
                             >
@@ -3188,7 +3182,7 @@ export default function DocsPage() {
                         )}
                       </div>
                     )}
-                    
+
                     {!isLoading && teacherChapterViewMode === 'questions' && currentContent && (
                       <div>
                         <div className="flex justify-between items-center mb-4">
@@ -3196,9 +3190,9 @@ export default function DocsPage() {
                             <h2 className="text-xl font-bold">
                               {currentContent.fileName}
                             </h2>
-                            <Button 
-                              color="default" 
-                              variant="light" 
+                            <Button
+                              color="default"
+                              variant="light"
                               size="sm"
                               onPress={() => {
                                 setTeacherChapterViewMode('chapterSelection');
@@ -3223,13 +3217,13 @@ export default function DocsPage() {
                         {renderQuestionList()}
                       </div>
                     )}
-                    
+
                     {!isLoading && teacherChapterViewMode === 'questions' && !currentContent && (
                       <div className="text-center p-8">
                         <p className="text-xl font-medium mb-2">暫無可用題目</p>
                         <p className="text-default-500 mb-4">此章節目前沒有可用的題目</p>
-                        <Button 
-                          color="primary" 
+                        <Button
+                          color="primary"
                           variant="light"
                           onPress={() => setTeacherChapterViewMode('chapterSelection')}
                         >
@@ -3257,7 +3251,7 @@ export default function DocsPage() {
                             )}
                           </div>
                         </div>
-                        
+
                         {renderQuestionList()}
                       </>
                     )}
@@ -3295,8 +3289,8 @@ export default function DocsPage() {
                       替換文件
                     </label>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         onPress={handleSelectFileClick}
                       >
                         選擇檔案
@@ -3316,23 +3310,23 @@ export default function DocsPage() {
                 </div>
               </ModalBody>
               <ModalFooter>
-                <Button 
-                  color="danger" 
+                <Button
+                  color="danger"
                   variant="light"
                   onPress={handleDeleteDoc}
                   isDisabled={isEditing}
                 >
                   刪除文件
                 </Button>
-                <Button 
-                  color="default" 
-                  variant="light" 
+                <Button
+                  color="default"
+                  variant="light"
                   onPress={() => onOpenChange()}
                 >
                   取消
                 </Button>
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   onPress={handleUpdateDoc}
                   isLoading={isEditing}
                 >
@@ -3345,11 +3339,11 @@ export default function DocsPage() {
       </Modal>
 
       {/* 題目編輯對話框 */}
-      <Modal 
-        isOpen={editQuestionModal} 
+      <Modal
+        isOpen={editQuestionModal}
         onOpenChange={(open) => {
           if (!open) setEditQuestionModal(false);
-        }} 
+        }}
         size="3xl"
         scrollBehavior="inside"
         classNames={{
@@ -3468,15 +3462,15 @@ export default function DocsPage() {
                     {((editingQuestion.pictures?.length ?? 0) > 0 || editingQuestion.picture) && (
                       <div className="mb-4 p-2 border border-divider rounded-md">
                         <div className="font-semibold mb-2">題目圖片：</div>
-                        
+
                         {/* 有多張圖片的情況 */}
                         {editingQuestion.pictures && editingQuestion.pictures.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {editingQuestion.pictures.map((picSrc, index) => (
                               <div key={index} className="flex justify-center">
-                                <img 
-                                  src={picSrc} 
-                                  alt={`題目圖片 ${index+1}`} 
+                                <img
+                                  src={picSrc}
+                                  alt={`題目圖片 ${index + 1}`}
                                   className="max-w-full max-h-64 object-contain border border-divider rounded-md"
                                   onError={(e) => {
                                     console.warn(`圖片載入失敗: ${picSrc}`);
@@ -3490,9 +3484,9 @@ export default function DocsPage() {
                           /* 僅有單張圖片 - 向後兼容 */
                           editingQuestion.picture && (
                             <div className="flex justify-center">
-                              <img 
-                                src={editingQuestion.picture} 
-                                alt="題目圖片" 
+                              <img
+                                src={editingQuestion.picture}
+                                alt="題目圖片"
                                 className="max-w-full max-h-64 object-contain border border-divider rounded-md"
                                 onError={(e) => {
                                   console.warn(`圖片載入失敗: ${editingQuestion.picture}`);
@@ -3547,15 +3541,15 @@ export default function DocsPage() {
                 )}
               </ModalBody>
               <ModalFooter>
-                <Button 
-                  color="default" 
-                  variant="light" 
+                <Button
+                  color="default"
+                  variant="light"
                   onPress={() => setEditQuestionModal(false)}
                 >
                   取消
                 </Button>
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   onPress={editingQuestion?.id.startsWith('new-') ? saveNewQuestion : saveEditedQuestion}
                 >
                   儲存

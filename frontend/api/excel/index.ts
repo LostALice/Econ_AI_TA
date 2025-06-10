@@ -19,19 +19,19 @@ export async function fetchExcelFileList(docType: string): Promise<IDocsFormat[]
       const errorText = await response.text();
       throw new Error(`Server responded with status: ${response.status} ${response.statusText} - ${errorText}`);
     }
-    
+
     const data = await response.json();
     const docsList = data.docs_list || [];
-    
+
     // 將 API 返回的資料映射到 IDocsFormat 型別，確保一致性處理
     return docsList.map((doc: any) => {
       // 確定時間戳字段
       const updateTime = doc.last_update || doc.lastUpdate || new Date().toISOString();
       const uploadTime = doc.upload_time || doc.uploadTime || updateTime;
-      
+
       return {
         fileID: doc.file_id || doc.fileID,
-        fileName: doc.file_name || doc.fileName, 
+        fileName: doc.file_name || doc.fileName,
         docType: doc.doc_type || doc.docType || docType,
         lastUpdate: updateTime,
         uploadTime: uploadTime,
@@ -78,7 +78,7 @@ export async function uploadExcelFile(
 
     const data = await response.json();
     console.log("上傳成功，伺服器回應:", data);
-    
+
     return {
       file_id: data.file_id,
       file_name: data.file_name,
@@ -102,7 +102,7 @@ export async function fetchExcelQuestions(fileId: string): Promise<{
 }> {
   try {
     console.log(`正在獲取檔案 ID: ${fileId} 的題目列表`);
-    
+
     const response = await fetch(`${siteConfig.api_url}/excel/questions/${fileId}/`, {
       method: "GET",
       headers: {
@@ -116,7 +116,7 @@ export async function fetchExcelQuestions(fileId: string): Promise<{
     }
 
     const data = await response.json();
-    
+
     // 處理題目圖片，支援一題多圖的情況
     if (data.questions && Array.isArray(data.questions)) {
       // 將單張圖片轉換為圖片陣列格式，保持向後兼容性
@@ -137,9 +137,9 @@ export async function fetchExcelQuestions(fileId: string): Promise<{
         return question;
       });
     }
-    
+
     console.log(`成功獲取 ${data.questions?.length || 0} 個題目，包含 ${data.questions?.filter((q: any) => q.picture).length || 0} 個帶圖片的題目`);
-    
+
     return {
       file_id: data.file_id,
       file_name: data.file_name,
@@ -162,7 +162,7 @@ export async function deleteExcelFile(fileId: string): Promise<{
 }> {
   try {
     console.log(`正在刪除檔案 ID: ${fileId}`);
-    
+
     const response = await fetch(`${siteConfig.api_url}/excel/${fileId}/`, {
       method: "DELETE",
       headers: {
@@ -177,7 +177,7 @@ export async function deleteExcelFile(fileId: string): Promise<{
 
     const data = await response.json();
     console.log("刪除成功，伺服器回應:", data);
-    
+
     return {
       file_id: data.file_id,
       message: data.message
@@ -205,23 +205,23 @@ export async function updateExcelQuestions(
 }> {
   try {
     console.log(`正在更新檔案 ID: ${fileId} 的題目，共 ${questions.length} 個題目`);
-    
+
     // 處理題目中的圖片，確保 Base64 格式正確
     const processedQuestions = questions.map(question => {
       const { picture, pictures, ...rest } = question as any;
-      
+
       // 處理主圖片（向後兼容）
       let processedPicture = null;
       if (picture && typeof picture === 'string' && picture.includes('base64')) {
         processedPicture = picture;
       }
-      
+
       // 處理多張圖片
       let processedPictures = [];
       if (pictures && Array.isArray(pictures)) {
         processedPictures = pictures.filter(pic => pic && typeof pic === 'string' && pic.includes('base64'));
       }
-      
+
       // 返回處理後的題目，保留原始的單圖片和多圖片格式
       return {
         ...rest,
@@ -229,7 +229,7 @@ export async function updateExcelQuestions(
         pictures: processedPictures
       };
     });
-    
+
     const response = await fetch(`${siteConfig.api_url}/excel/questions/`, {
       method: "PUT",
       headers: {
@@ -248,7 +248,7 @@ export async function updateExcelQuestions(
 
     const data = await response.json();
     console.log("更新成功，伺服器回應:", data);
-    
+
     return {
       file_id: data.file_id,
       updated_count: data.updated_count,
