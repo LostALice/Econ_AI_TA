@@ -1,4 +1,5 @@
 // Code by AkinoAlice@TyrantRey
+// Code by wonmeow
 
 import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
