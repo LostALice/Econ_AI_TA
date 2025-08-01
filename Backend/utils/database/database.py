@@ -130,308 +130,895 @@ class SetupMYSQL:
         self.connection.connect(database=self._DATABASE)
         self.connection.commit()
 
+        self.create_user_table()
+        self.create_chat_table()
+        self.create_exam_table()
+        self.create_class_table()
+        self.create_tag_table()
+        self.create_excel_table()
+
         # ROLE table
-        self.cursor.execute(
-            """
-            CREATE TABLE role (
-                `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `role_name` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`role_id`),
-                UNIQUE INDEX `role_id` (`role_id` ASC)
-            );
-            """
-        )
-        self.connection.commit()
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE role (
+        #         `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        #         `role_name` VARCHAR(45) NOT NULL,
+        #         PRIMARY KEY (`role_id`),
+        #         UNIQUE INDEX `role_id` (`role_id` ASC)
+        #     );
+        #     """
+        # )
+        # self.connection.commit()
 
         # USER table
-        self.cursor.execute(
-            """
-            CREATE TABLE `user` (
-                `user_id` INT NOT NULL AUTO_INCREMENT,
-                `username` VARCHAR(45) NOT NULL,
-                `role_id` INT UNSIGNED NOT NULL,
-                PRIMARY KEY (`user_id`),
-                FOREIGN KEY (`role_id`) REFERENCES `role`(`role_id`)
-            );
-            """
-        )
-        self.connection.commit()
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE `user` (
+        #         `user_id` INT NOT NULL AUTO_INCREMENT,
+        #         `username` VARCHAR(45) NOT NULL,
+        #         `role_id` INT UNSIGNED NOT NULL,
+        #         PRIMARY KEY (`user_id`),
+        #         FOREIGN KEY (`role_id`) REFERENCES `role`(`role_id`)
+        #     );
+        #     """
+        # )
+        # self.connection.commit()
 
         # LOGIN table
-        self.cursor.execute(
-            """
-            CREATE TABLE login (
-                `user_id` INT NOT NULL,
-                `password` VARCHAR(64) NOT NULL,
-                `jwt` VARCHAR(255) NOT NULL DEFAULT "",
-                `last_login` TIMESTAMP NOT NULL DEFAULT NOW(),
-                PRIMARY KEY (`user_id`),
-                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
-            );
-            """
-        )
-        self.connection.commit()
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE login (
+        #         `user_id` INT NOT NULL,
+        #         `password` VARCHAR(64) NOT NULL,
+        #         `jwt` VARCHAR(255) NOT NULL DEFAULT "",
+        #         `last_login` TIMESTAMP NOT NULL DEFAULT NOW(),
+        #         PRIMARY KEY (`user_id`),
+        #         FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+        #     );
+        #     """
+        # )
+        # self.connection.commit()
 
         # CHAT table
-        self.cursor.execute(
-            """
-            CREATE TABLE chat (
-                `chat_id` VARCHAR(45) NOT NULL,
-                `user_id` INT NOT NULL,
-                `chat_name` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`chat_id`),
-                UNIQUE INDEX `chat_id` (`chat_id` ASC),
-                FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE chat (
+        #         `chat_id` VARCHAR(45) NOT NULL,
+        #         `user_id` INT NOT NULL,
+        #         `chat_name` VARCHAR(45) NOT NULL,
+        #         PRIMARY KEY (`chat_id`),
+        #         UNIQUE INDEX `chat_id` (`chat_id` ASC),
+        #         FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+        #     );
+        #     """
+        # )
 
         # FILE table
-        self.cursor.execute(
-            """
-            CREATE TABLE file (
-                `file_id` VARCHAR(45) NOT NULL,
-                `collection` VARCHAR(45) NOT NULL DEFAULT "default",
-                `file_name` VARCHAR(255) NOT NULL,
-                `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
-                `expired` TINYINT(1) NOT NULL DEFAULT "0",
-                `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
-                PRIMARY KEY (`file_id`, `collection`),
-                UNIQUE INDEX `file_id` (`file_id` ASC)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE file (
+        #         `file_id` VARCHAR(45) NOT NULL,
+        #         `collection` VARCHAR(45) NOT NULL DEFAULT "default",
+        #         `file_name` VARCHAR(255) NOT NULL,
+        #         `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
+        #         `expired` TINYINT(1) NOT NULL DEFAULT "0",
+        #         `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
+        #         PRIMARY KEY (`file_id`, `collection`),
+        #         UNIQUE INDEX `file_id` (`file_id` ASC)
+        #     );
+        #     """
+        # )
 
         # QA table
-        self.cursor.execute(
-            """
-            CREATE TABLE qa (
-                `chat_id` VARCHAR(45) NOT NULL,
-                `qa_id` VARCHAR(45) NOT NULL,
-                `question` LONGTEXT NOT NULL,
-                `images` VARCHAR(45) NULL,
-                `answer` LONGTEXT NOT NULL,
-                `token_size` INT NOT NULL DEFAULT 0,
-                `rating` TINYINT(1) DEFAULT NULL,
-                `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `sent_by` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`chat_id`, `qa_id`),
-                UNIQUE INDEX `qa_id` (`qa_id`),
-                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE qa (
+        #         `chat_id` VARCHAR(45) NOT NULL,
+        #         `qa_id` VARCHAR(45) NOT NULL,
+        #         `question` LONGTEXT NOT NULL,
+        #         `images` VARCHAR(45) NULL,
+        #         `answer` LONGTEXT NOT NULL,
+        #         `token_size` INT NOT NULL DEFAULT 0,
+        #         `rating` TINYINT(1) DEFAULT NULL,
+        #         `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        #         `sent_by` VARCHAR(45) NOT NULL,
+        #         PRIMARY KEY (`chat_id`, `qa_id`),
+        #         UNIQUE INDEX `qa_id` (`qa_id`),
+        #         FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`)
+        #     );
+        #     """
+        # )
 
         # ATTACHMENT table
-        self.cursor.execute(
-            """
-            CREATE TABLE attachment (
-                `chat_id` VARCHAR(45) NOT NULL,
-                `qa_id` VARCHAR(45) NOT NULL,
-                `file_id` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`qa_id`, `file_id`),
-                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
-                FOREIGN KEY (`file_id`) REFERENCES `file`(`file_id`),
-                FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE attachment (
+        #         `chat_id` VARCHAR(45) NOT NULL,
+        #         `qa_id` VARCHAR(45) NOT NULL,
+        #         `file_id` VARCHAR(45) NOT NULL,
+        #         PRIMARY KEY (`qa_id`, `file_id`),
+        #         FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+        #         FOREIGN KEY (`file_id`) REFERENCES `file`(`file_id`),
+        #         FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+        #     );
+        #     """
+        # )
 
         # IMAGES table
-        self.cursor.execute(
-            """
-            CREATE TABLE images (
-                `chat_id` VARCHAR(45) NOT NULL,
-                `qa_id` VARCHAR(45) NOT NULL,
-                `images_file_id` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`qa_id`, `images_file_id`),
-                FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
-                FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE images (
+        #         `chat_id` VARCHAR(45) NOT NULL,
+        #         `qa_id` VARCHAR(45) NOT NULL,
+        #         `images_file_id` VARCHAR(45) NOT NULL,
+        #         PRIMARY KEY (`qa_id`, `images_file_id`),
+        #         FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+        #         FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+        #     );
+        #     """
+        # )
 
         # exam table
-        self.cursor.execute(
-            """
-            CREATE TABLE exams (
-                exam_id INT AUTO_INCREMENT PRIMARY KEY,
-                exam_name VARCHAR(255) NOT NULL,
-                exam_type VARCHAR(255) NOT NULL,
-                exam_date DATETIME NOT NULL,
-                exam_duration INT NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT 1
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE exams (
+        #         exam_id INT AUTO_INCREMENT PRIMARY KEY,
+        #         exam_name VARCHAR(255) NOT NULL,
+        #         exam_type VARCHAR(255) NOT NULL,
+        #         exam_date DATETIME NOT NULL,
+        #         exam_duration INT NOT NULL,
+        #         enabled TINYINT(1) NOT NULL DEFAULT 1
+        #     );
+        #     """
+        # )
 
         # question table
-        self.cursor.execute(
-            """
-            -- Table: question
-            CREATE TABLE question (
-                question_id INT AUTO_INCREMENT PRIMARY KEY,
-                question_text TEXT,
-                enabled TINYINT(1) NOT NULL DEFAULT 1
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: question
+        #     CREATE TABLE question (
+        #         question_id INT AUTO_INCREMENT PRIMARY KEY,
+        #         question_text TEXT,
+        #         enabled TINYINT(1) NOT NULL DEFAULT 1
+        #     );
+        #     """
+        # )
 
         # exam_questions table
-        self.cursor.execute(
-            """
-            CREATE TABLE exam_questions (
-                exam_id INT NOT NULL,
-                question_id INT NOT NULL,
-                PRIMARY KEY (exam_id, question_id),
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
-                FOREIGN KEY (question_id) REFERENCES question(question_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE exam_questions (
+        #         exam_id INT NOT NULL,
+        #         question_id INT NOT NULL,
+        #         PRIMARY KEY (exam_id, question_id),
+        #         FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+        #         FOREIGN KEY (question_id) REFERENCES question(question_id)
+        #     );
+        #     """
+        # )
 
         # question_image table
-        self.cursor.execute(
-            """
-            -- Table: question_image
-            CREATE TABLE question_image (
-                question_id INT NOT NULL,
-                image_uuid CHAR(36) NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT 1,
-                PRIMARY KEY (question_id, image_uuid),
-                FOREIGN KEY (question_id) REFERENCES question(question_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: question_image
+        #     CREATE TABLE question_image (
+        #         question_id INT NOT NULL,
+        #         image_uuid CHAR(36) NOT NULL,
+        #         enabled TINYINT(1) NOT NULL DEFAULT 1,
+        #         PRIMARY KEY (question_id, image_uuid),
+        #         FOREIGN KEY (question_id) REFERENCES question(question_id)
+        #     );
+        #     """
+        # )
 
         # option table
-        self.cursor.execute(
-            """
-            -- Table: option
-            CREATE TABLE `option` (
-                option_id INT AUTO_INCREMENT PRIMARY KEY,
-                option_text TEXT NOT NULL,
-                is_correct TINYINT(1) NOT NULL DEFAULT 0,
-                enabled TINYINT(1) NOT NULL DEFAULT 1
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: option
+        #     CREATE TABLE `option` (
+        #         option_id INT AUTO_INCREMENT PRIMARY KEY,
+        #         option_text TEXT NOT NULL,
+        #         is_correct TINYINT(1) NOT NULL DEFAULT 0,
+        #         enabled TINYINT(1) NOT NULL DEFAULT 1
+        #     );
+        #     """
+        # )
 
         # question_option table
-        self.cursor.execute(
-            """
-            -- Table: question_option (linking table)
-            CREATE TABLE question_option (
-                question_id INT NOT NULL,
-                option_id INT NOT NULL,
-                PRIMARY KEY (question_id, option_id),
-                FOREIGN KEY (question_id) REFERENCES question(question_id),
-                FOREIGN KEY (option_id) REFERENCES `option`(option_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: question_option (linking table)
+        #     CREATE TABLE question_option (
+        #         question_id INT NOT NULL,
+        #         option_id INT NOT NULL,
+        #         PRIMARY KEY (question_id, option_id),
+        #         FOREIGN KEY (question_id) REFERENCES question(question_id),
+        #         FOREIGN KEY (option_id) REFERENCES `option`(option_id)
+        #     );
+        #     """
+        # )
 
         # exam_submission table
-        self.cursor.execute(
-            """
-            -- Table: exam_submission
-            CREATE TABLE exam_submission (
-                submission_id INT AUTO_INCREMENT PRIMARY KEY,
-                exam_id INT NOT NULL,
-                user_id INT NOT NULL,
-                score INT NOT NULL,
-                regraded_score INT DEFAULT NULL,
-                submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
-                FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: exam_submission
+        #     CREATE TABLE exam_submission (
+        #         submission_id INT AUTO_INCREMENT PRIMARY KEY,
+        #         exam_id INT NOT NULL,
+        #         user_id INT NOT NULL,
+        #         score INT NOT NULL,
+        #         regraded_score INT DEFAULT NULL,
+        #         submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        #         FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+        #         FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
+        #     );
+        #     """
+        # )
 
         # exam_submission_answer table
-        self.cursor.execute(
-            """
-            -- Table: exam_submission_answer
-            CREATE TABLE exam_submission_answer (
-                submission_id INT NOT NULL,
-                question_id INT NOT NULL,
-                selected_option_id INT DEFAULT NULL,
-                is_correct_at_submission TINYINT(1) NOT NULL DEFAULT 1,
-                PRIMARY KEY (submission_id, question_id),
-                FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
-                FOREIGN KEY (question_id) REFERENCES question(question_id),
-                FOREIGN KEY (selected_option_id) REFERENCES `option`(option_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     -- Table: exam_submission_answer
+        #     CREATE TABLE exam_submission_answer (
+        #         submission_id INT NOT NULL,
+        #         question_id INT NOT NULL,
+        #         selected_option_id INT DEFAULT NULL,
+        #         is_correct_at_submission TINYINT(1) NOT NULL DEFAULT 1,
+        #         PRIMARY KEY (submission_id, question_id),
+        #         FOREIGN KEY (submission_id) REFERENCES exam_submission(submission_id),
+        #         FOREIGN KEY (question_id) REFERENCES question(question_id),
+        #         FOREIGN KEY (selected_option_id) REFERENCES `option`(option_id)
+        #     );
+        #     """
+        # )
 
         # classes table
-        self.cursor.execute(
-            """
-            CREATE TABLE class (
-                class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                classname VARCHAR(255) NOT NULL DEFAULT "New Class",
-                enabled TINYINT(1) NOT NULL DEFAULT 1
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE class (
+        #         class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        #         classname VARCHAR(255) NOT NULL DEFAULT "New Class",
+        #         enabled TINYINT(1) NOT NULL DEFAULT 1
+        #     );
+        #     """
+        # )
 
         # class user table
-        self.cursor.execute(
-            """
-            CREATE TABLE class_user (
-                class_id INT NOT NULL,
-                user_id INT NOT NULL,
-                role_id INT UNSIGNED NOT NULL,
-                PRIMARY KEY (class_id, user_id),
-                FOREIGN KEY (class_id) REFERENCES class(class_id),
-                FOREIGN KEY (user_id) REFERENCES `user`(user_id),
-                FOREIGN KEY (role_id) REFERENCES role(role_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE class_user (
+        #         class_id INT NOT NULL,
+        #         user_id INT NOT NULL,
+        #         role_id INT UNSIGNED NOT NULL,
+        #         PRIMARY KEY (class_id, user_id),
+        #         FOREIGN KEY (class_id) REFERENCES class(class_id),
+        #         FOREIGN KEY (user_id) REFERENCES `user`(user_id),
+        #         FOREIGN KEY (role_id) REFERENCES role(role_id)
+        #     );
+        #     """
+        # )
 
         # class Exam table
-        self.cursor.execute(
-            """
-            CREATE TABLE class_exam (
-                class_id INT NOT NULL,
-                exam_id INT NOT NULL,
-                PRIMARY KEY (class_id, exam_id),
-                FOREIGN KEY (class_id) REFERENCES class(class_id),
-                FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE class_exam (
+        #         class_id INT NOT NULL,
+        #         exam_id INT NOT NULL,
+        #         PRIMARY KEY (class_id, exam_id),
+        #         FOREIGN KEY (class_id) REFERENCES class(class_id),
+        #         FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+        #     );
+        #     """
+        # )
 
         # tag table
-        self.cursor.execute(
-            """
-            CREATE TABLE tag (
-                tag_id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(15) NOT NULL UNIQUE,
-                description VARCHAR(255) NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT TRUE
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE tag (
+        #         tag_id INT AUTO_INCREMENT PRIMARY KEY,
+        #         name VARCHAR(15) NOT NULL UNIQUE,
+        #         description VARCHAR(255) NOT NULL,
+        #         enabled TINYINT(1) NOT NULL DEFAULT TRUE
+        #     );
+        #     """
+        # )
 
         # question_tag table
-        self.cursor.execute(
-            """
-            CREATE TABLE question_tag (
-                question_id INT NOT NULL,
-                tag_id INT NOT NULL,
-                enabled TINYINT(1) NOT NULL DEFAULT TRUE,
-                PRIMARY KEY (question_id, tag_id),
-                FOREIGN KEY (question_id) REFERENCES question(question_id),
-                FOREIGN KEY (tag_id) REFERENCES tag(tag_id)
-            );
-            """
-        )
+        # self.cursor.execute(
+        #     """
+        #     CREATE TABLE question_tag (
+        #         question_id INT NOT NULL,
+        #         tag_id INT NOT NULL,
+        #         enabled TINYINT(1) NOT NULL DEFAULT TRUE,
+        #         PRIMARY KEY (question_id, tag_id),
+        #         FOREIGN KEY (question_id) REFERENCES question(question_id),
+        #         FOREIGN KEY (tag_id) REFERENCES tag(tag_id)
+        #     );
+        #     """
+        # )
 
         self.connection.commit()
 
+        # # Admin account
+        # admin_username = str(self._ROOT_USERNAME)
+        # admin_password = str(self._ROOT_PASSWORD)
+
+        # import hashlib
+
+        # hashed_admin_password = hashlib.sha3_256(
+        #     admin_password.encode("utf-8")
+        # ).hexdigest()
+        # self.logger.info(f"Root username: {admin_username}")
+        # self.logger.info(f"Root password: {hashed_admin_password}")
+
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `role` (`role_name`) VALUES ("Admin"), ("Teacher"), ("TA"), ("Student");
+        #     """
+        # )
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 1);
+        #     """,
+        #     (admin_username,),
+        # )
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `login` (user_id, password) VALUES (1, %s);
+        #     """,
+        #     (hashed_admin_password,),
+        # )
+        # self.connection.commit()
+
+        # # Teacher
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 2);
+        #     """,
+        #     ("Teacher",),
+        # )
+
+        # # TA
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 3);
+        #     """,
+        #     ("TA",),
+        # )
+
+        # # Student
+        # self.cursor.execute(
+        #     """
+        #     INSERT INTO `user` (`username`, `role_id`) VALUES (%s, 4);
+        #     """,
+        #     ("Student",),
+        # )
+
+        # self.connection.commit()
+
+        # if self._DEBUG:
+        #     # Teacher
+        #     self.cursor.execute(
+        #         """
+        #         INSERT INTO `login` (user_id, password) VALUES (2, %s);
+        #         """,
+        #         (hashed_admin_password,),
+        #     )
+
+        #     # TA
+        #     self.cursor.execute(
+        #         """
+        #         INSERT INTO `login` (user_id, password) VALUES (3, %s);
+        #         """,
+        #         (hashed_admin_password,),
+        #     )
+
+        #     # Student
+        #     self.cursor.execute(
+        #         """
+        #         INSERT INTO `login` (user_id, password) VALUES (4, %s);
+        #         """,
+        #         (hashed_admin_password,),
+        #     )
+        #     self.connection.commit()
+
+        self.logger.debug(pformat(f"Created MYSQL database {self._DATABASE}"))
+
+    def create_user_table(self) -> None:
+        """Create user reference table"""
+
+        self.logger.info("Creating alliance table: user")
+
+        # ROLE table
+        try:
+            self.logger.debug("\tCreating table: role")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE role (
+                    `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `role_name` VARCHAR(45) NOT NULL,
+                    PRIMARY KEY (`role_id`),
+                    UNIQUE INDEX `role_id` (`role_id` ASC)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: role")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # USER table
+        try:
+            self.logger.debug("Creating table: user")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE `user` (
+                    `user_id` INT NOT NULL AUTO_INCREMENT,
+                    `username` VARCHAR(45) NOT NULL,
+                    `role_id` INT UNSIGNED NOT NULL,
+                    PRIMARY KEY (`user_id`),
+                    FOREIGN KEY (`role_id`) REFERENCES `role`(`role_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: user")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # LOGIN table
+        try:
+            self.logger.debug("Creating table: login")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE login (
+                    `user_id` INT NOT NULL,
+                    `password` VARCHAR(64) NOT NULL,
+                    `jwt` VARCHAR(255) NOT NULL DEFAULT "",
+                    `last_login` TIMESTAMP NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (`user_id`),
+                    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: login")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def create_chat_table(self) -> None:
+        """Create chat reference table"""
+
+        self.logger.info("Creating alliance table: chat")
+
+        # CHAT table
+        try:
+            self.logger.debug("Creating table: CHAT")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE chat (
+                    `chat_id` VARCHAR(45) NOT NULL,
+                    `user_id` INT NOT NULL,
+                    `chat_name` VARCHAR(45) NOT NULL,
+                    PRIMARY KEY (`chat_id`),
+                    UNIQUE INDEX `chat_id` (`chat_id` ASC),
+                    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: CHAT")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # file table
+        try:
+            self.logger.debug("Creating table: file")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE file (
+                    `file_id` VARCHAR(45) NOT NULL,
+                    `collection` VARCHAR(45) NOT NULL DEFAULT "default",
+                    `file_name` VARCHAR(255) NOT NULL,
+                    `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
+                    `expired` TINYINT(1) NOT NULL DEFAULT "0",
+                    `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
+                    PRIMARY KEY (`file_id`, `collection`),
+                    UNIQUE INDEX `file_id` (`file_id` ASC)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: file")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # qa table
+        try:
+            self.logger.debug("Creating table: qa")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE qa (
+                    `chat_id` VARCHAR(45) NOT NULL,
+                    `qa_id` VARCHAR(45) NOT NULL,
+                    `question` LONGTEXT NOT NULL,
+                    `images` VARCHAR(45) NULL,
+                    `answer` LONGTEXT NOT NULL,
+                    `token_size` INT NOT NULL DEFAULT 0,
+                    `rating` TINYINT(1) DEFAULT NULL,
+                    `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `sent_by` VARCHAR(45) NOT NULL,
+                    PRIMARY KEY (`chat_id`, `qa_id`),
+                    UNIQUE INDEX `qa_id` (`qa_id`),
+                    FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: qa")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # attachment table
+        try:
+            self.logger.debug("Creating table: attachment")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE attachment (
+                    `chat_id` VARCHAR(45) NOT NULL,
+                    `qa_id` VARCHAR(45) NOT NULL,
+                    `file_id` VARCHAR(45) NOT NULL,
+                    PRIMARY KEY (`qa_id`, `file_id`),
+                    FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+                    FOREIGN KEY (`file_id`) REFERENCES `file`(`file_id`),
+                    FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: attachment")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # images table
+        try:
+            self.logger.debug("Creating table: images")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE images (
+                    `chat_id` VARCHAR(45) NOT NULL,
+                    `qa_id` VARCHAR(45) NOT NULL,
+                    `images_file_id` VARCHAR(45) NOT NULL,
+                    PRIMARY KEY (`qa_id`, `images_file_id`),
+                    FOREIGN KEY (`chat_id`) REFERENCES `chat`(`chat_id`),
+                    FOREIGN KEY (`qa_id`) REFERENCES `qa`(`qa_id`)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: images")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def create_exam_table(self) -> None:
+        """Create exam reference table"""
+
+        self.logger.info("Creating alliance table: exam")
+
+        # exams table
+        try:
+            self.logger.debug("Creating table: exams")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE exams (
+                    exam_id INT AUTO_INCREMENT PRIMARY KEY,
+                    exam_name VARCHAR(255) NOT NULL,
+                    exam_type VARCHAR(255) NOT NULL,
+                    exam_date DATETIME NOT NULL,
+                    exam_duration INT NOT NULL,
+                    enabled TINYINT(1) NOT NULL DEFAULT 1
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: exams")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # question table
+        try:
+            self.logger.debug("Creating table: question")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE question (
+                    question_id INT AUTO_INCREMENT PRIMARY KEY,
+                    question_text TEXT,
+                    enabled TINYINT(1) NOT NULL DEFAULT 1
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: question")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # exam_questions table
+        try:
+            self.logger.debug("Creating table: exam_questions")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE exam_questions (
+                    exam_id INT NOT NULL,
+                    question_id INT NOT NULL,
+                    PRIMARY KEY (exam_id, question_id),
+                    FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                    FOREIGN KEY (question_id) REFERENCES question(question_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: exam_questions")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # question_image table
+        try:
+            self.logger.debug("Creating table: question_image")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE question_image (
+                    question_id INT NOT NULL,
+                    image_uuid CHAR(36) NOT NULL,
+                    enabled TINYINT(1) NOT NULL DEFAULT 1,
+                    PRIMARY KEY (question_id, image_uuid),
+                    FOREIGN KEY (question_id) REFERENCES question(question_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: question_image")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # option table
+        try:
+            self.logger.debug("Creating table: option")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE `option` (
+                    option_id INT AUTO_INCREMENT PRIMARY KEY,
+                    option_text TEXT NOT NULL,
+                    is_correct TINYINT(1) NOT NULL DEFAULT 0,
+                    enabled TINYINT(1) NOT NULL DEFAULT 1
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: option")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # question_option table
+        try:
+            self.logger.debug("Creating table: question_option")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE question_option (
+                    question_id INT NOT NULL,
+                    option_id INT NOT NULL,
+                    PRIMARY KEY (question_id, option_id),
+                    FOREIGN KEY (question_id) REFERENCES question(question_id),
+                    FOREIGN KEY (option_id) REFERENCES `option`(option_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: question_option")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # exam_submission table
+        try:
+            self.logger.debug("Creating table: exam_submission")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE exam_submission (
+                    submission_id INT AUTO_INCREMENT PRIMARY KEY,
+                    exam_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    score INT NOT NULL,
+                    regraded_score INT DEFAULT NULL,
+                    submission_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (exam_id) REFERENCES exams(exam_id),
+                    FOREIGN KEY (user_id) REFERENCES user(user_id) -- Assumes a user table exists
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: exam_submission")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def create_class_table(self) -> None:
+        """Create class reference table"""
+
+        self.logger.info("Creating alliance table: class")
+
+        # class table
+        try:
+            self.logger.debug("Creating table: class")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE class (
+                    class_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    classname VARCHAR(255) NOT NULL DEFAULT "New Class",
+                    enabled TINYINT(1) NOT NULL DEFAULT 1
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: class")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # class_user table
+        try:
+            self.logger.debug("Creating table: class_user")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE class_user (
+                    class_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    role_id INT UNSIGNED NOT NULL,
+                    PRIMARY KEY (class_id, user_id),
+                    FOREIGN KEY (class_id) REFERENCES class(class_id),
+                    FOREIGN KEY (user_id) REFERENCES `user`(user_id),
+                    FOREIGN KEY (role_id) REFERENCES role(role_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: class_user")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # class_exam table
+        try:
+            self.logger.debug("Creating table: class_exam")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE class_exam (
+                    class_id INT NOT NULL,
+                    exam_id INT NOT NULL,
+                    PRIMARY KEY (class_id, exam_id),
+                    FOREIGN KEY (class_id) REFERENCES class(class_id),
+                    FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: class_exam")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def create_tag_table(self) -> None:
+        """Create tag reference table"""
+
+        self.logger.info("Creating alliance table: tag")
+
+        # tag table
+        try:
+            self.logger.debug("Creating table: tag")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE tag (
+                    tag_id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(15) NOT NULL UNIQUE,
+                    description VARCHAR(255) NOT NULL,
+                    enabled TINYINT(1) NOT NULL DEFAULT TRUE
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: class")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        # question_tag table
+        try:
+            self.logger.debug("Creating table: question_tag")
+
+            self.cursor.execute(
+                """
+                CREATE TABLE question_tag (
+                    question_id INT NOT NULL,
+                    tag_id INT NOT NULL,
+                    enabled TINYINT(1) NOT NULL DEFAULT TRUE,
+                    PRIMARY KEY (question_id, tag_id),
+                    FOREIGN KEY (question_id) REFERENCES question(question_id),
+                    FOREIGN KEY (tag_id) REFERENCES tag(tag_id)
+                );
+                """
+            )
+            self.connection.commit()
+            self.logger.debug("Committed table: question_tag")
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def create_excel_table(self) -> None:
+        """Create excel reference table"""
+
+        self.logger.info("Creating table excel")
+
+        try:
+            # 建立題目資料表
+            self.logger.debug("Creating table: excel_questions")
+            self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS excel_questions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                question_no VARCHAR(50) NOT NULL,
+                chapter_no VARCHAR(50) NOT NULL,
+                question_text MEDIUMTEXT NOT NULL,
+                option_a TEXT NOT NULL,
+                option_b TEXT NOT NULL,
+                option_c TEXT NOT NULL,
+                option_d TEXT NOT NULL,
+                correct_answer VARCHAR(255) NOT NULL,
+                explanation TEXT NOT NULL,
+                picture MEDIUMBLOB,
+                file_name VARCHAR(255) NOT NULL,
+                upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                doc_type VARCHAR(50) NOT NULL,
+                INDEX file_name_idx (file_name)
+            )
+            """)
+
+            self.connection.commit()
+            self.logger.debug("Committed table: excel_questions")
+
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+        try:
+            # 建立題目資料表
+            self.logger.debug("Creating table: excel_uploaded_files")
+            self.cursor.execute("""
+                CREATE TABLE IF NOT EXISTS excel_uploaded_files (
+                file_id VARCHAR(255) PRIMARY KEY,
+                file_name VARCHAR(255) NOT NULL,
+                doc_type VARCHAR(50) NOT NULL,
+                upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                question_count INT DEFAULT 0
+            )
+            """)
+
+            self.connection.commit()
+            self.logger.debug("Committed table: excel_uploaded_files")
+
+        except Exception as e:
+            self.logger.exception("Error: {}", e)
+
+    def _init_default_account(self) -> None:
         # Admin account
         admin_username = str(self._ROOT_USERNAME)
         admin_password = str(self._ROOT_PASSWORD)
@@ -514,8 +1101,6 @@ class SetupMYSQL:
                 (hashed_admin_password,),
             )
             self.connection.commit()
-
-        self.logger.debug(pformat(f"Created MYSQL database {self._DATABASE}"))
 
 
 class MySQLHandler(SetupMYSQL):
