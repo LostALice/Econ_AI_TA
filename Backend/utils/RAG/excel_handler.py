@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple
 from xml.etree import ElementTree as ET
 
-# from mysql_backend_clean.db_connection import DBConnection
-# from mysql_backend_clean.model.db_connection import ResultModel
-# from mysql_backend_clean.model.excel_handler import ValidatedQuestionModel
+from Backend.utils.helper.model.database.excel import ResultModel
+from Backend.utils.helper.model.excel import ValidatedQuestionModel
 from Backend.utils.database.excel import ExcelDatabaseController
 
 logger = logging.getLogger(__name__)
+excel_database_controller = ExcelDatabaseController()
 
 
 class XlsxImageExtractor:
@@ -447,8 +447,10 @@ class XlsxImageExtractor:
 class ExcelHandler:
     """Excel 檔案處理類"""
 
+    def __init__(self) -> None: ...
+
     @staticmethod
-    def save_questions_to_db(
+    def save_questions_to_excel_database_controller(
         questions: List[Dict[str, Any]], file_id: str, file_name: str, doc_type: str
     ) -> bool:
         """將題目保存到資料庫
@@ -463,13 +465,14 @@ class ExcelHandler:
             bool: 是否成功保存
         """
         try:
-            db = DBConnection()
             # 插入題目到資料庫
-            result = db.insert_questions(questions, file_name, doc_type)
+            result = excel_database_controller.insert_questions(
+                questions, file_name, doc_type
+            )
 
             if result > 0:
                 # 記錄檔案上傳信息到 uploaded_files 表
-                upload_result = db.record_file_upload(
+                upload_result = excel_database_controller.record_file_upload(
                     file_id, file_name, doc_type, result
                 )
                 if upload_result:
@@ -481,7 +484,6 @@ class ExcelHandler:
                         f"記錄檔案上傳信息失敗：ID={file_id}, 名稱={file_name}"
                     )
 
-            db.close()
             return result > 0
         except Exception as e:
             logger.error(f"保存題目到資料庫時發生錯誤: {str(e)}")
@@ -498,9 +500,7 @@ class ExcelHandler:
             List[Dict[str, Any]]: 檔案列表
         """
         try:
-            db = DBConnection()
-            file_list = db.get_file_list(doc_type)
-            db.close()
+            file_list = excel_database_controller.get_file_list(doc_type)
             return file_list
         except Exception as e:
             logger.error(f"獲取檔案列表時發生錯誤: {str(e)}")
@@ -517,9 +517,7 @@ class ExcelHandler:
             Tuple[List[Dict[str, Any]], str]: (題目列表, 檔案名稱)
         """
         try:
-            db = DBConnection()
-            questions, file_name = db.get_questions(file_id)
-            db.close()
+            questions, file_name = excel_database_controller.get_questions(file_id)
             return questions, file_name
         except Exception as e:
             logger.error(f"獲取題目時發生錯誤: {str(e)}")
@@ -536,9 +534,7 @@ class ExcelHandler:
             bool: 是否成功刪除
         """
         try:
-            db = DBConnection()
-            result = db.delete_file_and_questions(file_id)
-            db.close()
+            result = excel_database_controller.delete_file_and_questions(file_id)
             return result
         except Exception as e:
             logger.error(f"刪除檔案時發生錯誤: {str(e)}")
@@ -556,9 +552,7 @@ class ExcelHandler:
             Dict: 包含更新結果的字典
         """
         try:
-            db = DBConnection()
-            result = db.update_questions(file_id, questions)
-            db.close()
+            result = excel_database_controller.update_questions(file_id, questions)
             return result
         except Exception as e:
             logger.error(f"更新題目時發生錯誤: {str(e)}")

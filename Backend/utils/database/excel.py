@@ -13,7 +13,7 @@ from collections import Counter
 class ExcelDatabaseController:
     def __init__(self) -> None:
         self.database = mysql_client
-        self.logger = CustomLoggerHandler.get_logger()
+        self.logger = CustomLoggerHandler().get_logger()
 
     def insert_questions(
         self, questions: list[dict[str, Any]], file_name: str, doc_type: str
@@ -53,10 +53,10 @@ class ExcelDatabaseController:
                     self.logger.info(
                         f"已刪除舊有題目 {deleted_count} 題 (檔案名: {file_name})"
                     )
-                    self.connection.commit()
+                    self.database.connection.commit()
             except Exception as e:
                 self.logger.warning(f"刪除舊有題目時發生錯誤: {e}")
-                self.connection.rollback()
+                self.database.connection.rollback()
 
                 # 批次處理，每50題一批
                 batch_size = 50
@@ -202,7 +202,7 @@ class ExcelDatabaseController:
 
                     # 批次完成後提交
                     try:
-                        self.connection.commit()
+                        self.database.connection.commit()
                         self.logger.info(
                             f"第 {batch_index + 1} 批次完成，本批次成功插入 {batch_successful} 題"
                         )
@@ -210,7 +210,7 @@ class ExcelDatabaseController:
                         self.logger.error(
                             f"提交第 {batch_index + 1} 批次時發生錯誤: {commit_error}"
                         )
-                        self.connection.rollback()
+                        self.database.connection.rollback()
                         # 回滾後，從本批次中成功計數中減去
                         successful_inserts -= batch_successful
 
@@ -243,8 +243,10 @@ class ExcelDatabaseController:
                 return successful_inserts
         except Exception as e:
             self.logger.error(f"整體插入題目時發生錯誤: {e}")
-            self.connection.rollback()
+            self.database.connection.rollback()
             return 0
+
+        return 0
 
     def insert_questions_batch(
         self,
@@ -328,13 +330,13 @@ class ExcelDatabaseController:
                 successful_inserts += 1
 
             # 提交事務
-            self.connection.commit()
+            self.database.connection.commit()
             self.logger.info(f"成功批量插入/更新 {successful_inserts} 個題目")
 
             return successful_inserts
         except Exception as e:
             self.logger.error(f"批量插入題目時發生錯誤: {e}")
-            self.connection.rollback()
+            self.database.connection.rollback()
             return 0
 
     def record_file_upload(
@@ -368,13 +370,13 @@ class ExcelDatabaseController:
             )
 
             # 提交事務
-            self.connection.commit()
+            self.database.connection.commit()
             self.logger.info(f"成功記錄檔案上傳: {file_name}")
 
             return True
         except Exception as e:
             self.logger.error(f"記錄檔案上傳時發生錯誤: {e}")
-            self.connection.rollback()
+            self.database.connection.rollback()
             return False
 
     def get_file_list(self, doc_type: str | None = None) -> list[dict[str, Any]]:
@@ -515,7 +517,7 @@ class ExcelDatabaseController:
                 try:
                     update_sql = "UPDATE uploaded_files SET question_count = %s WHERE file_id = %s"
                     self.database.cursor.execute(update_sql, (actual_count, file_id))
-                    self.connection.commit()
+                    self.database.connection.commit()
                 except Exception as e:
                     self.logger.error(f"更新題目數量失敗: {e}")
 
@@ -559,13 +561,13 @@ class ExcelDatabaseController:
             self.database.cursor.execute(sql_delete_file, (file_id,))
 
             # 提交事務
-            self.connection.commit()
+            self.database.connection.commit()
             self.logger.info(f"成功刪除檔案和題目: {file_name}")
 
             return True
         except Exception as e:
             self.logger.error(f"刪除檔案和題目時發生錯誤: {e}")
-            self.connection.rollback()
+            self.database.connection.connection.rollback()
             return False
 
     def get_question_count(self, file_name: str) -> int:
@@ -580,9 +582,9 @@ class ExcelDatabaseController:
         """
         try:
             sql = "SELECT COUNT(*) as count FROM questions WHERE file_name = %s"
-            self.database.cursor.execute(sql, (file_name,))
+            self.database.connection.cursor.execute(sql, (file_name,))
 
-            result = self.database.cursor.fetchone()
+            result = self.database.connection.cursor.fetchone()
             return result.get("count", 0) if result else 0
         except Exception as e:
             self.logger.error(f"獲取題目數量時發生錯誤: {e}")
@@ -848,7 +850,7 @@ class ExcelDatabaseController:
             self.database.cursor.execute(update_file_sql, (new_count, file_id))
 
             # 提交所有更改
-            self.connection.commit()
+            self.database.connection.commit()
             result.success = True
             self.logger.info(
                 f"成功更新檔案 {file_id} 的題目：更新 {result.updated_count}，刪除 {result.deleted_count}"
@@ -857,7 +859,7 @@ class ExcelDatabaseController:
             return result
 
         except Exception as e:
-            self.connection.rollback()
+            self.database.connection.rollback()
             error_msg = str(e)
             self.logger.error(f"更新題目時發生錯誤: {error_msg}")
             result.error = error_msg

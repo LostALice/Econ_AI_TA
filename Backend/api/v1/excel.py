@@ -15,7 +15,7 @@ from Backend.utils.helper.model.api.v1.excel import (
     QuestionsUpdateModel,
     QuestionsUpdateSuccessModel,
 )
-from Backend.utils.helper.excel_handler import ExcelHandler
+from Backend.utils.RAG.excel_handler import ExcelHandler
 
 logger = logging.getLogger(__name__)
 
