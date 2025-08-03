@@ -225,6 +225,10 @@ export const LanguageTable = {
   },
   docs: {
     page: {
+      docs: {
+        zh: "題庫",
+        en: "Docs",
+      },
       lessonName: {
         zh: "課程名稱",
         en: "Lesson Name",
@@ -244,6 +248,18 @@ export const LanguageTable = {
       theorem: {
         zh: "大一經濟學原理",
         en: "Basic of Economics",
+      },
+      uploadFile: {
+        zh: "上傳考古題/文件",
+        en: "Upload past exam questions/files"
+      },
+      loginToRead: {
+        zh: "請先登入以閱覽題庫功能",
+        en: "Please log in first to view the question bank function"
+      },
+      loginNow: {
+        zh: "立即登入",
+        en: "Login now"
       },
     },
     component: {

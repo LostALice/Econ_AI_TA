@@ -136,6 +136,7 @@ class SetupMYSQL:
         self.create_class_table()
         self.create_tag_table()
         self.create_excel_table()
+        self._init_default_account()
 
         # ROLE table
         # self.cursor.execute(
@@ -437,7 +438,7 @@ class SetupMYSQL:
         #     """
         # )
 
-        self.connection.commit()
+        # self.connection.commit()
 
         # # Admin account
         # admin_username = str(self._ROOT_USERNAME)

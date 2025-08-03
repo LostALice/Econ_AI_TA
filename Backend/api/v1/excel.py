@@ -2,7 +2,6 @@
 # Modify by TyrantRey 24/7/25
 
 import uuid
-import logging
 import base64
 import datetime
 
@@ -15,9 +14,10 @@ from Backend.utils.helper.model.api.v1.excel import (
     QuestionsUpdateModel,
     QuestionsUpdateSuccessModel,
 )
-from Backend.utils.RAG.excel_handler import ExcelHandler
+from Backend.utils.RAG.excel_handler import excel_client
+from Backend.utils.helper.logger import CustomLoggerHandler
 
-logger = logging.getLogger(__name__)
+logger = CustomLoggerHandler().get_logger()
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ async def upload_excel_file(
 
         # 解析 Excel 內容為題目資料
         try:
-            questions = ExcelHandler.parse_excel_to_questions(
+            questions = excel_client.parse_excel_to_questions(
                 content_b64, excel_file.content_type
             )
         except ValueError as e:
@@ -83,11 +83,12 @@ async def upload_excel_file(
                 status_code=500, detail=f"Excel Parsing Error: {str(e)}"
             )
 
+        logger.info(f"Parsed question: {len(questions)}")
         # 儲存題目到資料庫
-        success = ExcelHandler.save_questions_to_db(
+        success = excel_client.save_questions_to_db(
             questions, file_id, file_name, doc_type
         )
-
+        logger.info(success)
         if not success:
             raise HTTPException(status_code=500, detail="儲存題目到資料庫失敗")
 
@@ -110,7 +111,7 @@ async def upload_excel_file(
 async def get_file_list(doc_type: str) -> FileListSuccessModel:
     """取得檔案列表"""
     try:
-        file_list = ExcelHandler.get_file_list(doc_type)
+        file_list = excel_client.get_file_list(doc_type)
         return FileListSuccessModel(docs_list=file_list)
     except Exception as e:
         logger.error(f"取得檔案列表錯誤: {str(e)}")
@@ -132,7 +133,7 @@ async def get_questions(file_id: str) -> QuestionsSuccessModel:
     """
     try:
         # 獲取題目列表和檔案名稱
-        questions, file_name = ExcelHandler.get_questions(file_id)
+        questions, file_name = excel_client.get_questions(file_id)
 
         if not questions:
             logger.warning(f"找不到檔案ID: {file_id} 的題目")
@@ -265,19 +266,19 @@ async def update_questions(
             raise HTTPException(status_code=400, detail="沒有提供要更新的題目")
 
         # 更新題目
-        result = ExcelHandler.update_questions(file_id, questions)
+        result = excel_client.update_questions(file_id, questions)
 
-        if not result["success"]:
-            error_message = result.get("error", "未知錯誤")
+        if not result.success:
+            error_message = result.error if result.error else "未知錯誤"
             raise HTTPException(
                 status_code=500, detail=f"更新題目失敗: {error_message}"
             )
 
         return QuestionsUpdateSuccessModel(
             file_id=file_id,
-            updated_count=result["updated_count"],
-            deleted_count=result["deleted_count"],
-            message=f"成功更新題目，已更新 {result['updated_count']} 題，已刪除 {result['deleted_count']} 題",
+            updated_count=result.updated_count,
+            deleted_count=result.deleted_count,
+            message=f"成功更新題目，已更新 {result.updated_count} 題，已刪除 {result.deleted_count} 題",
         )
 
     except HTTPException:
@@ -293,7 +294,7 @@ async def update_questions(
 async def delete_file(file_id: str) -> FileDeleteSuccessModel:
     """刪除檔案及其題目"""
     try:
-        success = ExcelHandler.delete_file(file_id)
+        success = excel_client.delete_file(file_id)
 
         if not success:
             raise HTTPException(status_code=404, detail=f"找不到檔案ID: {file_id}")

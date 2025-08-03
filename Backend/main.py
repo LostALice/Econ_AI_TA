@@ -8,6 +8,7 @@ from Backend.api.v1 import (
     admin,
     result,
     management,
+    excel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
 
@@ -112,6 +113,13 @@ app.include_router(
     tags=["Management", "v1"],
 )
 logger.debug("| Management Loading Finished |")
+
+app.include_router(
+    excel.router,
+    prefix="/api/v1/excel",
+    tags=["Excel", "v1"],
+)
+logger.debug("| Excel Loading Finished |")
 
 logger.debug("| Backend Loading Finished |")
 

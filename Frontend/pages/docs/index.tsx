@@ -211,10 +211,10 @@ export default function DocsPage() {
 
   // 根據 userInfo.role 判斷是否為教師或助教，注意使用原始角色值而非轉換後的顯示名稱
   // 修改為使用顯示角色判斷，因為原始角色值可能不正確
-  const isTeacherOrTA = userInfo?.role === 'teacher' || userInfo?.role === 'ta' || userInfo?.role === 'admin' ||
-    role === LanguageTable.login.role.teacher[language] ||
-    role === LanguageTable.login.role.ta[language] ||
-    role === LanguageTable.nav.role.admin[language];
+  const isTeacherOrTA =
+    role === LanguageTable.login.role.teacher.en ||
+    role === LanguageTable.login.role.ta.en ||
+    role === LanguageTable.nav.role.admin.en;
 
   // 新增：判斷是否為學生
   const isStudent = userInfo?.role === 'student' || role === LanguageTable.login.role.student[language];
@@ -3116,7 +3116,6 @@ export default function DocsPage() {
                                     variant="light"
                                     color="primary"
                                     onPress={() => handleEditClick(item)}
-                                    isDisabled={!item.fileID.startsWith("local-")}
                                   >
                                     編輯
                                   </Button>

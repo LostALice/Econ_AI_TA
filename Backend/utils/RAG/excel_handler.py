@@ -1,8 +1,8 @@
 # Code by wonmeow
+# Modify by AkinoAlice@TyrantRey 3/8/2025
 
 import base64
 import pandas as pd  # type: ignore[import-untyped]
-import logging
 import io
 import zipfile
 import tempfile
@@ -11,19 +11,20 @@ import shutil
 
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Any
 from xml.etree import ElementTree as ET
 
 from Backend.utils.helper.model.database.excel import ResultModel
 from Backend.utils.helper.model.excel import ValidatedQuestionModel
 from Backend.utils.database.excel import ExcelDatabaseController
+from Backend.utils.helper.logger import CustomLoggerHandler
 
-logger = logging.getLogger(__name__)
 excel_database_controller = ExcelDatabaseController()
 
 
 class XlsxImageExtractor:
     def __init__(self, xlsx_path):
+        self.logger = CustomLoggerHandler().get_logger()
         self.xlsx_path = xlsx_path
         self.temp_dir = Path("temp_extraction")
         self.output_dir = Path("extracted_images")
@@ -42,7 +43,7 @@ class XlsxImageExtractor:
     def extract_xlsx(self):
         """使用 zipfile 解壓縮 xlsx 檔案"""
         try:
-            logger.info("解壓縮 Excel 檔案...")
+            self.logger.info("解壓縮 Excel 檔案...")
 
             # 建立臨時目錄
             self.setup_directories()
@@ -51,13 +52,13 @@ class XlsxImageExtractor:
             with zipfile.ZipFile(self.xlsx_path, "r") as zip_ref:
                 # 檢查 ZIP 檔案的完整性
                 if zip_ref.testzip() is not None:
-                    logger.error("Excel 檔案已損壞")
+                    self.logger.error("Excel 檔案已損壞")
                     return False
 
                 # 顯示 ZIP 檔案內容
-                logger.info("Excel 檔案包含以下檔案:")
+                self.logger.info("Excel 檔案包含以下檔案:")
                 for item in zip_ref.namelist():
-                    logger.info(f"  {item}")
+                    self.logger.info(f"  {item}")
 
                 # 解壓縮所有檔案
                 zip_ref.extractall(self.temp_dir)
@@ -68,25 +69,25 @@ class XlsxImageExtractor:
                 for file_path in required_files:
                     full_path = self.temp_dir / file_path
                     if not full_path.exists():
-                        logger.warning(f"找不到必要的檔案: {file_path}")
+                        self.logger.warning(f"找不到必要的檔案: {file_path}")
 
                 return True
 
         except zipfile.BadZipFile:
-            logger.error("無法解壓縮 Excel 檔案，檔案可能已損壞")
+            self.logger.error("無法解壓縮 Excel 檔案，檔案可能已損壞")
             return False
         except Exception as e:
-            logger.error(f"解壓縮過程發生錯誤: {str(e)}")
+            self.logger.error(f"解壓縮過程發生錯誤: {str(e)}")
             return False
 
     def read_worksheet_xml(self):
         """從 XML 直接讀取工作表內容"""
-        logger.info("開始讀取工作表 XML...")
+        self.logger.info("開始讀取工作表 XML...")
 
         try:
             worksheet_path = self.temp_dir / "xl" / "worksheets" / "sheet1.xml"
             if not worksheet_path.exists():
-                logger.error("找不到工作表 XML 檔案")
+                self.logger.error("找不到工作表 XML 檔案")
                 return
 
             # 讀取 sharedStrings.xml 以獲取字串內容
@@ -142,15 +143,15 @@ class XlsxImageExtractor:
                             "col": 3,
                             "full_text": question_text,
                         }
-                        logger.info(f"找到題號: {chapter_no}.{question_no}")
+                        self.logger.info(f"找到題號: {chapter_no}.{question_no}")
 
-            logger.info(f"總共找到 {len(self.question_numbers)} 個題號")
+            self.logger.info(f"總共找到 {len(self.question_numbers)} 個題號")
 
         except ET.ParseError as e:
-            logger.error(f"解析 XML 時發生錯誤: {str(e)}")
+            self.logger.error(f"解析 XML 時發生錯誤: {str(e)}")
         except Exception as e:
-            logger.error(f"讀取工作表時發生錯誤: {str(e)}")
-            logger.error(str(e))
+            self.logger.error(f"讀取工作表時發生錯誤: {str(e)}")
+            self.logger.error(str(e))
 
     def _load_shared_strings(self):
         """載入 sharedStrings.xml 檔案中的字串資料"""
@@ -158,7 +159,7 @@ class XlsxImageExtractor:
         try:
             shared_strings_path = self.temp_dir / "xl" / "sharedStrings.xml"
             if not shared_strings_path.exists():
-                logger.warning("找不到 sharedStrings.xml 檔案")
+                self.logger.warning("找不到 sharedStrings.xml 檔案")
                 return shared_strings
 
             tree = ET.parse(shared_strings_path)
@@ -175,22 +176,24 @@ class XlsxImageExtractor:
                 else:
                     shared_strings[i] = f"空字串 {i}"
 
-            logger.info(f"從 sharedStrings.xml 載入了 {len(shared_strings)} 個字串")
+            self.logger.info(
+                f"從 sharedStrings.xml 載入了 {len(shared_strings)} 個字串"
+            )
             return shared_strings
 
         except Exception as e:
-            logger.error(f"載入 sharedStrings.xml 時發生錯誤: {str(e)}")
+            self.logger.error(f"載入 sharedStrings.xml 時發生錯誤: {str(e)}")
             return shared_strings
 
     def analyze_worksheet_for_images(self):
         """從 sheet1.xml 中分析圖片與題號的關聯"""
-        logger.info("從 sheet1.xml 分析圖片與題號關聯...")
+        self.logger.info("從 sheet1.xml 分析圖片與題號關聯...")
 
         image_mappings = {}
         try:
             worksheet_path = self.temp_dir / "xl" / "worksheets" / "sheet1.xml"
             if not worksheet_path.exists():
-                logger.error("找不到 sheet1.xml 檔案")
+                self.logger.error("找不到 sheet1.xml 檔案")
                 return image_mappings
 
             # 讀取 sharedStrings.xml 以獲取字串內容
@@ -220,7 +223,9 @@ class XlsxImageExtractor:
                                     "vm_value": vm_value,
                                 }
                             )
-                            logger.info(f"在第 {row_num} 行找到圖片 (vm={vm_value})")
+                            self.logger.info(
+                                f"在第 {row_num} 行找到圖片 (vm={vm_value})"
+                            )
 
             # 建立圖片與題號的關係
             for img_cell in image_cells:
@@ -295,18 +300,18 @@ class XlsxImageExtractor:
                         "vm_value": vm_value,
                     }
 
-                    logger.info(
+                    self.logger.info(
                         f"圖片 (行={row_num}, vm={vm_value}) 對應題號 {chapter_no}.{question_no}"
                     )
 
             return image_mappings
 
         except ET.ParseError as e:
-            logger.error(f"解析 XML 時發生錯誤: {str(e)}")
+            self.logger.error(f"解析 XML 時發生錯誤: {str(e)}")
             return image_mappings
         except Exception as e:
-            logger.error(f"分析 worksheet 時發生錯誤: {str(e)}")
-            logger.error(str(e))
+            self.logger.error(f"分析 worksheet 時發生錯誤: {str(e)}")
+            self.logger.error(str(e))
             return image_mappings
 
     def process(self, keep_temp=False):
@@ -323,7 +328,7 @@ class XlsxImageExtractor:
             image_info = self.analyze_worksheet_for_images()
 
             # 從 Excel 中提取所有圖片
-            logger.info("從 Excel 提取圖片...")
+            self.logger.info("從 Excel 提取圖片...")
             extracted_images = []
             media_dir = self.temp_dir / "xl" / "media"
             if media_dir.exists():
@@ -340,13 +345,13 @@ class XlsxImageExtractor:
 
                 # 按照行號_VM值的對應關係建立映射
                 image_mappings = list(image_info.keys())
-                logger.info(
+                self.logger.info(
                     f"找到 {len(image_mappings)} 個圖片映射: {', '.join(image_mappings)}"
                 )
 
                 # 確保 media_files 和 image_mappings 有合適數量的元素
                 if len(media_files) < len(image_mappings):
-                    logger.warning(
+                    self.logger.warning(
                         f"警告: 圖片文件數量 ({len(media_files)}) 少於映射數量 ({len(image_mappings)})"
                     )
 
@@ -400,12 +405,14 @@ class XlsxImageExtractor:
                                 "mapping_key": mapping_key,
                                 "original_image": image_file.name,
                             }
-                            logger.info(
+                            self.logger.info(
                                 f"圖片 {image_name} (行={info['row']}, VM={info['vm_value']}) 對應到題號 {info['chapter_no']}.{info['question_no']}"
                             )
                     else:
                         for mapping_key in vm_mappings:
-                            logger.warning(f"映射 {mapping_key} 沒有對應的圖片文件")
+                            self.logger.warning(
+                                f"映射 {mapping_key} 沒有對應的圖片文件"
+                            )
 
             # 生成報告
             report = {
@@ -425,13 +432,13 @@ class XlsxImageExtractor:
                 "extracted_images": extracted_images,
             }
 
-            logger.info(
+            self.logger.info(
                 f"處理完成！找到 {len(self.question_numbers)} 個題號和 {len(extracted_images)} 張圖片，共 {len(image_info)} 個映射關係"
             )
             return report
 
         except Exception as e:
-            logger.error(f"處理過程中發生錯誤: {str(e)}")
+            self.logger.error(f"處理過程中發生錯誤: {str(e)}")
             return None
         finally:
             # 如果不保留臨時檔案，則清理
@@ -439,19 +446,24 @@ class XlsxImageExtractor:
                 try:
                     if self.temp_dir.exists():
                         shutil.rmtree(self.temp_dir)
-                        logger.info("已清理臨時檔案")
+                        self.logger.info("已清理臨時檔案")
                 except Exception as e:
-                    logger.error(f"清理臨時檔案時發生錯誤: {str(e)}")
+                    self.logger.error(f"清理臨時檔案時發生錯誤: {str(e)}")
 
 
 class ExcelHandler:
     """Excel 檔案處理類"""
 
-    def __init__(self) -> None: ...
+    def __init__(self) -> None:
+        self.logger = CustomLoggerHandler().get_logger()
 
-    @staticmethod
-    def save_questions_to_excel_database_controller(
-        questions: List[Dict[str, Any]], file_id: str, file_name: str, doc_type: str
+    # @staticmethod
+    def save_questions_to_db(
+        self,
+        questions: list[ValidatedQuestionModel],
+        file_id: str,
+        file_name: str,
+        doc_type: str,
     ) -> bool:
         """將題目保存到資料庫
 
@@ -469,28 +481,27 @@ class ExcelHandler:
             result = excel_database_controller.insert_questions(
                 questions, file_name, doc_type
             )
-
+            self.logger.info(result)
             if result > 0:
                 # 記錄檔案上傳信息到 uploaded_files 表
                 upload_result = excel_database_controller.record_file_upload(
                     file_id, file_name, doc_type, result
                 )
                 if upload_result:
-                    logger.info(
+                    self.logger.info(
                         f"成功記錄檔案上傳信息：ID={file_id}, 名稱={file_name}, 類型={doc_type}, 題目數={result}"
                     )
                 else:
-                    logger.warning(
+                    self.logger.warning(
                         f"記錄檔案上傳信息失敗：ID={file_id}, 名稱={file_name}"
                     )
 
             return result > 0
         except Exception as e:
-            logger.error(f"保存題目到資料庫時發生錯誤: {str(e)}")
+            self.logger.error(f"保存題目到資料庫時發生錯誤: {str(e)}")
             return False
 
-    @staticmethod
-    def get_file_list(doc_type: str | None = None) -> List[Dict[str, Any]]:
+    def get_file_list(self, doc_type: str | None = None) -> list[dict[str, Any]]:
         """獲取檔案列表
 
         Args:
@@ -503,11 +514,10 @@ class ExcelHandler:
             file_list = excel_database_controller.get_file_list(doc_type)
             return file_list
         except Exception as e:
-            logger.error(f"獲取檔案列表時發生錯誤: {str(e)}")
+            self.logger.error(f"獲取檔案列表時發生錯誤: {str(e)}")
             return []
 
-    @staticmethod
-    def get_questions(file_id: str) -> Tuple[List[Dict[str, Any]], str]:
+    def get_questions(self, file_id: str) -> tuple[list[dict[str, Any]], str]:
         """獲取指定檔案 ID 的題目
 
         Args:
@@ -520,11 +530,10 @@ class ExcelHandler:
             questions, file_name = excel_database_controller.get_questions(file_id)
             return questions, file_name
         except Exception as e:
-            logger.error(f"獲取題目時發生錯誤: {str(e)}")
+            self.logger.error(f"獲取題目時發生錯誤: {str(e)}")
             return [], ""
 
-    @staticmethod
-    def delete_file(file_id: str) -> bool:
+    def delete_file(self, file_id: str) -> bool:
         """刪除檔案及其題目
 
         Args:
@@ -537,11 +546,12 @@ class ExcelHandler:
             result = excel_database_controller.delete_file_and_questions(file_id)
             return result
         except Exception as e:
-            logger.error(f"刪除檔案時發生錯誤: {str(e)}")
+            self.logger.error(f"刪除檔案時發生錯誤: {str(e)}")
             return False
 
-    @staticmethod
-    def update_questions(file_id: str, questions: List[Dict[str, Any]]) -> ResultModel:
+    def update_questions(
+        self, file_id: str, questions: list[dict[str, Any]]
+    ) -> ResultModel:
         """更新題目內容
 
         Args:
@@ -555,7 +565,7 @@ class ExcelHandler:
             result = excel_database_controller.update_questions(file_id, questions)
             return result
         except Exception as e:
-            logger.error(f"更新題目時發生錯誤: {str(e)}")
+            self.logger.error(f"更新題目時發生錯誤: {str(e)}")
             return ResultModel(
                 success=False,
                 updated_count=0,
@@ -563,10 +573,9 @@ class ExcelHandler:
                 error=str(e),
             )
 
-    @staticmethod
     def parse_excel_to_questions(
-        file_content: str, file_type: str
-    ) -> List[ValidatedQuestionModel]:
+        self, file_content: str, file_type: str
+    ) -> list[ValidatedQuestionModel]:
         """解析 Excel 檔案內容為題目列表
 
         Args:
@@ -620,7 +629,7 @@ class ExcelHandler:
             for i, option in enumerate(options):
                 if not option or not isinstance(option, str) or option.strip() == "":
                     options[i] = f"選項 {chr(65 + i)}"
-                    logger.warning(
+                    self.logger.warning(
                         f"題目 {validated_question.question_no} 的選項 {chr(65 + i)} 為空，使用預設值"
                     )
                 else:
@@ -652,7 +661,7 @@ class ExcelHandler:
             report = extractor.process(keep_temp=False)
 
             if not report:
-                logger.warning("無法從 Excel 檔案提取圖片數據，但繼續處理文字內容")
+                self.logger.warning("無法從 Excel 檔案提取圖片數據，但繼續處理文字內容")
                 report = {"image_mappings": {}}
 
             # 使用 pandas 讀取 Excel 以獲取題目內容
@@ -662,15 +671,15 @@ class ExcelHandler:
             df.columns = [col.strip() for col in df.columns]
 
             # 輸出詳細的檔案結構調試信息
-            logger.info("=== Excel 檔案結構分析 ===")
-            logger.info(f"Excel 檔案的欄位名稱: {list(df.columns)}")
-            logger.info(f"總行數: {len(df)}")
+            self.logger.info("=== Excel 檔案結構分析 ===")
+            self.logger.info(f"Excel 檔案的欄位名稱: {list(df.columns)}")
+            self.logger.info(f"總行數: {len(df)}")
 
             # 輸出前幾行的資料樣本
             if len(df) > 0:
-                logger.info(f"第一行資料: {dict(df.iloc[0])}")
+                self.logger.info(f"第一行資料: {dict(df.iloc[0])}")
             if len(df) > 1:
-                logger.info(f"第二行資料: {dict(df.iloc[1])}")
+                self.logger.info(f"第二行資料: {dict(df.iloc[1])}")
 
             # 檢查必要欄位是否存在
             required_fields = [
@@ -695,15 +704,15 @@ class ExcelHandler:
                         " ", ""
                     ) == req.lower().replace(".", ""):
                         column_mapping[col] = req
-                        logger.info(f"精確匹配: {col} -> {req}")
+                        self.logger.info(f"精確匹配: {col} -> {req}")
 
                 # 特別處理 PIC 欄位映射到 Picture
                 if col.lower() == "pic":
                     column_mapping[col] = "Picture"
-                    logger.info(f"精確匹配: {col} -> Picture")
+                    self.logger.info(f"精確匹配: {col} -> Picture")
                 elif col.lower() == "picture":
                     column_mapping[col] = "Picture"
-                    logger.info(f"精確匹配: {col} -> Picture")
+                    self.logger.info(f"精確匹配: {col} -> Picture")
 
             # 檢查是否有基本的題目欄位（放寬要求，只要有題目欄位即可）
             has_question_field = any(
@@ -712,7 +721,7 @@ class ExcelHandler:
 
             if not has_question_field:
                 # 嘗試智能匹配欄位
-                logger.warning("未找到標準欄位格式，嘗試智能匹配...")
+                self.logger.warning("未找到標準欄位格式，嘗試智能匹配...")
 
                 # 更詳細的智能匹配邏輯
                 # 1. 智能匹配題目欄位
@@ -729,7 +738,9 @@ class ExcelHandler:
                     if any(keyword in col_lower for keyword in question_keywords):
                         if "QuestionInChinese" not in column_mapping.values():
                             column_mapping[col] = "QuestionInChinese"
-                            logger.info(f"智能匹配題目欄位: {col} -> QuestionInChinese")
+                            self.logger.info(
+                                f"智能匹配題目欄位: {col} -> QuestionInChinese"
+                            )
                             break
 
                 # 2. 智能匹配選項欄位 - 更精確的匹配
@@ -798,7 +809,7 @@ class ExcelHandler:
                         if any(pattern in col_lower for pattern in patterns):
                             if target_field not in column_mapping.values():
                                 column_mapping[col] = target_field
-                                logger.info(
+                                self.logger.info(
                                     f"智能匹配選項欄位: {col} -> {target_field}"
                                 )
                                 break
@@ -817,7 +828,9 @@ class ExcelHandler:
                     ):
                         if "CorrectAnswer" not in column_mapping.values():
                             column_mapping[col] = "CorrectAnswer"
-                            logger.info(f"智能匹配答案欄位: {col} -> CorrectAnswer")
+                            self.logger.info(
+                                f"智能匹配答案欄位: {col} -> CorrectAnswer"
+                            )
 
                     # 匹配章節欄位
                     elif any(
@@ -826,7 +839,7 @@ class ExcelHandler:
                     ):
                         if "ChapterNo" not in column_mapping.values():
                             column_mapping[col] = "ChapterNo"
-                            logger.info(f"智能匹配章節欄位: {col} -> ChapterNo")
+                            self.logger.info(f"智能匹配章節欄位: {col} -> ChapterNo")
 
                     # 匹配題號欄位
                     elif any(
@@ -835,7 +848,7 @@ class ExcelHandler:
                     ):
                         if "QuestionNo." not in column_mapping.values():
                             column_mapping[col] = "QuestionNo."
-                            logger.info(f"智能匹配題號欄位: {col} -> QuestionNo.")
+                            self.logger.info(f"智能匹配題號欄位: {col} -> QuestionNo.")
 
                     # 匹配解釋欄位
                     elif any(
@@ -844,15 +857,15 @@ class ExcelHandler:
                     ):
                         if "AnswerExplainInChinese" not in column_mapping.values():
                             column_mapping[col] = "AnswerExplainInChinese"
-                            logger.info(
+                            self.logger.info(
                                 f"智能匹配解釋欄位: {col} -> AnswerExplainInChinese"
                             )
 
-                logger.info(f"智能匹配結果: {column_mapping}")
+                self.logger.info(f"智能匹配結果: {column_mapping}")
 
             # 如果仍然沒有找到題目欄位，嘗試使用第一個非數字欄位作為題目
             if "QuestionInChinese" not in column_mapping.values():
-                logger.warning("仍未找到題目欄位，嘗試使用啟發式方法...")
+                self.logger.warning("仍未找到題目欄位，嘗試使用啟發式方法...")
 
                 # 檢查每個欄位的內容，找到最可能是題目的欄位
                 for col in df.columns:
@@ -863,26 +876,26 @@ class ExcelHandler:
                             avg_length = sum(
                                 len(str(val)) for val in sample_values
                             ) / len(sample_values)
-                            logger.info(f"欄位 {col} 的平均內容長度: {avg_length}")
+                            self.logger.info(f"欄位 {col} 的平均內容長度: {avg_length}")
 
                             # 如果平均長度超過10個字符，可能是題目
                             if avg_length > 10:
                                 column_mapping[col] = "QuestionInChinese"
-                                logger.info(
+                                self.logger.info(
                                     f"啟發式匹配題目欄位: {col} -> QuestionInChinese (平均長度: {avg_length})"
                                 )
                                 break
 
             # 如果還是沒有找到題目欄位，拋出錯誤
             if "QuestionInChinese" not in column_mapping.values():
-                logger.error(
+                self.logger.error(
                     f"Excel 檔案格式不正確，無法找到題目欄位。可用欄位: {list(df.columns)}"
                 )
-                logger.error(f"欄位映射結果: {column_mapping}")
+                self.logger.error(f"欄位映射結果: {column_mapping}")
                 raise ValueError("Excel 檔案格式不正確，請確保包含題目欄位")
 
             # 重命名欄位以符合標準格式
-            logger.info(f"應用欄位映射: {column_mapping}")
+            self.logger.info(f"應用欄位映射: {column_mapping}")
             df = df.rename(columns=column_mapping)
 
             # 統計總行數、有效行數和跳過行數
@@ -892,7 +905,7 @@ class ExcelHandler:
             # 用於記錄跳過的原因
             skipped_reasons: Counter = Counter()
 
-            logger.info(f"開始處理 Excel 檔案，總計 {total_rows} 行數據")
+            self.logger.info(f"開始處理 Excel 檔案，總計 {total_rows} 行數據")
 
             questions = []
             for idx, row in df.iterrows():
@@ -904,7 +917,7 @@ class ExcelHandler:
                 ):
                     reason = "缺少題目內容"
                     skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
-                    logger.warning(f"第 {idx + 1} 行跳過: {reason}")
+                    self.logger.warning(f"第 {idx + 1} 行跳過: {reason}")
                     skipped_rows += 1
                     continue
 
@@ -918,7 +931,7 @@ class ExcelHandler:
 
                 # 只記錄警告，但仍處理該題目
                 if warning_fields:
-                    logger.warning(
+                    self.logger.warning(
                         f"第 {idx + 1} 行警告: 欄位 {', '.join(warning_fields)} 為空，使用預設值處理"
                     )
 
@@ -994,22 +1007,22 @@ class ExcelHandler:
                         if image_path.exists():
                             with open(image_path, "rb") as img_file:
                                 question.picture = img_file.read()
-                            logger.info(
+                            self.logger.info(
                                 f"題目 {chapter_no}.{question_no} 已關聯圖片 {image_name}, 大小: {question.picture.__sizeof__()} 位元組"
                             )
                             break
 
                 # 檢查圖片是否成功處理
                 if question.picture is not None:
-                    logger.info(
+                    self.logger.info(
                         f"題目 {question.question_no} 成功添加圖片，大小: {question.picture.__sizeof__()} 位元組"
                     )
                 else:
-                    logger.info(f"題目 {question.question_no} 沒有圖片")
+                    self.logger.info(f"題目 {question.question_no} 沒有圖片")
 
                 # 輸出調試信息，檢查每個題目的欄位
                 # logged
-                # logger.info(
+                # self.logger.info(
                 #     f"成功解析題目 {question['question_no']}: {question['question_text'][:30]}... 選項: A={question['option_a'][:10]}..., B={question['option_b'][:10]}..., C={question['option_c'][:10]}..., D={question['option_d'][:10]}..., 答案: {question['correct_answer'][:30]}..."
                 # )
 
@@ -1022,18 +1035,21 @@ class ExcelHandler:
                     shutil.rmtree(extractor.output_dir)
                 os.unlink(temp_file_path)
             except Exception as e:
-                logger.warning(f"清理臨時文件時發生錯誤: {str(e)}")
+                self.logger.warning(f"清理臨時文件時發生錯誤: {str(e)}")
 
             # 處理結果統計
-            logger.info(
+            self.logger.info(
                 f"Excel 解析結果: 總計 {total_rows} 行, 有效 {valid_rows} 行, 跳過 {skipped_rows} 行"
             )
             if skipped_rows > 0:
                 for reason, count in skipped_reasons.items():
-                    logger.info(f"- 跳過原因 '{reason}': {count} 行")
+                    self.logger.info(f"- 跳過原因 '{reason}': {count} 行")
 
             return questions
 
         except Exception as e:
-            logger.error(f"解析 Excel 檔案時發生錯誤: {str(e)}", exc_info=True)
+            self.logger.error(f"解析 Excel 檔案時發生錯誤: {str(e)}", exc_info=True)
             raise e
+
+
+excel_client = ExcelHandler()

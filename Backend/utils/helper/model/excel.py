@@ -1,4 +1,5 @@
-# Code by AkinoAlice@TyrantRey
+# Code by wonmeow
+# Modify by AkinoAlice@TyrantRey 3/8/2025
 
 from pydantic import BaseModel
 
