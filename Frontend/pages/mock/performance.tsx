@@ -229,6 +229,7 @@ export default function PerformancePage() {
                     <Button
                         as={Link}
                         href={siteConfig.api_url + downloadURL}
+                        isDisabled={downloadURL == ""}
                     >
                         Download Excel
                     </Button>
