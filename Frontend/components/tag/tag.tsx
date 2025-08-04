@@ -246,8 +246,14 @@ export const TagBox = ({ questionId = null }: { questionId?: number | null }) =>
             </Modal>
             <ScrollShadow className="flex flex-wrap gap-1" orientation="horizontal">
                 {questionOwnedTagList?.map((tag) => (
-                    <Chip key={tag.tag_id} onClose={() => questionId ? handleRemoveQuestionTag(questionId, tag.tag_id) : {}}>{tag.name}</Chip>
+                    <Chip
+                        key={tag.tag_id}
+                        onClose={questionId ? () => handleRemoveQuestionTag(questionId, tag.tag_id) : undefined}
+                    >
+                        {tag.name}
+                    </Chip>
                 ))}
+
             </ScrollShadow>
             <ButtonGroup>
                 <Dropdown placement="bottom-end">

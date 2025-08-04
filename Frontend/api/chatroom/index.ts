@@ -32,10 +32,6 @@ export async function askQuestion(
   console.log(postBody);
   const resp = await fetcher(`${siteConfig.api_url}/chatroom/${chatUUID}/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
     body: postBody,
   });
   const data = await resp;

@@ -7,31 +7,30 @@ import {
   Button,
   useDisclosure,
 } from "@heroui/react"
-import { useEffect, useState, useContext } from "react"
+import { useState, useContext } from "react"
 
-
-import { getCookie } from "cookies-next"
 import { siteConfig } from "@/config/site"
 import { AuthContext } from "@/contexts/AuthContext"
 import { LangContext } from "@/contexts/LangContext"
 import { LanguageTable } from "@/i18n";
-import { fetcher } from "@/api/fetcher"
 
-export const FileUploadButton = () => {
-  const { role, setRole } = useContext(AuthContext)
+interface FileUploadButtonProps {
+  onFileUpload?: (file: File) => Promise<void>;
+  acceptedFileTypes?: string;
+}
+
+export const FileUploadButton = ({
+  onFileUpload,
+  acceptedFileTypes = "application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.presentationml.presentation, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+}: FileUploadButtonProps) => {
+  const { isLoggedIn } = useContext(AuthContext)
+  const { language } = useContext(LangContext);
 
   const { isOpen, onOpen, onOpenChange } = useDisclosure()
   const [uploadSuccess, setUploadSuccess] = useState<number>(0)
   const [isProgressing, setIsProgressing] = useState<boolean>(false)
   const [fileObject, setFileObject] = useState<File | null>()
   const [fileURL, setFileURL] = useState<string>()
-  const { language, setLang } = useContext(LangContext);
-
-  useEffect(() => {
-    const userRole = getCookie("role") || LanguageTable.nav.role.unsigned[language]
-    setRole(userRole)
-  })
-
   function renderFilePreview(file: File) {
     const fileType = file.type
 
@@ -54,6 +53,15 @@ export const FileUploadButton = () => {
             </span>
           </div>
         )
+      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        return (
+          <div className="w-full flex justify-center">
+            <span className="text-left text-lg">
+              {uploadSuccess ? (uploadSuccess == 200 ? LanguageTable.docs.component.fileUploadButton.uploadSuccess[language] : LanguageTable.docs.component.fileUploadButton.uploadFailed[language]) : ""}
+              {file.name}
+            </span>
+          </div>
+        )
       default:
         return (
           <object
@@ -64,12 +72,64 @@ export const FileUploadButton = () => {
         )
     }
   }
-
   async function uploadFile(
     file: File,
     collection: string = "default",
     tags: Array<string>
   ) {
+    if (onFileUpload) {
+      try {
+        setIsProgressing(true);
+        await onFileUpload(file);
+        setIsProgressing(false);
+        setUploadSuccess(200);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        setIsProgressing(false);
+        setUploadSuccess(422);
+      }
+      return;
+    }
+    // Excel檔案特殊處理 - 確保適用於上傳 XLSX 文件
+    if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      try {
+        setIsProgressing(true);
+        const formData = new FormData();
+        formData.append("excel_file", file);
+        formData.append("doc_type", "TESTING");  // 預設為考古題類型
+
+        console.log("上傳中...", file.name);
+
+        const response = await fetch(`${siteConfig.api_url}/excel/upload/`, {
+          method: "POST",
+          body: formData,
+        });
+
+        // 先檢查回應狀態
+        if (!response.ok) {
+          console.error("Server responded with error:", response.status, response.statusText);
+          throw new Error(`上傳失敗: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("上傳成功，收到回應:", data);
+
+        if (data.status_code === 200 || (!data.status_code && data.file_id)) {
+          setUploadSuccess(200);
+        } else {
+          setUploadSuccess(422);
+        }
+
+        setIsProgressing(false);
+        return;
+      } catch (error) {
+        console.error("Error uploading Excel file:", error);
+        setIsProgressing(false);
+        setUploadSuccess(422);
+        return;
+      }
+    }
+
     const apiUploadFileURL = new URL(siteConfig.api_url + "/upload/")
     const fileFormData = new FormData()
     let department = "None"
@@ -81,6 +141,9 @@ export const FileUploadButton = () => {
       case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
         department = "pptx"
         break
+      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        department = "xlsx"
+        break
     }
 
     fileFormData.append("docs_file", file)
@@ -89,13 +152,12 @@ export const FileUploadButton = () => {
     apiUploadFileURL.searchParams.append("department", department)
     apiUploadFileURL.searchParams.append("collection", collection)
 
-    const resp = await fetcher(apiUploadFileURL.toString(), {
+    const resp = await fetch(apiUploadFileURL, {
       method: "POST",
       body: fileFormData,
-      credentials: "include",
     })
 
-    const respJson = await resp
+    const respJson = await resp.json()
     console.log(respJson)
     if (respJson.status_code === 200) {
       console.log("File uploaded successfully")
@@ -111,8 +173,7 @@ export const FileUploadButton = () => {
   return (
     <>
       <Button
-        className="bg-transparent text-medium text-center w-full dark:bg-stone-600 shadow-md"
-        isDisabled={role == "Admin" ? false : true}
+        className="bg-transparent text-medium text-center w-full dark:bg-stone-600 shadow-md hover:bg-stone-100"
         onPress={() => {
           onOpen()
           setIsProgressing(false)
@@ -163,16 +224,16 @@ export const FileUploadButton = () => {
                       <div className="mx-auto flex flex-col w-full h-72 border-dashed items-center justify-center border-4">
                         <label
                           htmlFor="file"
-                          className="flex justify-center text-center h-full w-full items-center"
+                          className="flex flex-col justify-center text-center h-full w-full items-center"
                         >
-                          <span className="text-blue-500">{LanguageTable.docs.component.fileUploadButton.clickToUpload[language]}</span>
+                          <span className="text-blue-500 mb-2">{LanguageTable.docs.component.fileUploadButton.clickToUpload[language]}</span>
                           <span>{LanguageTable.docs.component.fileUploadButton.dropToUpload[language]}</span>
                         </label>
                         <input
                           id="file"
                           type="file"
                           className="hidden"
-                          accept="application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                          accept={acceptedFileTypes}
                           onChange={(e) => {
                             let droppedFiles = e.target.files
                             if (droppedFiles && droppedFiles[0]) {
