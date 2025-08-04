@@ -20,10 +20,6 @@ export interface IMessageInfo {
   time: string;
 }
 
-export interface ILoginPermission {
-  loggedInState: TPermission;
-}
-
 type TPermission = true | false;
 
 export interface ILoginPermission {

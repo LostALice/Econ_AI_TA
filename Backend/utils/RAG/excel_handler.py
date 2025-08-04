@@ -735,13 +735,15 @@ class ExcelHandler:
                 ]
                 for col in df.columns:
                     col_lower = col.lower()
-                    if any(keyword in col_lower for keyword in question_keywords):
-                        if "QuestionInChinese" not in column_mapping.values():
-                            column_mapping[col] = "QuestionInChinese"
-                            self.logger.info(
-                                f"智能匹配題目欄位: {col} -> QuestionInChinese"
-                            )
-                            break
+                    if (
+                        any(keyword in col_lower for keyword in question_keywords)
+                        and "QuestionInChinese" not in column_mapping.values()
+                    ):
+                        column_mapping[col] = "QuestionInChinese"
+                        self.logger.info(
+                            f"智能匹配題目欄位: {col} -> QuestionInChinese"
+                        )
+                        break
 
                 # 2. 智能匹配選項欄位 - 更精確的匹配
                 option_patterns = [
@@ -806,14 +808,16 @@ class ExcelHandler:
                 for col in df.columns:
                     col_lower = col.lower().replace(" ", "").replace("_", "")
                     for patterns, target_field in option_patterns:
-                        if any(pattern in col_lower for pattern in patterns):
-                            if target_field not in column_mapping.values():
-                                column_mapping[col] = target_field
-                                self.logger.info(
-                                    f"智能匹配選項欄位: {col} -> {target_field}"
-                                )
-                                break
-
+                        if (
+                            any(pattern in col_lower for pattern in patterns)
+                            and target_field not in column_mapping.values()
+                        ):
+                            column_mapping[col] = target_field
+                            self.logger.info(
+                                f"智能匹配選項欄位: {col} -> {target_field}"
+                            )
+                            break
+                        
                 # 3. 智能匹配其他欄位
                 for col in df.columns:
                     col_lower = col.lower()

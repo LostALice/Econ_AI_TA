@@ -535,7 +535,7 @@ class ExcelDatabaseController:
                     valid_options.append(item["option_d"])
 
                 # 如果沒有有效選項，則提供空陣列
-                item["options"] = valid_options if valid_options else []
+                item["options"] = valid_options or []
 
                 item["answer"] = item["correct_answer"]
                 item["category"] = item["chapter_no"]

@@ -62,15 +62,6 @@ export const FileUploadButton = ({
             </span>
           </div>
         )
-      case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-        return (
-          <div className="w-full flex justify-center">
-            <span className="text-left text-lg">
-              {uploadSuccess ? (uploadSuccess == 200 ? LanguageTable.docs.component.fileUploadButton.uploadSuccess[language] : LanguageTable.docs.component.fileUploadButton.uploadFailed[language]) : ""}
-              {file.name}
-            </span>
-          </div>
-        )
       default:
         return (
           <object

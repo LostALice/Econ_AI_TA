@@ -47,17 +47,10 @@ async def upload_excel_file(
             400: "Parsing Error"
             500: "Upload Error"
     """
-    if excel_file.filename is None:
-        raise HTTPException(422, "No Excel file given")
+    if excel_file.filename is None or excel_file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(422, "只接受 Excel 檔案 (.xlsx, .xls)")
 
     try:
-        # 檢查是否為 Excel 檔案
-
-        if not excel_file.filename.endswith((".xlsx", ".xls")):
-            raise HTTPException(
-                status_code=400, detail="只接受 Excel 檔案 (.xlsx, .xls)"
-            )
-
         # 讀取檔案內容
         contents = await excel_file.read()
         file_id = f"db-{uuid.uuid4()}"
@@ -90,7 +83,7 @@ async def upload_excel_file(
         )
         logger.info(success)
         if not success:
-            raise HTTPException(status_code=500, detail="儲存題目到資料庫失敗")
+            raise HTTPException(status_code=422, detail="儲存題目到資料庫失敗")
 
         # 取得當前時間作為最後更新時間
         last_update = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -115,7 +108,9 @@ async def get_file_list(doc_type: str) -> FileListSuccessModel:
         return FileListSuccessModel(docs_list=file_list)
     except Exception as e:
         logger.error(f"取得檔案列表錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"取得檔案列表錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"取得檔案列表錯誤: {str(e)}"
+        ) from e
 
 
 @router.get("/questions/{file_id}/")
@@ -237,7 +232,7 @@ async def get_questions(file_id: str) -> QuestionsSuccessModel:
         raise
     except Exception as e:
         logger.error(f"取得題目錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"取得題目錯誤: {str(e)}") from e
 
 
 @router.put("/questions/")
@@ -269,7 +264,7 @@ async def update_questions(
         result = excel_client.update_questions(file_id, questions)
 
         if not result.success:
-            error_message = result.error if result.error else "未知錯誤"
+            error_message = result.error or "未知錯誤"
             raise HTTPException(
                 status_code=500, detail=f"更新題目失敗: {error_message}"
             )
@@ -287,7 +282,9 @@ async def update_questions(
 
     except Exception as e:
         logger.error(f"更新題目時發生錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"更新題目時發生錯誤: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"更新題目時發生錯誤: {str(e)}"
+        ) from e
 
 
 @router.delete("/{file_id}/")
@@ -304,4 +301,4 @@ async def delete_file(file_id: str) -> FileDeleteSuccessModel:
         raise
     except Exception as e:
         logger.error(f"刪除檔案錯誤: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"刪除檔案錯誤: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"刪除檔案錯誤: {str(e)}") from e
