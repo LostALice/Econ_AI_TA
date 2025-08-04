@@ -635,7 +635,7 @@ export default function MockPage() {
                                     disallowEmptySelection
                                     aria-label="class list"
                                     selectionMode="multiple"
-                                    onSelectionChange={(keys) => setSelectedClassIdList(keys as Set<number>)}
+                                    onSelectionChange={(keys: Set<number>) => setSelectedClassIdList(keys)}
                                     items={classList}
                                 >
                                     {(class_: IClassListModel) => (

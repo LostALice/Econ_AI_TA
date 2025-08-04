@@ -1,3 +1,4 @@
+[![wakatime](https://wakatime.com/badge/user/09ce4786-a8a5-43eb-8a65-50ad8684b5da/project/0ea3f1ad-2fa9-407b-807a-d28050e46eb5.svg)](https://wakatime.com/badge/user/09ce4786-a8a5-43eb-8a65-50ad8684b5da/project/0ea3f1ad-2fa9-407b-807a-d28050e46eb5)
 ```mermaid
 flowchart TD 
     subgraph "Presentation Layer"
