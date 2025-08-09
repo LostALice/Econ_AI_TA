@@ -13,11 +13,13 @@
 **/node_modules/**
 **/.next/**
 **/log/**
-**/excel/**
+**/excel/temp/**
 
 # Backend
 # ===================
 /Backend/images/**
+/Backend/excel/**
+/Backend/volumes/**
 **/*.png
 
 # LLM
@@ -32,8 +34,10 @@ pyvenv.cfg
 
 # Testing file
 # ===================
+docker-compose.yaml
 test/**
 test.*
 *.log
 *.docx
 .env
+docker-compose.yaml

@@ -1,13 +1,32 @@
-FROM node AS builder
+# 1. Build stage
+FROM node:current-alpine AS builder
 
-RUN mkdir -p /home/FCU_LLM
+WORKDIR /app
 
-WORKDIR /home/FCU_LLM
+COPY package*.json ./
+
+RUN npm install
 
 COPY . .
 
-RUN npm i
+RUN npm run build
 
+FROM node:current-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/package.json ./package.json
+
+# Expose port
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+# Start Next.js
+CMD ["npm", "start"]
