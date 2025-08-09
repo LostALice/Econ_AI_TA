@@ -13,11 +13,12 @@
 **/node_modules/**
 **/.next/**
 **/log/**
-**/excel/**
 
 # Backend
 # ===================
 /Backend/images/**
+/Backend/excel/**
+/Backend/volumes/**
 **/*.png
 
 # LLM
@@ -37,3 +38,4 @@ test.*
 *.log
 *.docx
 .env
+docker-compose.yaml
