@@ -13,7 +13,7 @@
 **/node_modules/**
 **/.next/**
 **/log/**
-**/excel/**
+**/excel/temp/**
 
 # Backend
 # ===================
@@ -32,6 +32,7 @@ pyvenv.cfg
 
 # Testing file
 # ===================
+docker-compose.yaml
 test/**
 test.*
 *.log

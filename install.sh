@@ -1,11 +1,5 @@
 # Code by AkinoAlice@TyrantRey
 
-if [[ "$(uname -s)" == "Linux" ]]; then
-    echo "This system is running Linux."
-else
-    echo "This system is not running Linux."
-fi
-
 # Curl
 if command -v curl &>/dev/null; then
     echo "curl is already installed."
@@ -83,29 +77,29 @@ else
 fi
 
 # Mysql Server
-read -p "Installing MYSQL in Docker? (y/yes/n to confirm)" response
-response=$(echo "$response")
+# read -p "Installing MYSQL in Docker? (y/yes/n to confirm)" response
+# response=$(echo "$response")
 
-if [[ "$response" == "y" || "$response" == "yes" ]]; then
-    read -sp "Enter a MySQL root password: " MYSQL_ROOT_PASSWORD
-    echo
+# if [[ "$response" == "y" || "$response" == "yes" ]]; then
+#     read -sp "Enter a MySQL root password: " MYSQL_ROOT_PASSWORD
+#     echo
 
-    read -sp "Confirm the MySQL root password: " CONFIRM_PASSWORD
-    echo
+#     read -sp "Confirm the MySQL root password: " CONFIRM_PASSWORD
+#     echo
 
-    if [[ "$MYSQL_ROOT_PASSWORD" != "$CONFIRM_PASSWORD" ]]; then
-        echo "Passwords do not match. Exiting."
-        exit 1
-    fi
+#     if [[ "$MYSQL_ROOT_PASSWORD" != "$CONFIRM_PASSWORD" ]]; then
+#         echo "Passwords do not match. Exiting."
+#         exit 1
+#     fi
 
-    read -sp "MYSQL port: " MYSQL_PORT
-    echo
+#     read -sp "MYSQL port: " MYSQL_PORT
+#     echo
 
-    echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD\n" >./Backend/.env
-    echo "MYSQL_PORT=$MYSQL_PORT\n" >./Backend/.env
+#     echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD\n" >./Backend/.env
+#     echo "MYSQL_PORT=$MYSQL_PORT\n" >./Backend/.env
 
-    docker run --name mysql -p $MYSQL_PORT:3306 -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -d mysql
-else
-    echo "Exited."
-    exit 1
-fi
+#     docker run --name mysql -p $MYSQL_PORT:3306 -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -d mysql
+# else
+#     echo "Exited."
+#     exit 1
+# fi

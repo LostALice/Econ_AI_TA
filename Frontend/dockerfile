@@ -1,10 +1,12 @@
-FROM node AS builder
+FROM node:current-alpine
 
 RUN mkdir -p /home/FCU_LLM
 
 WORKDIR /home/FCU_LLM
 
 COPY . .
+
+RUN npm install -g npm@latest
 
 RUN npm i
 

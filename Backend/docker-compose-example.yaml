@@ -21,7 +21,7 @@ services:
 
       # MYSQL
       # database.py
-      - MYSQL_DEBUG=False
+      - MYSQL_DEBUG=True
       - MYSQL_HOST=localhost
       - MYSQL_USER_NAME=root
       - MYSQL_PASSWORD=example_password
@@ -35,12 +35,14 @@ services:
       # authentication.py
       - JWT_SECRET=example_secret
       - JWT_ALGORITHM=HS256
+      - JWT_TIMEOUT=2h
+
 
       # LLM
       - LLM_DEPLOY_MODE=openai
 
       # Embedding
-      - EMBEDDING_DEPLOY_MODE=ollama
+      - EMBEDDING_DEPLOY_MODE=openai
 
       ## AFS
       # - AFS_API_URL=
@@ -49,10 +51,10 @@ services:
       # - AFS_EMBEDDING_MODEL_NAME=ffm-embedding
 
       ## Ollama
-      - OLLAMA_HOST=http://localhost
-      - OLLAMA_PORT=11434
-      - OLLAMA_MODEL_NAME=llama3.2
-      - OLLAMA_EMBEDDING_MODEL_NAME=mxbai-embed-large
+      # - OLLAMA_HOST=http://localhost
+      # - OLLAMA_PORT=11434
+      # - OLLAMA_MODEL_NAME=llama3.2
+      # - OLLAMA_EMBEDDING_MODEL_NAME=mxbai-embed-large
 
       ## Openai
       - OPENAI_API_KEY=
@@ -60,7 +62,7 @@ services:
 
       # 1536 for text-embedding-3-small
       # 3072 for text-embedding-3-large
-      # OPENAI_EMBEDDING_MODEL_NAME=text-embedding-3-small
+      - OPENAI_EMBEDDING_MODEL_NAME=text-embedding-3-small
 
       # Milvus
       # Vector Database
