@@ -623,13 +623,13 @@ export const LanguageTable = {
         zh: "班級",
         en: "Class",
       },
-      exam: {
-        zh: "模擬考",
+      examId: {
+        zh: "模擬考ID",
         en: "Mock Exam ID:",
       },
-      user: {
-        zh: "使用者",
-        en: "User",
+      userId: {
+        zh: "使用者ID",
+        en: "User ID:",
       },
       examName: {
         zh: "模擬考名稱:",

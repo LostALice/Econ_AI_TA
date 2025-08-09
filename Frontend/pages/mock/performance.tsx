@@ -196,7 +196,7 @@ export default function PerformancePage() {
                         <TableHeader>
                             <TableColumn>{LanguageTable.mock.result.submissionId[language]}</TableColumn>
                             <TableColumn>{LanguageTable.mock.result.class[language]}</TableColumn>
-                            <TableColumn>{LanguageTable.mock.result.user[language]}</TableColumn>
+                            <TableColumn>{LanguageTable.mock.result.userId[language]}</TableColumn>
                             <TableColumn>{LanguageTable.mock.result.examName[language]}</TableColumn>
                             <TableColumn>{LanguageTable.mock.result.examType[language]}</TableColumn>
                             <TableColumn>{LanguageTable.mock.result.examDate[language]}</TableColumn>

@@ -635,7 +635,12 @@ export default function MockPage() {
                                     disallowEmptySelection
                                     aria-label="class list"
                                     selectionMode="multiple"
-                                    onSelectionChange={(keys: Set<number>) => setSelectedClassIdList(keys)}
+                                    onSelectionChange={(keys) => {
+                                        if (keys === "all") {
+                                            return;
+                                        }
+                                        setSelectedClassIdList(new Set(Array.from(keys).map(k => Number(k))));
+                                    }}
                                     items={classList}
                                 >
                                     {(class_: IClassListModel) => (
