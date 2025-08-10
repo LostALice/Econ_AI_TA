@@ -47,7 +47,7 @@ async def upload_excel_file(
             400: "Parsing Error"
             500: "Upload Error"
     """
-    if excel_file.filename is None or excel_file.filename.endswith((".xlsx", ".xls")):
+    if excel_file.filename is None or not excel_file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(422, "只接受 Excel 檔案 (.xlsx, .xls)")
 
     try:
@@ -172,8 +172,12 @@ async def get_questions(file_id: str) -> QuestionsSuccessModel:
             picture_data = q.get("picture")
             picture_base64 = None
 
-            if picture_data and isinstance(picture_data, bytes):
+            if picture_data and (isinstance(picture_data, bytes) or isinstance(picture_data, bytearray)):
                 try:
+                    # 如果是 bytearray，轉換為 bytes
+                    if isinstance(picture_data, bytearray):
+                        picture_data = bytes(picture_data)
+                    
                     # 嘗試識別圖片類型
                     img_type = "png"  # 預設為 PNG
                     if picture_data.startswith(b"\xff\xd8"):
