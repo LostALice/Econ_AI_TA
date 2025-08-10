@@ -193,6 +193,11 @@ export default function DocsPage() {
   const [selectedStudentChapter, setSelectedStudentChapter] = useState<string>("");
   const [studentViewMode, setStudentViewMode] = useState<'bankSelection' | 'chapterSelection' | 'questions'>('bankSelection');
 
+  // 新增：分頁相關狀態
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [questionsPerPage] = useState<number>(1); // 一題一頁
+
   // 新增：老師/助教章節瀏覽相關狀態
   const [teacherChapterViewMode, setTeacherChapterViewMode] = useState<'bankSelection' | 'chapterSelection' | 'questions'>('bankSelection');
   const [teacherSelectedQuestionBank, setTeacherSelectedQuestionBank] = useState<string>("TESTING");
@@ -505,6 +510,8 @@ export default function DocsPage() {
     return () => clearInterval(interval);
   }, []);
 
+
+
   const documentationTypeList = [
     {
       key: "TESTING",
@@ -692,8 +699,21 @@ export default function DocsPage() {
         return [];
       }
 
+      // 檢查 data.SheetNames 是否存在
+      if (!data.SheetNames || !Array.isArray(data.SheetNames) || data.SheetNames.length === 0) {
+        console.error("SheetNames 不存在或為空");
+        return [];
+      }
+
       // 假設第一個工作表包含題目
       const firstSheetName = data.SheetNames[0];
+      
+      // 檢查 data.Sheets 和 worksheet 是否存在
+      if (!data.Sheets || !data.Sheets[firstSheetName]) {
+        console.error("data.Sheets 或 worksheet 不存在");
+        return [];
+      }
+
       const worksheet = data.Sheets[firstSheetName];
 
       // 將工作表轉換為JSON
@@ -977,8 +997,85 @@ export default function DocsPage() {
   // 將題目資料轉換回Excel格式
   const saveQuestionsToExcel = (questions: IExcelQuestion[], fileContent: any): any => {
     try {
+      // 檢查 fileContent 和 originalContent 是否存在
+      if (!fileContent || !fileContent.originalContent) {
+        console.warn("fileContent 或 originalContent 不存在，創建新的工作簿");
+        const worksheetData = questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          option1: q.options[0] || "",
+          option2: q.options[1] || "",
+          option3: q.options[2] || "",
+          option4: q.options[3] || "",
+          answer: q.answer,
+          category: q.category,
+          difficulty: q.difficulty
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+        return {
+          ...fileContent,
+          originalContent: workbook
+        };
+      }
+
       const data = fileContent.originalContent;
+      
+      // 檢查 data.SheetNames 是否存在
+      if (!data.SheetNames || !Array.isArray(data.SheetNames) || data.SheetNames.length === 0) {
+        console.warn("SheetNames 不存在或為空，創建新的工作簿");
+        const worksheetData = questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          option1: q.options[0] || "",
+          option2: q.options[1] || "",
+          option3: q.options[2] || "",
+          option4: q.options[3] || "",
+          answer: q.answer,
+          category: q.category,
+          difficulty: q.difficulty
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+        return {
+          ...fileContent,
+          originalContent: workbook
+        };
+      }
+
       const firstSheetName = data.SheetNames[0];
+      
+      // 檢查 data.Sheets 和 worksheet 是否存在
+      if (!data.Sheets || !data.Sheets[firstSheetName]) {
+        console.warn("data.Sheets 或 worksheet 不存在，創建新的工作簿");
+        const worksheetData = questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          option1: q.options[0] || "",
+          option2: q.options[1] || "",
+          option3: q.options[2] || "",
+          option4: q.options[3] || "",
+          answer: q.answer,
+          category: q.category,
+          difficulty: q.difficulty
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+        return {
+          ...fileContent,
+          originalContent: workbook
+        };
+      }
+
       const worksheet = data.Sheets[firstSheetName];
       const originalData = XLSX.utils.sheet_to_json(worksheet);
 
@@ -1384,6 +1481,7 @@ export default function DocsPage() {
     setCurrentContent(null);
     setSelectedChapter("all");
     setAvailableChapters([]);
+    setCurrentPage(1); // 重置分頁
   };
 
   // dataURL 轉 Blob
@@ -1457,9 +1555,14 @@ export default function DocsPage() {
     );
 
     const fileContent = getFileContent(currentContent.fileID);
+    console.log("saveEditedQuestion - fileContent:", fileContent);
+    console.log("saveEditedQuestion - currentContent.fileID:", currentContent.fileID);
     if (fileContent) {
+      console.log("saveEditedQuestion - fileContent.originalContent:", fileContent.originalContent);
       const updatedFileContent = saveQuestionsToExcel(updatedQuestions, fileContent);
       saveFileContent(currentContent.fileID, updatedFileContent);
+    } else {
+      console.warn("saveEditedQuestion - fileContent is null or undefined");
     }
 
     setCurrentContent(updatedContent);
@@ -1933,6 +2036,13 @@ export default function DocsPage() {
         .filter(file => file)
       )];
 
+      // 計算分頁
+      const totalQuestions = sortedQuestions.length;
+      const totalPages = Math.ceil(totalQuestions / questionsPerPage);
+      const startIndex = (currentPage - 1) * questionsPerPage;
+      const endIndex = startIndex + questionsPerPage;
+      const currentQuestion = totalQuestions > 0 ? sortedQuestions[startIndex] : null;
+
       return (
         <div>
           {/* 學生模式的簡化題目摘要 */}
@@ -1940,7 +2050,7 @@ export default function DocsPage() {
             <h3 className="text-lg font-semibold mb-2">題目摘要</h3>
             <div className="text-sm">
               <p>章節: {currentContent.fileName}</p>
-              <p>題目數量: {sortedQuestions.length} 題</p>
+              <p>題目數量: {totalQuestions} 題</p>
               <p>包含圖片: {questionsWithImages} 題</p>
               {sourceFiles.length > 0 && (
                 <p>來源檔案: {sourceFiles.length} 個檔案</p>
@@ -1949,16 +2059,73 @@ export default function DocsPage() {
             </div>
           </div>
 
-          {sortedQuestions.length === 0 ? (
+          {totalQuestions === 0 ? (
             <div className="text-center p-8">
               <p className="text-xl font-medium mb-2">沒有題目</p>
               <p className="text-default-500">此章節不包含可顯示的題目</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {sortedQuestions.map(question => (
-                <QuestionCard key={question.id} question={question} />
-              ))}
+            <div>
+              {/* 分頁導航 */}
+              <div className="flex justify-between items-center mb-4 p-3 bg-content2 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    isDisabled={currentPage === 1}
+                    onPress={() => setCurrentPage(currentPage - 1)}
+                  >
+                    上一題
+                  </Button>
+                  <span className="text-sm">
+                    {currentPage}/{totalQuestions}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    isDisabled={currentPage === totalQuestions}
+                    onPress={() => setCurrentPage(currentPage + 1)}
+                  >
+                    下一題
+                  </Button>
+                </div>
+                
+                {/* 頁數選擇器 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">跳轉</span>
+                  <Select
+                    size="sm"
+                    placeholder="選擇頁數"
+                    selectedKeys={[currentPage.toString()]}
+                    onSelectionChange={(keys) => {
+                      const selected = Array.from(keys)[0] as string;
+                      if (selected) {
+                        setCurrentPage(parseInt(selected));
+                      }
+                    }}
+                    className="w-32"
+                    items={Array.from({ length: totalQuestions }, (_, i) => ({
+                      key: (i + 1).toString(),
+                      label: `第 ${i + 1} 題`
+                    }))}
+                  >
+                    {(item) => (
+                      <SelectItem key={item.key}>
+                        {item.label}
+                      </SelectItem>
+                    )}
+                  </Select>
+                </div>
+              </div>
+
+
+
+              {/* 當前題目 */}
+              {currentQuestion && (
+                <div className="mb-4">
+                  <QuestionCard question={currentQuestion} />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2007,6 +2174,18 @@ export default function DocsPage() {
 
     const isChapterBrowseMode = currentContent.fileName.includes('章節瀏覽');
 
+    // 計算分頁
+    const totalQuestions = sortedQuestions.length;
+    const totalPages = Math.ceil(totalQuestions / questionsPerPage);
+    const startIndex = (currentPage - 1) * questionsPerPage;
+    const endIndex = startIndex + questionsPerPage;
+    const currentQuestion = totalQuestions > 0 ? sortedQuestions[startIndex] : null;
+
+    // 確保 currentPage 不超過總題數
+    if (totalQuestions > 0 && currentPage > totalQuestions) {
+      setCurrentPage(1);
+    }
+
     return (
       <div>
         {/* 根據模式顯示不同的題目摘要 */}
@@ -2052,6 +2231,7 @@ export default function DocsPage() {
                   onSelectionChange={(keys) => {
                     const selected = Array.from(keys)[0] as string;
                     setSelectedChapter(selected || "all");
+                    setCurrentPage(1); // 切換章節時重置分頁
                   }}
                   className="w-48"
                   items={[
@@ -2070,7 +2250,7 @@ export default function DocsPage() {
           </div>
         )}
 
-        {sortedQuestions.length === 0 ? (
+        {totalQuestions === 0 ? (
           <div className="text-center p-8">
             <p className="text-xl font-medium mb-2">
               {selectedChapter === "all" ? "沒有題目" : `第 ${selectedChapter} 章沒有題目`}
@@ -2083,16 +2263,71 @@ export default function DocsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {sortedQuestions.map(question => (
-              <div key={question.id} className="relative">
+          <div>
+            {/* 分頁導航 */}
+            <div className="flex justify-between items-center mb-4 p-3 bg-content2 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="light"
+                  isDisabled={currentPage === 1}
+                  onPress={() => setCurrentPage(currentPage - 1)}
+                >
+                  上一題
+                </Button>
+                <span className="text-sm">
+                  {currentPage} / {totalQuestions}
+                </span>
+                <Button
+                  size="sm"
+                  variant="light"
+                  isDisabled={currentPage === totalQuestions}
+                  onPress={() => setCurrentPage(currentPage + 1)}
+                >
+                  下一題
+                </Button>
+              </div>
+              
+              {/* 頁數選擇器 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm">跳轉</span>
+                <Select
+                  size="sm"
+                  placeholder="選擇頁數"
+                  selectedKeys={[currentPage.toString()]}
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys)[0] as string;
+                    if (selected) {
+                      setCurrentPage(parseInt(selected));
+                    }
+                  }}
+                  className="w-32"
+                  items={Array.from({ length: totalQuestions }, (_, i) => ({
+                    key: (i + 1).toString(),
+                    label: `第 ${i + 1} 題`
+                  }))}
+                >
+                  {(item) => (
+                    <SelectItem key={item.key}>
+                      {item.label}
+                    </SelectItem>
+                  )}
+                </Select>
+              </div>
+            </div>
+
+
+
+            {/* 當前題目 */}
+            {currentQuestion && (
+              <div className="relative mb-4">
                 {isTeacherOrTA && (
-                  <div className="absolute top-2 right-2 flex gap-2">
+                  <div className="absolute top-2 right-2 flex gap-2 z-10">
                     <Button
                       size="sm"
                       color="primary"
                       variant="light"
-                      onPress={() => handleEditQuestion(question)}
+                      onPress={() => handleEditQuestion(currentQuestion)}
                     >
                       編輯
                     </Button>
@@ -2100,16 +2335,15 @@ export default function DocsPage() {
                       size="sm"
                       color="danger"
                       variant="light"
-                      onPress={() => handleDeleteQuestion(question.id)}
+                      onPress={() => handleDeleteQuestion(currentQuestion.id)}
                     >
                       刪除
                     </Button>
                   </div>
                 )}
-
-                <QuestionCard question={question} />
+                <QuestionCard question={currentQuestion} />
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
