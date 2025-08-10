@@ -5,7 +5,7 @@ import DefaultLayout from "@/layouts/default";
 import { siteConfig } from "@/config/site";
 import { useState, useContext, Key, useRef, useEffect } from "react";
 import { getCookie, hasCookie, setCookie } from "cookies-next";
-import * as XLSX from 'xlsx'; // 引入 xlsx 庫
+import * as XLSX from 'xlsx'; 
 
 import {
   Listbox,
@@ -46,7 +46,7 @@ import { fetchExcelFileList, uploadExcelFile, fetchExcelQuestions, deleteExcelFi
 
 import { validateQuestion } from "@/utils/dataValidation";
 
-// 統一的 Toast 消息管理
+// Toast 管理
 const TOAST_MESSAGES = {
   SUCCESS: {
     LOAD: "載入成功",
@@ -74,13 +74,34 @@ const TOAST_MESSAGES = {
   }
 };
 
-// 用於在本地存儲模擬文件列表
+// 本地存儲模擬文件列表
 const LOCAL_STORAGE_DOCS_KEY = "mock_docs_list";
 const LOCAL_STORAGE_DOCS_CONTENT_KEY = "mock_docs_content";
 
 // 顯示題目圖片的組件
 const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
   const safeQuestion = validateQuestion(question);
+  const [isAnswerExpanded, setIsAnswerExpanded] = useState<boolean>(false);
+
+  // 自定義 chevron 圖標組件
+  const ChevronIcon = ({ isExpanded }: { isExpanded: boolean }) => (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+    >
+      <path
+        d="M6 9L12 15L18 9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 
   return (
     <div className="bg-content1 shadow-md p-4 rounded-lg mb-4">
@@ -132,25 +153,42 @@ const QuestionCard = ({ question }: { question: IExcelQuestion }) => {
         </div>
       )}
 
-      <div className="mb-4">
-        <div className="font-semibold mb-2">選項：</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {safeQuestion.options.length > 0 ? (
-            safeQuestion.options.map((option, index) => (
-              <div key={index} className="flex items-start">
-                <div className="font-semibold mr-2">{String.fromCharCode(65 + index)}.</div>
-                <div>{option || `選項 ${String.fromCharCode(65 + index)}`}</div>
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-500 col-span-2">此題目沒有可用選項</div>
-          )}
+      {safeQuestion.options.length > 0 && (
+        <div className="mb-4">
+          <div className="font-semibold mb-2">選項：</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {safeQuestion.options.length > 0 ? (
+              safeQuestion.options.map((option, index) => (
+                <div key={index} className="flex items-start">
+                  <div className="font-semibold mr-2">{String.fromCharCode(65 + index)}.</div>
+                  <div>{option || `選項 ${String.fromCharCode(65 + index)}`}</div>
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-500 col-span-2">此題目沒有可用選項</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mb-4">
-        <div className="font-semibold mb-2">答案：</div>
-        <div>{safeQuestion.answer}</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-semibold">答案：</div>
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => setIsAnswerExpanded(!isAnswerExpanded)}
+            className="text-xs"
+            isIconOnly
+          >
+            <ChevronIcon isExpanded={isAnswerExpanded} />
+          </Button>
+        </div>
+        {isAnswerExpanded && (
+          <div className="p-3 bg-content2 rounded-md">
+            {safeQuestion.answer}
+          </div>
+        )}
       </div>
 
       <div>
@@ -185,20 +223,20 @@ export default function DocsPage() {
   const [selectedChapter, setSelectedChapter] = useState<string>("all");
   const [availableChapters, setAvailableChapters] = useState<string[]>([]);
 
-  // 新增：學生題庫選擇狀態
+  // 學生題庫選擇狀態
   const [selectedQuestionBank, setSelectedQuestionBank] = useState<string>("TESTING");
 
-  // 新增：學生章節選擇相關狀態
+  // 學生章節選擇相關狀態
   const [availableStudentChapters, setAvailableStudentChapters] = useState<string[]>([]);
   const [selectedStudentChapter, setSelectedStudentChapter] = useState<string>("");
   const [studentViewMode, setStudentViewMode] = useState<'bankSelection' | 'chapterSelection' | 'questions'>('bankSelection');
 
-  // 新增：分頁相關狀態
+  // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [questionsPerPage] = useState<number>(1); // 一題一頁
 
-  // 新增：老師/助教章節瀏覽相關狀態
+  // 老師/助教章節瀏覽相關狀態
   const [teacherChapterViewMode, setTeacherChapterViewMode] = useState<'bankSelection' | 'chapterSelection' | 'questions'>('bankSelection');
   const [teacherSelectedQuestionBank, setTeacherSelectedQuestionBank] = useState<string>("TESTING");
   const [teacherAvailableChapters, setTeacherAvailableChapters] = useState<string[]>([]);
@@ -239,7 +277,7 @@ export default function DocsPage() {
     }
   ];
 
-  // 輸出調試信息
+  // 輸出 console
   useEffect(() => {
     console.log("====== 角色狀態檢查 ======");
     console.log("DocsPage - Current role (display name):", role);
@@ -416,7 +454,7 @@ export default function DocsPage() {
             description: `已成功載入 ${dbDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
           });
         } else {
-          // 嘗試載入本地緩存的資料作為備用
+          // 載入本地緩存的資料備用
           const localDocs = loadLocalStorageDocsList(documentationType);
 
           if (localDocs && localDocs.length > 0) {
@@ -427,7 +465,6 @@ export default function DocsPage() {
               description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
             });
           } else {
-            // 完全沒有資料
             setFileList([]);
             addToast({
               color: "primary",
@@ -439,7 +476,7 @@ export default function DocsPage() {
       } catch (error) {
         console.error("Error loading file list:", error);
 
-        // 嘗試從本地緩存載入資料作為備用
+        // 從本地緩存載入資料備用
         const localDocs = loadLocalStorageDocsList(documentationType);
 
         if (localDocs && localDocs.length > 0) {
@@ -450,7 +487,6 @@ export default function DocsPage() {
             description: "使用本地緩存資料替代",
           });
         } else {
-          // 完全沒有資料
           setFileList([]);
           addToast({
             color: "danger",
@@ -553,10 +589,10 @@ export default function DocsPage() {
   async function loadFileList(documentationType: string) {
     setIsLoading(true);
     setCurrentDocType(documentationType);
-    setViewMode('list'); // 重置視圖模式
+    setViewMode('list'); 
 
     try {
-      // 先嘗試從資料庫取得檔案列表
+      // 從資料庫取得檔案列表
       const dbDocs = await fetchExcelFileList(documentationType);
 
       if (dbDocs && dbDocs.length > 0) {
@@ -568,7 +604,7 @@ export default function DocsPage() {
           description: `已成功載入 ${dbDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
         });
       } else {
-        // 尚無資料，也可以嘗試載入本地緩存的資料作為備用
+        // 載入本地緩存的資料作為備用
         const localDocs = loadLocalStorageDocsList(documentationType);
 
         if (localDocs && localDocs.length > 0) {
@@ -579,7 +615,6 @@ export default function DocsPage() {
             description: `已成功載入 ${localDocs.length} 個${documentationType === "TESTING" ? "考古題" : "理論資料"}文件`,
           });
         } else {
-          // 完全沒有資料
           setFileList([]);
           addToast({
             color: "primary",
@@ -591,7 +626,7 @@ export default function DocsPage() {
     } catch (error) {
       console.error("Error loading file list:", error);
 
-      // 嘗試從本地緩存載入資料作為備用
+      // 從本地緩存載入資料作為備用
       const localDocs = loadLocalStorageDocsList(documentationType);
 
       if (localDocs && localDocs.length > 0) {
@@ -602,7 +637,6 @@ export default function DocsPage() {
           description: "使用本地緩存資料替代",
         });
       } else {
-        // 完全沒有資料
         setFileList([]);
         addToast({
           color: "danger",
@@ -615,9 +649,9 @@ export default function DocsPage() {
     }
   }
 
-  // 生成空的數據列表而不是模擬數據
+  // 生成空的數據列表
   const generateMockData = (docType: string, count: number): IDocsFormat[] => {
-    return []; // 返回空數組，不再生成模擬數據
+    return []; 
   };
 
   const saveFileContent = (fileID: string, content: any) => {
@@ -969,7 +1003,7 @@ export default function DocsPage() {
           const parsedQuestion = {
             id: (index + 1).toString(),
             question: questionField ? row[questionField] : "未定義題目",
-            options: options, // 確保始終為陣列
+            options: options, 
             answer: correctField ? row[correctField] : "",
             category: "",
             difficulty: "普通",
