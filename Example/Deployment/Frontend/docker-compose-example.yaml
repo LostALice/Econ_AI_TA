@@ -1,0 +1,11 @@
+# Code by AkinoAlice@TyrantRey
+
+version: "3.9"
+services:
+  Frontend:
+    container_name: econ_ta_frontend
+    restart: unless-stopped
+    image: econ_afs_frontend
+    ports:
+      - 3000:3000
+    env_file: ".env"
