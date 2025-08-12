@@ -1,16 +1,18 @@
 # 1. Build stage
 FROM node:current-alpine AS builder
-
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm install
-
 COPY . .
+
+# Accept env from build args
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
 
+# 2. Deploy
 FROM node:current-alpine AS runner
 
 WORKDIR /app
