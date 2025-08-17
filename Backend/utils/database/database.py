@@ -23,6 +23,7 @@ from typing import Literal
 
 import mysql.connector as connector
 import json
+import time
 
 from pprint import pformat
 from os import getenv
@@ -2673,6 +2674,12 @@ class MySQLHandler(SetupMYSQL):
             if close_connection:
                 self.connection.close()
                 self.logger.debug(pformat("Mysql connection closed"))
+
+    def keep_alive(self) -> None:
+        """Keep Mysql connection alive"""
+        self.cursor.execute("SELECT(1);")
+        self.connection.commit()
+        self.logger.debug("Mysql running", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 mysql_client = MySQLHandler()
