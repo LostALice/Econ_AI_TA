@@ -11,7 +11,9 @@ from Backend.api.v1 import (
     excel,
 )
 from Backend.utils.helper.logger import CustomLoggerHandler
+from Backend.utils.database.database import mysql_client
 
+from apscheduler.schedulers.background import BackgroundScheduler  # type:ignore[import-untyped]
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
 
@@ -122,6 +124,11 @@ app.include_router(
 logger.debug("| Excel Loading Finished |")
 
 logger.debug("| Backend Loading Finished |")
+
+# Keep mysql working
+scheduler = BackgroundScheduler()
+scheduler.add_job(mysql_client.keep_alive, "interval", minutes=30)
+scheduler.start()
 
 
 @app.middleware("http")
