@@ -27,7 +27,7 @@ class MockerDatabaseController:
     def query_mock_exam_list(
         self, mock_type: MOCK_TYPE, user_id: int
     ) -> list[ExamsModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
 
         if mock_type == "all":
             self.database.cursor.execute(
@@ -103,7 +103,7 @@ class MockerDatabaseController:
         exam_date: datetime,
         exam_duration: int,
     ) -> int:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
 
         self.database.cursor.execute(
             """
@@ -127,6 +127,7 @@ class MockerDatabaseController:
         return last_id
 
     def insert_class_exam(self, class_id: int, exam_id: int) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO class_exam (
@@ -147,7 +148,8 @@ class MockerDatabaseController:
         exam_date: datetime,
         exam_duration: int,
     ) -> int | None:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -178,7 +180,8 @@ class MockerDatabaseController:
             return None
 
     def insert_new_exam_question(self, exam_id: int, question_text: str) -> int | None:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -211,7 +214,7 @@ class MockerDatabaseController:
     def insert_new_exam_question_option(
         self, question_id: int, option_text: str, is_correct: bool
     ) -> int | None:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -242,7 +245,7 @@ class MockerDatabaseController:
             return None
 
     def insert_new_exam_question_image(self, question_id: int, image_uuid: str) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO question_image (question_id, image_uuid)
@@ -255,7 +258,7 @@ class MockerDatabaseController:
         return self.database.commit()
 
     def disable_exam(self, exam_id: int) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             UPDATE exams 
@@ -267,7 +270,7 @@ class MockerDatabaseController:
         return self.database.commit()
 
     def disable_exam_question(self, question_id: int) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             UPDATE question 
@@ -279,7 +282,7 @@ class MockerDatabaseController:
         return self.database.commit()
 
     def disable_exam_question_option(self, option_id: int) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             UPDATE `option` 
@@ -293,6 +296,7 @@ class MockerDatabaseController:
     def disable_exam_question_image(
         self, exam_id: int, question_id: int, image_uuid: str
     ) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         image_path = (
             Path("./images/mock/")
             / str(exam_id)
@@ -301,7 +305,7 @@ class MockerDatabaseController:
         )
         file_content_to_restore = None
         try:
-            self.database.connection.ping(attempts=3)
+            self.database.connection.ping(attempts=3, reconnection=True)
 
             if image_path.exists():
                 with image_path.open("rb") as f:
@@ -353,7 +357,7 @@ class MockerDatabaseController:
         exam_date: datetime,
         exam_duration: int,
     ) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -381,7 +385,7 @@ class MockerDatabaseController:
             return False
 
     def modify_exam_question(self, question_id: int, question_text: str) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -401,7 +405,7 @@ class MockerDatabaseController:
     def modify_exam_question_option(
         self, option_id: int, option_text: str, is_correct: bool
     ) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """
@@ -443,7 +447,7 @@ class MockerDatabaseController:
 
         file_content_to_restore = None
 
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
 
         try:
             if image_path.exists():
@@ -493,7 +497,7 @@ class MockerDatabaseController:
             return False
 
     def query_exam_info(self, exam_id: int) -> ExamsModel:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT 
@@ -522,7 +526,7 @@ class MockerDatabaseController:
         )
 
     def query_exam_question(self, exam_id: int) -> list[QuestionModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT 
@@ -551,7 +555,8 @@ class MockerDatabaseController:
         ]
 
     def query_question_info(self, question_id: int) -> QuestionModel:
-        self.database.connection.ping()
+        self.database.connection.ping(attempts=3, reconnection=True)
+
         self.database.cursor.execute(
             """
             SELECT 
@@ -575,7 +580,7 @@ class MockerDatabaseController:
     def query_question_option(
         self, exam_id: int, question_id: int
     ) -> list[OptionModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -607,7 +612,7 @@ class MockerDatabaseController:
         ]
 
     def query_question_option_info(self, option_id: int) -> OptionModel:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -632,7 +637,7 @@ class MockerDatabaseController:
     def query_question_image(
         self, exam_id: int, question_id: int
     ) -> list[QuestionImageModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -661,7 +666,7 @@ class MockerDatabaseController:
         ]
 
     def query_question_image_info(self, image_uuid: str) -> QuestionImageModel:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -683,7 +688,7 @@ class MockerDatabaseController:
         )
 
     def query_exam_correct_answer(self, exam_id: int) -> list[MockAnswerModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT 
@@ -717,6 +722,7 @@ class MockerDatabaseController:
         ]
 
     def query_tag_list(self) -> list[TagModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT tag_id, name, description FROM tag WHERE enabled = TRUE;
@@ -738,6 +744,7 @@ class MockerDatabaseController:
         ]
 
     def add_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO question_tag (question_id, tag_id) VALUES (%s, %s);
@@ -751,6 +758,7 @@ class MockerDatabaseController:
         return success
 
     def delete_question_tag(self, question_id: int, tag_id: int) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             DELETE from question_tag
@@ -765,6 +773,7 @@ class MockerDatabaseController:
         return success
 
     def query_tag(self, tag_id: int) -> TagModel | None:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT tag_id, name, description FROM tag WHERE enabled = TRUE AND tag_id = %s;
@@ -785,7 +794,7 @@ class MockerDatabaseController:
         )
 
     def query_question_tags(self, question_id: int) -> list[TagModel]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT 
@@ -815,6 +824,7 @@ class MockerDatabaseController:
         ]
 
     def create_tag(self, tag_name: str, tag_description: str) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO tag (name, description) VALUES (%s, %s);
@@ -828,6 +838,7 @@ class MockerDatabaseController:
         return success
 
     def disable_tag(self, tag_id: int) -> bool:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             UPDATE tag SET enabled = FALSE
@@ -842,7 +853,7 @@ class MockerDatabaseController:
         return success
 
     def insert_submitted_exam(self, exam_id: int, user_id: int, score: int) -> int:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO exam_submission (exam_id, user_id, score)
@@ -861,7 +872,7 @@ class MockerDatabaseController:
     def insert_submitted_answer(
         self, submission_id: int, question_id: int, selection_option_id: int | None
     ) -> bool:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             self.database.cursor.execute(
                 """

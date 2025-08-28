@@ -1119,7 +1119,7 @@ class MySQLHandler(SetupMYSQL):
             int: role name
             None: not found
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
 
         self.cursor.execute(
             """SELECT role_id FROM `user` WHERE user_id = %s""", (user_id,)
@@ -1141,7 +1141,7 @@ class MySQLHandler(SetupMYSQL):
             int: role name
             None: not found
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.logger.debug(pformat(f"create_user {role_name}"))
 
         self.cursor.execute(
@@ -1187,7 +1187,7 @@ class MySQLHandler(SetupMYSQL):
             302: Username already exists
             500: Error during database commit
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.logger.debug(
             pformat(f"create_user {username} {hashed_password} {role_name}")
         )
@@ -1284,7 +1284,7 @@ class MySQLHandler(SetupMYSQL):
                 - If status is 200: A UserInfoModel object containing user information
                 - If status is 403: An error message string
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.logger.debug(f"user: {username} trying to login")
 
         self.cursor.execute(
@@ -1346,7 +1346,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: True if the file record was successfully inserted, False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.logger.debug(
             pformat(f"insert_file {file_uuid} {filename} {tags} {collection}")
         )
@@ -1376,7 +1376,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: True if the rating was successfully updated in the database, False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.logger.info(f"inserting rating {question_uuid}:{rating}")
 
         self.cursor.execute(
@@ -1423,7 +1423,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: True if the chat record was successfully inserted, False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
 
         self.logger.debug(
             pformat(
@@ -1489,7 +1489,7 @@ class MySQLHandler(SetupMYSQL):
     #     Returns:
     #         filename: file name
     #     f"""
-    #     self.connection.ping(attempts=3)
+    #     self.connection.ping(attempts=3, reconnect=True)
     #     self.cursor.execute("""SELECT file_id
     #         FROM {self._DATABASE}.file
     #         WHERE file_name = %s
@@ -1516,7 +1516,7 @@ class MySQLHandler(SetupMYSQL):
         Note:
             This method pings the database connection before executing the query to ensure it"s active.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
 
         self.logger.info(pformat("query docs name {docs_id}"))
         self.cursor.execute(
@@ -1555,7 +1555,7 @@ class MySQLHandler(SetupMYSQL):
         Note:
             This method pings the database connection before executing the query to ensure it"s active.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""SELECT file_id, file_name, last_update
                 FROM {self._DATABASE}.file
@@ -1593,7 +1593,7 @@ class MySQLHandler(SetupMYSQL):
             dict or None: A dictionary containing exam information with nested exam questions and options, or None if no exam records are found.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         if not mock_type or mock_type == "all":
             self.cursor.execute(
                 """
@@ -1846,7 +1846,7 @@ class MySQLHandler(SetupMYSQL):
         return exam_info_data
 
     def query_mock_exam(self, mock_type: Literal["basic", "cse"] | None) -> dict | None:
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
 
         self.cursor.execute(
             """
@@ -1873,7 +1873,7 @@ class MySQLHandler(SetupMYSQL):
                              and an empty list for exam_questions.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             INSERT INTO {self._DATABASE}.exams(
@@ -1942,7 +1942,7 @@ class MySQLHandler(SetupMYSQL):
                                 and placeholders for question_options and question_images.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             INSERT INTO {self._DATABASE}.exam_questions(
@@ -2000,7 +2000,7 @@ class MySQLHandler(SetupMYSQL):
             list[ExamOptionModel] - A list of exam option models representing the newly inserted options.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         new_options = [
             (option.question_id, option.option_text, option.is_correct)
             for option in options
@@ -2060,7 +2060,7 @@ class MySQLHandler(SetupMYSQL):
             bool - True if the modification was successful; False otherwise.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
@@ -2133,7 +2133,7 @@ class MySQLHandler(SetupMYSQL):
         Return:
             bool - True if the deletion was successful and the transaction was committed; False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
@@ -2159,7 +2159,7 @@ class MySQLHandler(SetupMYSQL):
         Return:
             bool - True if the deletion was successful and the transaction was committed; False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam
@@ -2184,7 +2184,7 @@ class MySQLHandler(SetupMYSQL):
 
         Returns: bool: True if the deletion was successful and the transaction was committed; False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             DELETE FROM {self._DATABASE}.exam
@@ -2208,7 +2208,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: Returns True if the question is successfully disabled, False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             UPDATE {self._DATABASE}.exam_questions
@@ -2233,7 +2233,7 @@ class MySQLHandler(SetupMYSQL):
         Returns:
             bool: Returns True if the question is successfully deleted, False otherwise.
         """
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             f"""
             DELETE FROM {self._DATABASE}.exam_questions
@@ -2254,7 +2254,7 @@ class MySQLHandler(SetupMYSQL):
         Retrieves a list of mock exam questions based on the provided mock_id.
         """
 
-        self.connection.ping(attempts=3)
+        self.connection.ping(attempts=3, reconnect=True)
         self.cursor.execute(
             """
             SELECT 

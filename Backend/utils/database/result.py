@@ -13,7 +13,7 @@ class ResultDatabaseController:
         self.logger = CustomLoggerHandler().get_logger()
 
     def query_mock_exam_result(self, submission_id: int) -> MockResult:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             WITH ExamQuestionCounts AS (
@@ -83,7 +83,7 @@ class ResultDatabaseController:
         )
 
     def query_mock_exam_result_by_exam(self, exam_id: int) -> list[MockResult]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             WITH ExamQuestionCounts AS (
@@ -156,7 +156,7 @@ class ResultDatabaseController:
         ]
 
     def query_mock_exam_result_by_class(self, class_id: int) -> list[MockResult]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             WITH ExamQuestionCounts AS (
@@ -229,7 +229,7 @@ class ResultDatabaseController:
         ]
 
     def query_mock_exam_result_by_user(self, user_id: int) -> list[MockResult]:
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             WITH ExamQuestionCounts AS (
