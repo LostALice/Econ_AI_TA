@@ -34,7 +34,7 @@ class ExcelDatabaseController:
         failed_inserts = 0
         failures: Counter = Counter()
 
-        self.database.connection.ping(attempts=3)
+        self.database.connection.ping(attempts=3, reconnection=True)
 
         try:
             # 先刪除可能存在的舊題目，確保不會有重複
@@ -302,6 +302,7 @@ class ExcelDatabaseController:
         返回:
             成功插入的題目數量
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         successful_inserts = 0
         try:
             for question in questions:
@@ -389,6 +390,7 @@ class ExcelDatabaseController:
         返回:
             是否成功
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             # 執行 SQL
             self.database.cursor.execute(
@@ -424,6 +426,7 @@ class ExcelDatabaseController:
         返回:
             檔案列表
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             if doc_type:
                 sql = "SELECT file_id as fileID, file_name as fileName, doc_type as docType, upload_time as uploadTime, question_count as questionCount FROM excel_uploaded_files WHERE doc_type = %s ORDER BY upload_time DESC"
@@ -456,6 +459,7 @@ class ExcelDatabaseController:
         返回:
             題目列表
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             # 首先獲取檔案名稱
             sql_file = "SELECT file_name, question_count FROM excel_uploaded_files WHERE file_id = %s"
@@ -573,6 +577,7 @@ class ExcelDatabaseController:
         返回:
             是否成功
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             # 首先查詢 file_name
             sql_get_file_name = (
@@ -617,6 +622,7 @@ class ExcelDatabaseController:
         返回:
             題目數量
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             sql = "SELECT COUNT(*) as count FROM excel_questions WHERE file_name = %s"
             self.database.connection.cursor.execute(sql, (file_name,))
@@ -637,6 +643,7 @@ class ExcelDatabaseController:
         返回:
             檔案資訊字典，如果找不到則返回空字典
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             sql = """
                 SELECT file_id, file_name, doc_type, upload_time, last_update, question_count
@@ -676,6 +683,7 @@ class ExcelDatabaseController:
         返回:
             題目列表
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             # warning select *
             self.database.cursor.execute(
@@ -704,6 +712,7 @@ class ExcelDatabaseController:
         返回:
             Tuple[List[Dict[str, Any]], str]: (題目列表, 檔案名稱)
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         try:
             # 首先獲取檔案名稱
             sql_file = "SELECT file_name FROM excel_uploaded_files WHERE file_id = %s"
@@ -745,6 +754,7 @@ class ExcelDatabaseController:
                 'error': str
             }
         """
+        self.database.connection.ping(attempts=3, reconnection=True)
         result: ResultModel = ResultModel(
             success=False,
             updated_count=0,

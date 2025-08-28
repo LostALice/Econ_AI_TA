@@ -11,6 +11,7 @@ class ManagementDatabaseController:
         self.logger = CustomLoggerHandler().get_logger()
 
     def query_teacher_list(self) -> list[UserModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute("""
             SELECT
                 u.user_id,
@@ -37,6 +38,7 @@ class ManagementDatabaseController:
         ]
 
     def query_user_list(self) -> list[UserModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute("""
             SELECT
                 u.user_id,
@@ -61,6 +63,7 @@ class ManagementDatabaseController:
         ]
 
     def query_class_user_list(self, class_id: int) -> list[UserModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -93,6 +96,7 @@ class ManagementDatabaseController:
         ]
 
     def get_class_list(self) -> list[ClassModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute("""
             SELECT
                 class_id,
@@ -115,6 +119,7 @@ class ManagementDatabaseController:
         ]
 
     def get_class_by_user_id(self, user_id: int) -> list[ClassModel]:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             SELECT
@@ -143,6 +148,7 @@ class ManagementDatabaseController:
         ]
 
     def new_class(self, classname: str) -> int:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO class (classname)
@@ -159,6 +165,7 @@ class ManagementDatabaseController:
         return class_id
 
     def delete_class(self, class_id: int) -> int:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             UPDATE class
@@ -177,6 +184,7 @@ class ManagementDatabaseController:
         return deleted_class_id
 
     def new_user(self, class_id: int, user_id: int, role_id: int) -> int:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             INSERT INTO class_user (class_id, user_id, role_id)
@@ -194,6 +202,7 @@ class ManagementDatabaseController:
         return added_user_id
 
     def delete_user(self, class_id, user_id: int) -> int:
+        self.database.connection.ping(attempts=3, reconnection=True)
         self.database.cursor.execute(
             """
             DELETE FROM class_user 
