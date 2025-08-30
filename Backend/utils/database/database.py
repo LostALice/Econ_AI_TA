@@ -2700,6 +2700,7 @@ class MySQLHandler(SetupMYSQL):
         """Keep Mysql connection alive"""
         self.cursor.execute("SELECT(1);")
         self.cursor.fetchall()
+
         self.logger.debug("Mysql running", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
