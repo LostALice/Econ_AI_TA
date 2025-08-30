@@ -1104,6 +1104,27 @@ class SetupMYSQL:
             )
             self.connection.commit()
 
+    def connection_check(self, reconnect: bool = True) -> None:
+        """Check mysql is connected
+
+        Args:
+            reconnect (bool): Do reconnect. Defaults to True.
+        """
+        if self.connection.is_connected():
+            self.logger.info("Already connected to MySQL")
+        else:
+            self.logger.warning("Error while connecting to MySQL")
+
+            if reconnect:
+                self.connection = connector.connect(
+                    host=self._HOST,
+                    user=self._USER,
+                    password=self._PASSWORD,
+                    port=self._PORT,
+                )
+
+            self.cursor = self.connection.cursor(dictionary=True, prepared=True)
+
 
 class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
@@ -2678,7 +2699,8 @@ class MySQLHandler(SetupMYSQL):
     def keep_alive(self) -> None:
         """Keep Mysql connection alive"""
         self.cursor.execute("SELECT(1);")
-        self.connection.commit()
+        self.cursor.fetchall()
+
         self.logger.debug("Mysql running", time.strftime("%Y-%m-%d %H:%M:%S"))
 
 
